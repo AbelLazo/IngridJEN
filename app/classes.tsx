@@ -311,6 +311,8 @@ export default function ClassesScreen() {
         const translateY = useSharedValue(0);
         const isDragging = useSharedValue(false);
 
+        const screenHeight = Dimensions.get('window').height;
+
         const panGesture = Gesture.Pan()
             .onStart(() => {
                 isDragging.value = true;
@@ -322,7 +324,6 @@ export default function ClassesScreen() {
                 translateY.value = event.translationY;
             })
             .onEnd((event) => {
-                const screenHeight = Dimensions.get('window').height;
                 const absoluteY = event.absoluteY;
 
                 if (absoluteY > screenHeight * 0.8) {
