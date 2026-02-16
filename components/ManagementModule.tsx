@@ -2,9 +2,11 @@ import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Picker } from '@react-native-picker/picker';
 import { Stack, useRouter } from 'expo-router';
-import { ChevronLeft, Phone, Plus, Search, UserPlus, X } from 'lucide-react-native';
+import { ChevronLeft, Edit3, Phone, Plus, Search, Trash2, UserPlus, X } from 'lucide-react-native';
 import React, { useState } from 'react';
 import {
+    Alert,
+    Dimensions,
     FlatList,
     KeyboardAvoidingView,
     Modal,
@@ -14,8 +16,17 @@ import {
     Text,
     TextInput,
     TouchableOpacity,
+    Vibration,
     View
 } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, {
+    interpolate,
+    runOnJS,
+    useAnimatedStyle,
+    useSharedValue,
+    withSpring
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 
@@ -44,9 +55,11 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
     const router = useRouter();
     const colorScheme = useColorScheme() ?? 'light';
     const colors = Colors[colorScheme as keyof typeof Colors];
-    const { courses, students, teachers, addStudent, addTeacher } = useInstitution();
+    const { courses, students, teachers, addStudent, addTeacher, updateStudent, updateTeacher, removeStudent, removeTeacher } = useInstitution();
+    const isDraggingGlobal = useSharedValue(0); // 0 = not dragging, 1 = dragging
 
     const [searchQuery, setSearchQuery] = useState('');
+    const [editingEntityId, setEditingEntityId] = useState<string | null>(null);
     const [modalVisible, setModalVisible] = useState(false);
 
     const [formData, setFormData] = useState({
@@ -55,6 +68,11 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
         phone: '',
         selectedSpecialties: [] as string[]
     });
+
+    const resetForm = () => {
+        setFormData({ firstName: '', lastName: '', phone: '', selectedSpecialties: [] });
+        setEditingEntityId(null);
+    };
 
     const handleAddSpecialty = (name: string) => {
         if (name && !formData.selectedSpecialties.includes(name)) {
@@ -80,10 +98,107 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
         item.phone.includes(searchQuery)
     );
 
-    const handleAdd = () => {
+    const handleDelete = (item: Entity) => {
+        Alert.alert(
+            "Eliminar Registro",
+            `¿Estás seguro de que deseas eliminar a ${item.firstName} ${item.lastName}?`,
+            [
+                { text: "Cancelar", style: "cancel" },
+                {
+                    text: "Eliminar",
+                    style: "destructive",
+                    onPress: () => {
+                        if (type === 'teacher') {
+                            removeTeacher(item.id);
+                        } else {
+                            removeStudent(item.id);
+                        }
+                        Vibration.vibrate(100);
+                    }
+                }
+            ]
+        );
+    };
+
+    const DraggableCard = ({ item, colors, onEdit, onDelete }: any) => {
+        const translateX = useSharedValue(0);
+        const translateY = useSharedValue(0);
+        const isDragging = useSharedValue(false);
+
+        const panGesture = Gesture.Pan()
+            .onStart(() => {
+                isDragging.value = true;
+                isDraggingGlobal.value = withSpring(1);
+                runOnJS(Vibration.vibrate)(40);
+            })
+            .onUpdate((event) => {
+                translateX.value = event.translationX;
+                translateY.value = event.translationY;
+            })
+            .onEnd((event) => {
+                const screenHeight = Dimensions.get('window').height;
+                const absoluteY = event.absoluteY;
+
+                if (absoluteY > screenHeight * 0.8) {
+                    runOnJS(onDelete)(item);
+                }
+
+                translateX.value = withSpring(0);
+                translateY.value = withSpring(0);
+                isDragging.value = false;
+                isDraggingGlobal.value = withSpring(0);
+            });
+
+        const animatedStyle = useAnimatedStyle(() => {
+            return {
+                transform: [
+                    { translateX: translateX.value },
+                    { translateY: translateY.value },
+                    { scale: withSpring(isDragging.value ? 1.05 : 1) }
+                ],
+                zIndex: isDragging.value ? 1000 : 1,
+                elevation: isDragging.value ? 10 : 0,
+                opacity: isDragging.value ? 0.9 : 1,
+            };
+        });
+
+        return (
+            <GestureDetector gesture={panGesture}>
+                <Animated.View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }, animatedStyle]}>
+                    <View style={[styles.avatar, { backgroundColor: colors.primary + '20' }]}>
+                        <Text style={[styles.avatarText, { color: colors.primary }]}>{item.firstName.charAt(0)}</Text>
+                    </View>
+                    <View style={styles.cardContent}>
+                        <Text style={[styles.cardName, { color: colors.text }]}>{item.firstName} {item.lastName}</Text>
+                        <View style={styles.cardInfoRow}>
+                            <Phone size={14} color={colors.icon} />
+                            <Text style={[styles.cardSub, { color: colors.icon, marginLeft: 4 }]}>{item.phone}</Text>
+                        </View>
+                        {item.extra && item.extra.length > 0 && (
+                            <View style={styles.specialtyTags}>
+                                {item.extra.split(', ').map((s: string, idx: number) => (
+                                    <View key={idx} style={[styles.miniBadge, { backgroundColor: colors.primary + '10' }]}>
+                                        <Text style={[styles.miniBadgeText, { color: colors.primary }]}>{s}</Text>
+                                    </View>
+                                ))}
+                            </View>
+                        )}
+                    </View>
+                    <TouchableOpacity
+                        style={[styles.editCircle, { backgroundColor: colors.primary + '10' }]}
+                        onPress={() => onEdit(item)}
+                    >
+                        <Edit3 size={18} color={colors.primary} />
+                    </TouchableOpacity>
+                </Animated.View>
+            </GestureDetector>
+        );
+    };
+
+    const handleSave = () => {
         if (formData.firstName && formData.lastName && formData.phone) {
-            const newEntity: any = {
-                id: Date.now().toString(),
+            const entityData: any = {
+                id: editingEntityId || Date.now().toString(),
                 firstName: formData.firstName,
                 lastName: formData.lastName,
                 phone: formData.phone,
@@ -91,42 +206,56 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
             };
 
             if (type === 'teacher') {
-                newEntity.extra = formData.selectedSpecialties.join(', ');
-                addTeacher(newEntity);
+                entityData.extra = formData.selectedSpecialties.join(', ');
+                if (editingEntityId) {
+                    updateTeacher(entityData);
+                } else {
+                    addTeacher(entityData);
+                }
             } else {
-                addStudent(newEntity);
+                if (editingEntityId) {
+                    updateStudent(entityData);
+                } else {
+                    addStudent(entityData);
+                }
             }
 
-            setFormData({ firstName: '', lastName: '', phone: '', selectedSpecialties: [] });
+            resetForm();
             setModalVisible(false);
         }
     };
 
+    const handleEditPress = (item: Entity) => {
+        setFormData({
+            firstName: item.firstName,
+            lastName: item.lastName,
+            phone: item.phone,
+            selectedSpecialties: item.extra ? item.extra.split(', ') : []
+        });
+        setEditingEntityId(item.id);
+        setModalVisible(true);
+    };
+
 
     const renderItem = ({ item }: { item: Entity }) => (
-        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <View style={[styles.avatar, { backgroundColor: colors.primary + '20' }]}>
-                <Text style={[styles.avatarText, { color: colors.primary }]}>{item.firstName.charAt(0)}</Text>
-            </View>
-            <View style={styles.cardContent}>
-                <Text style={[styles.cardName, { color: colors.text }]}>{item.firstName} {item.lastName}</Text>
-                <View style={styles.cardInfoRow}>
-                    <Phone size={14} color={colors.icon} />
-                    <Text style={[styles.cardSub, { color: colors.icon, marginLeft: 4 }]}>{item.phone}</Text>
-                </View>
-                {item.extra && item.extra.length > 0 && (
-                    <View style={styles.specialtyTags}>
-                        {item.extra.split(', ').map((s, idx) => (
-                            <View key={idx} style={[styles.miniBadge, { backgroundColor: colors.primary + '10' }]}>
-                                <Text style={[styles.miniBadgeText, { color: colors.primary }]}>{s}</Text>
-                            </View>
-                        ))}
-                    </View>
-                )}
-
-            </View>
-        </View>
+        <DraggableCard
+            item={item}
+            colors={colors}
+            onEdit={handleEditPress}
+            onDelete={handleDelete}
+        />
     );
+
+    const trashAnimatedStyle = useAnimatedStyle(() => {
+        return {
+            opacity: isDraggingGlobal.value,
+            pointerEvents: isDraggingGlobal.value > 0.5 ? 'auto' : 'none' as any,
+            transform: [
+                { translateY: interpolate(isDraggingGlobal.value, [0, 1], [100, 0]) },
+                { scale: interpolate(isDraggingGlobal.value, [0, 1], [0.5, 1]) }
+            ]
+        };
+    });
 
     return (
         <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}>
@@ -140,7 +269,7 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
                 <Text style={[styles.headerTitle, { color: colors.text }]}>{title}</Text>
                 <TouchableOpacity
                     style={[styles.addButton, { backgroundColor: colors.primary }]}
-                    onPress={() => setModalVisible(true)}
+                    onPress={() => { resetForm(); setModalVisible(true); }}
                 >
                     <Plus color="#fff" size={24} />
                 </TouchableOpacity>
@@ -184,8 +313,10 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
                 >
                     <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
                         <View style={styles.modalHeader}>
-                            <Text style={[styles.modalTitle, { color: colors.text }]}>Registrar {title.slice(0, -1)}</Text>
-                            <TouchableOpacity onPress={() => setModalVisible(false)}>
+                            <Text style={[styles.modalTitle, { color: colors.text }]}>
+                                {editingEntityId ? 'Editar' : 'Registrar'} {title.slice(0, -1)}
+                            </Text>
+                            <TouchableOpacity onPress={() => { setModalVisible(false); resetForm(); }}>
                                 <X color={colors.text} size={24} />
                             </TouchableOpacity>
                         </View>
@@ -277,15 +408,25 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
 
                             <TouchableOpacity
                                 style={[styles.submitButton, { backgroundColor: colors.primary }]}
-                                onPress={handleAdd}
+                                onPress={handleSave}
                             >
-                                <Text style={styles.submitButtonText}>Guardar Registro</Text>
+                                <Text style={styles.submitButtonText}>
+                                    {editingEntityId ? 'Guardar Cambios' : 'Guardar Registro'}
+                                </Text>
                             </TouchableOpacity>
 
                         </ScrollView>
                     </View>
                 </KeyboardAvoidingView>
             </Modal>
+
+            {/* Deletion Trash Zone */}
+            <Animated.View style={[styles.trashZone, trashAnimatedStyle]}>
+                <View style={[styles.trashCircle, { backgroundColor: '#FF4444' }]}>
+                    <Trash2 color="#FFF" size={32} />
+                </View>
+                <Text style={styles.trashText}>Suelta para eliminar</Text>
+            </Animated.View>
         </View>
     );
 }
@@ -483,5 +624,45 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: 16,
         fontWeight: 'bold',
+    },
+    editCircle: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginLeft: 10,
+    },
+    trashZone: {
+        position: 'absolute',
+        bottom: 30,
+        left: 0,
+        right: 0,
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 2000,
+    },
+    trashCircle: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        justifyContent: 'center',
+        alignItems: 'center',
+        elevation: 10,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 5 },
+        shadowOpacity: 0.3,
+        shadowRadius: 10,
+        marginBottom: 10,
+    },
+    trashText: {
+        color: '#FF4444',
+        fontWeight: 'bold',
+        fontSize: 14,
+        backgroundColor: 'rgba(255,255,255,0.8)',
+        paddingHorizontal: 12,
+        paddingVertical: 4,
+        borderRadius: 10,
+        overflow: 'hidden'
     }
 });

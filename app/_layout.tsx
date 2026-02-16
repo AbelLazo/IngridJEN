@@ -4,6 +4,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect } from 'react';
 import { Platform } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -28,23 +29,25 @@ export default function RootLayout() {
   }, [colorScheme]);
 
   return (
-    <SafeAreaProvider>
-      <InstitutionProvider>
-        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-          <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="students" options={{ title: 'Estudiantes' }} />
-            <Stack.Screen name="teachers" options={{ title: 'Profesores' }} />
-            <Stack.Screen name="courses" options={{ title: 'Cursos' }} />
-            <Stack.Screen name="classes" options={{ title: 'Clases' }} />
-            <Stack.Screen name="schedule" options={{ title: 'Horario' }} />
-            <Stack.Screen name="fees" options={{ title: 'Mensualidad' }} />
-            <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
-          </Stack>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <InstitutionProvider>
+          <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+            <Stack screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen name="students" options={{ title: 'Estudiantes' }} />
+              <Stack.Screen name="teachers" options={{ title: 'Profesores' }} />
+              <Stack.Screen name="courses" options={{ title: 'Cursos' }} />
+              <Stack.Screen name="classes" options={{ title: 'Clases' }} />
+              <Stack.Screen name="schedule" options={{ title: 'Horario' }} />
+              <Stack.Screen name="fees" options={{ title: 'Mensualidad' }} />
+              <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+            </Stack>
 
-          <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
-        </ThemeProvider>
-      </InstitutionProvider>
-    </SafeAreaProvider>
+            <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
+          </ThemeProvider>
+        </InstitutionProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }

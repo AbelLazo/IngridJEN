@@ -1,10 +1,13 @@
 import { Colors } from '@/constants/theme';
 import { Course, useInstitution } from '@/context/InstitutionContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { Picker } from '@react-native-picker/picker';
 import { Stack, useRouter } from 'expo-router';
-import { BookOpen, ChevronLeft, Clock, DollarSign, Plus, Search, X } from 'lucide-react-native';
+import { BookOpen, ChevronLeft, Clock, DollarSign, Edit3, Plus, Search, Trash2, X } from 'lucide-react-native';
 import React, { useState } from 'react';
 import {
+    Alert,
+    Dimensions,
     FlatList,
     KeyboardAvoidingView,
     Modal,
@@ -14,8 +17,17 @@ import {
     Text,
     TextInput,
     TouchableOpacity,
+    Vibration,
     View
 } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, {
+    interpolate,
+    runOnJS,
+    useAnimatedStyle,
+    useSharedValue,
+    withSpring
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function CoursesScreen() {
@@ -23,9 +35,11 @@ export default function CoursesScreen() {
     const router = useRouter();
     const colorScheme = useColorScheme() ?? 'light';
     const colors = Colors[colorScheme as keyof typeof Colors];
-    const { courses, addCourse } = useInstitution();
+    const { courses, addCourse, updateCourse, removeCourse } = useInstitution();
+    const isDraggingGlobal = useSharedValue(0);
 
     const [searchQuery, setSearchQuery] = useState('');
+    const [editingCourseId, setEditingCourseId] = useState<string | null>(null);
     const [modalVisible, setModalVisible] = useState(false);
 
     const [formData, setFormData] = useState({
@@ -35,49 +49,160 @@ export default function CoursesScreen() {
         price: ''
     });
 
+    const resetForm = () => {
+        setFormData({ name: '', hours: '', minutes: '', price: '' });
+        setEditingCourseId(null);
+    };
+
     const filteredCourses = courses.filter(item =>
         item.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
-    const handleAdd = () => {
+    const handleSave = () => {
         if (formData.name && (formData.hours || formData.minutes)) {
-            const newCourse = {
-                id: Date.now().toString(),
+            const courseData = {
+                id: editingCourseId || Date.now().toString(),
                 name: formData.name,
                 hours: formData.hours || '0',
                 minutes: formData.minutes || '0',
                 price: formData.price || '0'
             };
-            addCourse(newCourse);
-            setFormData({ name: '', hours: '', minutes: '', price: '' });
+
+            if (editingCourseId) {
+                updateCourse(courseData);
+            } else {
+                addCourse(courseData);
+            }
+
+            resetForm();
             setModalVisible(false);
         }
     };
 
+    const handleEditPress = (course: Course) => {
+        setFormData({
+            name: course.name,
+            hours: course.hours,
+            minutes: course.minutes,
+            price: course.price
+        });
+        setEditingCourseId(course.id);
+        setModalVisible(true);
+    };
+
+    const handleDelete = (item: Course) => {
+        Alert.alert(
+            "Eliminar Materia",
+            `¿Estás seguro de que deseas eliminar la materia ${item.name}?`,
+            [
+                { text: "Cancelar", style: "cancel" },
+                {
+                    text: "Eliminar",
+                    style: "destructive",
+                    onPress: () => {
+                        removeCourse(item.id);
+                        Vibration.vibrate(100);
+                    }
+                }
+            ]
+        );
+    };
+
+    const DraggableCard = ({ item, colors, onEdit, onDelete }: any) => {
+        const translateX = useSharedValue(0);
+        const translateY = useSharedValue(0);
+        const isDragging = useSharedValue(false);
+
+        const panGesture = Gesture.Pan()
+            .onStart(() => {
+                isDragging.value = true;
+                isDraggingGlobal.value = withSpring(1);
+                runOnJS(Vibration.vibrate)(40);
+            })
+            .onUpdate((event) => {
+                translateX.value = event.translationX;
+                translateY.value = event.translationY;
+            })
+            .onEnd((event) => {
+                const screenHeight = Dimensions.get('window').height;
+                const absoluteY = event.absoluteY;
+
+                if (absoluteY > screenHeight * 0.8) {
+                    runOnJS(onDelete)(item);
+                }
+
+                translateX.value = withSpring(0);
+                translateY.value = withSpring(0);
+                isDragging.value = false;
+                isDraggingGlobal.value = withSpring(0);
+            });
+
+        const animatedStyle = useAnimatedStyle(() => {
+            return {
+                transform: [
+                    { translateX: translateX.value },
+                    { translateY: translateY.value },
+                    { scale: withSpring(isDragging.value ? 1.05 : 1) }
+                ],
+                zIndex: isDragging.value ? 1000 : 1,
+                elevation: isDragging.value ? 10 : 0,
+                opacity: isDragging.value ? 0.9 : 1,
+            };
+        });
+
+        return (
+            <GestureDetector gesture={panGesture}>
+                <Animated.View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }, animatedStyle]}>
+                    <View style={[styles.iconContainer, { backgroundColor: colors.primary + '15' }]}>
+                        <BookOpen size={24} color={colors.primary} />
+                    </View>
+                    <View style={styles.cardContent}>
+                        <Text style={[styles.cardName, { color: colors.text }]}>{item.name}</Text>
+                        <View style={styles.detailsRow}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: 15 }}>
+                                <Clock size={14} color={colors.icon} />
+                                <Text style={[styles.detailText, { color: colors.icon }]}>
+                                    {item.hours}h {item.minutes}m
+                                </Text>
+                            </View>
+                            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                <DollarSign size={14} color={colors.primary} />
+                                <Text style={[styles.detailText, { color: colors.primary, fontWeight: 'bold' }]}>
+                                    {item.price}
+                                </Text>
+                            </View>
+                        </View>
+                    </View>
+                    <TouchableOpacity
+                        style={[styles.editCircle, { backgroundColor: colors.primary + '10' }]}
+                        onPress={() => onEdit(item)}
+                    >
+                        <Edit3 size={18} color={colors.primary} />
+                    </TouchableOpacity>
+                </Animated.View>
+            </GestureDetector>
+        );
+    };
+
     const renderItem = ({ item }: { item: Course }) => (
-        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <View style={[styles.iconContainer, { backgroundColor: colors.primary + '15' }]}>
-                <BookOpen size={24} color={colors.primary} />
-            </View>
-            <View style={styles.cardContent}>
-                <Text style={[styles.cardName, { color: colors.text }]}>{item.name}</Text>
-                <View style={styles.detailsRow}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: 15 }}>
-                        <Clock size={14} color={colors.icon} />
-                        <Text style={[styles.detailText, { color: colors.icon }]}>
-                            {item.hours}h {item.minutes}m
-                        </Text>
-                    </View>
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        <DollarSign size={14} color={colors.primary} />
-                        <Text style={[styles.detailText, { color: colors.primary, fontWeight: 'bold' }]}>
-                            {item.price}
-                        </Text>
-                    </View>
-                </View>
-            </View>
-        </View>
+        <DraggableCard
+            item={item}
+            colors={colors}
+            onEdit={handleEditPress}
+            onDelete={handleDelete}
+        />
     );
+
+    const trashAnimatedStyle = useAnimatedStyle(() => {
+        return {
+            opacity: isDraggingGlobal.value,
+            pointerEvents: isDraggingGlobal.value > 0.5 ? 'auto' : 'none' as any,
+            transform: [
+                { translateY: interpolate(isDraggingGlobal.value, [0, 1], [100, 0]) },
+                { scale: interpolate(isDraggingGlobal.value, [0, 1], [0.5, 1]) }
+            ]
+        };
+    });
 
 
     return (
@@ -136,8 +261,10 @@ export default function CoursesScreen() {
                 >
                     <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
                         <View style={styles.modalHeader}>
-                            <Text style={[styles.modalTitle, { color: colors.text }]}>Nueva Materia</Text>
-                            <TouchableOpacity onPress={() => setModalVisible(false)}>
+                            <Text style={[styles.modalTitle, { color: colors.text }]}>
+                                {editingCourseId ? 'Editar Materia' : 'Nueva Materia'}
+                            </Text>
+                            <TouchableOpacity onPress={() => { setModalVisible(false); resetForm(); }}>
                                 <X color={colors.text} size={24} />
                             </TouchableOpacity>
                         </View>
@@ -161,30 +288,32 @@ export default function CoursesScreen() {
                                 <Text style={[styles.label, { color: colors.text }]}>Duración</Text>
                                 <View style={styles.durationRow}>
                                     <View style={[styles.durationInputGroup, { flex: 1, marginRight: 10 }]}>
-                                        <View style={[styles.inputWrapper, { borderColor: colors.border }]}>
-                                            <Clock size={16} color={colors.icon} />
-                                            <TextInput
-                                                style={[styles.input, { color: colors.text }]}
-                                                placeholder="Horas"
-                                                placeholderTextColor={colors.icon}
-                                                keyboardType="numeric"
-                                                value={formData.hours}
-                                                onChangeText={(v) => setFormData({ ...formData, hours: v })}
-                                            />
+                                        <View style={[styles.inputWrapper, { borderColor: colors.border, paddingHorizontal: 0 }]}>
+                                            <Picker
+                                                selectedValue={formData.hours || '0'}
+                                                onValueChange={(v) => setFormData({ ...formData, hours: v })}
+                                                style={{ color: colors.text, width: '100%', height: 50 }}
+                                                dropdownIconColor={colors.primary}
+                                            >
+                                                {Array.from({ length: 9 }).map((_, i) => (
+                                                    <Picker.Item key={i} label={`${i} h`} value={i.toString()} color="#000" />
+                                                ))}
+                                            </Picker>
                                         </View>
                                     </View>
 
                                     <View style={[styles.durationInputGroup, { flex: 1 }]}>
-                                        <View style={[styles.inputWrapper, { borderColor: colors.border }]}>
-                                            <Clock size={16} color={colors.icon} />
-                                            <TextInput
-                                                style={[styles.input, { color: colors.text }]}
-                                                placeholder="Minutos"
-                                                placeholderTextColor={colors.icon}
-                                                keyboardType="numeric"
-                                                value={formData.minutes}
-                                                onChangeText={(v) => setFormData({ ...formData, minutes: v })}
-                                            />
+                                        <View style={[styles.inputWrapper, { borderColor: colors.border, paddingHorizontal: 0 }]}>
+                                            <Picker
+                                                selectedValue={formData.minutes || '0'}
+                                                onValueChange={(v) => setFormData({ ...formData, minutes: v })}
+                                                style={{ color: colors.text, width: '100%', height: 50 }}
+                                                dropdownIconColor={colors.primary}
+                                            >
+                                                {['00', '15', '30', '45'].map(m => (
+                                                    <Picker.Item key={m} label={`${m} m`} value={m} color="#000" />
+                                                ))}
+                                            </Picker>
                                         </View>
                                     </View>
                                 </View>
@@ -207,14 +336,24 @@ export default function CoursesScreen() {
 
                             <TouchableOpacity
                                 style={[styles.submitButton, { backgroundColor: colors.primary }]}
-                                onPress={handleAdd}
+                                onPress={handleSave}
                             >
-                                <Text style={styles.submitButtonText}>Registrar Materia</Text>
+                                <Text style={styles.submitButtonText}>
+                                    {editingCourseId ? 'Guardar Cambios' : 'Registrar Materia'}
+                                </Text>
                             </TouchableOpacity>
                         </ScrollView>
                     </View>
                 </KeyboardAvoidingView>
             </Modal>
+
+            {/* Deletion Trash Zone */}
+            <Animated.View style={[styles.trashZone, trashAnimatedStyle]}>
+                <View style={[styles.trashCircle, { backgroundColor: '#FF4444' }]}>
+                    <Trash2 color="#FFF" size={32} />
+                </View>
+                <Text style={styles.trashText}>Suelta para eliminar</Text>
+            </Animated.View>
         </View>
     );
 }
@@ -372,5 +511,45 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: 17,
         fontWeight: 'bold',
+    },
+    editCircle: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginLeft: 10,
+    },
+    trashZone: {
+        position: 'absolute',
+        bottom: 30,
+        left: 0,
+        right: 0,
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 2000,
+    },
+    trashCircle: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        justifyContent: 'center',
+        alignItems: 'center',
+        elevation: 10,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 5 },
+        shadowOpacity: 0.3,
+        shadowRadius: 10,
+        marginBottom: 10,
+    },
+    trashText: {
+        color: '#FF4444',
+        fontWeight: 'bold',
+        fontSize: 14,
+        backgroundColor: 'rgba(255,255,255,0.8)',
+        paddingHorizontal: 12,
+        paddingVertical: 4,
+        borderRadius: 10,
+        overflow: 'hidden'
     }
 });
