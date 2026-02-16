@@ -1,5 +1,6 @@
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { Picker } from '@react-native-picker/picker';
 import { Stack, useRouter } from 'expo-router';
 import { ChevronLeft, Phone, Plus, Search, UserPlus, X } from 'lucide-react-native';
 import React, { useState } from 'react';
@@ -17,6 +18,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+
+
 import { useInstitution } from '@/context/InstitutionContext';
 
 interface Entity {
@@ -24,9 +27,10 @@ interface Entity {
     firstName: string;
     lastName: string;
     phone: string;
-    specialties?: string[];
+    extra?: string;
     type: 'student' | 'teacher';
 }
+
 
 interface ManagementModuleProps {
     title: string;
@@ -40,20 +44,10 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
     const router = useRouter();
     const colorScheme = useColorScheme() ?? 'light';
     const colors = Colors[colorScheme as keyof typeof Colors];
-    const { courses } = useInstitution();
+    const { courses, students, teachers, addStudent, addTeacher } = useInstitution();
 
     const [searchQuery, setSearchQuery] = useState('');
     const [modalVisible, setModalVisible] = useState(false);
-    const [entities, setEntities] = useState<Entity[]>([
-        {
-            id: '1',
-            firstName: type === 'student' ? 'Juan' : 'Carlos',
-            lastName: type === 'student' ? 'Pérez' : 'Ruíz',
-            phone: '999123456',
-            specialties: type === 'student' ? undefined : ['Matemáticas Avanzadas'],
-            type
-        },
-    ]);
 
     const [formData, setFormData] = useState({
         firstName: '',
@@ -62,35 +56,52 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
         selectedSpecialties: [] as string[]
     });
 
-    const handleToggleSpecialty = (name: string) => {
+    const handleAddSpecialty = (name: string) => {
+        if (name && !formData.selectedSpecialties.includes(name)) {
+            setFormData(prev => ({
+                ...prev,
+                selectedSpecialties: [...prev.selectedSpecialties, name]
+            }));
+        }
+    };
+
+    const handleRemoveSpecialty = (name: string) => {
         setFormData(prev => ({
             ...prev,
-            selectedSpecialties: prev.selectedSpecialties.includes(name)
-                ? prev.selectedSpecialties.filter(s => s !== name)
-                : [...prev.selectedSpecialties, name]
+            selectedSpecialties: prev.selectedSpecialties.filter(s => s !== name)
         }));
     };
 
-    const filteredEntities = entities.filter(item =>
+
+    const currentEntities = type === 'teacher' ? teachers : students;
+
+    const filteredEntities = currentEntities.filter(item =>
         `${item.firstName} ${item.lastName}`.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.phone.includes(searchQuery)
     );
 
     const handleAdd = () => {
         if (formData.firstName && formData.lastName && formData.phone) {
-            const newEntity: Entity = {
+            const newEntity: any = {
                 id: Date.now().toString(),
                 firstName: formData.firstName,
                 lastName: formData.lastName,
                 phone: formData.phone,
-                specialties: type === 'teacher' ? formData.selectedSpecialties : undefined,
                 type
             };
-            setEntities([newEntity, ...entities]);
+
+            if (type === 'teacher') {
+                newEntity.extra = formData.selectedSpecialties.join(', ');
+                addTeacher(newEntity);
+            } else {
+                addStudent(newEntity);
+            }
+
             setFormData({ firstName: '', lastName: '', phone: '', selectedSpecialties: [] });
             setModalVisible(false);
         }
     };
+
 
     const renderItem = ({ item }: { item: Entity }) => (
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -103,15 +114,16 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
                     <Phone size={14} color={colors.icon} />
                     <Text style={[styles.cardSub, { color: colors.icon, marginLeft: 4 }]}>{item.phone}</Text>
                 </View>
-                {item.specialties && item.specialties.length > 0 && (
+                {item.extra && item.extra.length > 0 && (
                     <View style={styles.specialtyTags}>
-                        {item.specialties.map((s, idx) => (
+                        {item.extra.split(', ').map((s, idx) => (
                             <View key={idx} style={[styles.miniBadge, { backgroundColor: colors.primary + '10' }]}>
                                 <Text style={[styles.miniBadgeText, { color: colors.primary }]}>{s}</Text>
                             </View>
                         ))}
                     </View>
                 )}
+
             </View>
         </View>
     );
@@ -225,31 +237,43 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
                             {type === 'teacher' && (
                                 <View style={styles.formGroup}>
                                     <Text style={[styles.label, { color: colors.text }]}>Especialidades (Cursos)</Text>
-                                    <View style={styles.specialtiesSelector}>
-                                        {courses.length > 0 ? (
-                                            courses.map(course => (
-                                                <TouchableOpacity
-                                                    key={course.id}
-                                                    style={[
-                                                        styles.specialtyChip,
-                                                        { borderColor: colors.border },
-                                                        formData.selectedSpecialties.includes(course.name) && { backgroundColor: colors.primary, borderColor: colors.primary }
-                                                    ]}
-                                                    onPress={() => handleToggleSpecialty(course.name)}
-                                                >
-                                                    <Text style={[
-                                                        styles.specialtyChipText,
-                                                        { color: colors.text },
-                                                        formData.selectedSpecialties.includes(course.name) && { color: '#fff' }
-                                                    ]}>{course.name}</Text>
-                                                </TouchableOpacity>
-                                            ))
-                                        ) : (
-                                            <Text style={{ color: colors.icon, fontSize: 13 }}>No hay cursos creados para asignar.</Text>
-                                        )}
+                                    <View style={[styles.inputWrapper, { borderColor: colors.border, paddingHorizontal: 0 }]}>
+                                        <Picker
+                                            selectedValue=""
+                                            onValueChange={(itemValue) => handleAddSpecialty(itemValue)}
+                                            style={{ color: colors.text, width: '100%', height: 50 }}
+                                            dropdownIconColor={colors.primary}
+                                        >
+                                            <Picker.Item label="Selecciona para añadir..." value="" color={colors.icon} />
+                                            {courses.map(course => (
+                                                <Picker.Item key={course.id} label={course.name} value={course.name} />
+                                            ))}
+                                        </Picker>
                                     </View>
+
+                                    {/* Selected Specialties Display */}
+                                    {formData.selectedSpecialties.length > 0 && (
+                                        <View style={[styles.specialtiesSelector, { marginTop: 12 }]}>
+                                            {formData.selectedSpecialties.map((spec, idx) => (
+                                                <TouchableOpacity
+                                                    key={idx}
+                                                    onPress={() => handleRemoveSpecialty(spec)}
+                                                    style={[styles.specialtyChip, {
+                                                        backgroundColor: colors.primary,
+                                                        borderColor: colors.primary,
+                                                        flexDirection: 'row',
+                                                        alignItems: 'center'
+                                                    }]}
+                                                >
+                                                    <Text style={[styles.specialtyChipText, { color: '#fff', marginRight: 5 }]}>{spec}</Text>
+                                                    <X size={14} color="#fff" />
+                                                </TouchableOpacity>
+                                            ))}
+                                        </View>
+                                    )}
                                 </View>
                             )}
+
 
                             <TouchableOpacity
                                 style={[styles.submitButton, { backgroundColor: colors.primary }]}

@@ -2,7 +2,7 @@ import { Colors } from '@/constants/theme';
 import { Course, useInstitution } from '@/context/InstitutionContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Stack, useRouter } from 'expo-router';
-import { BookOpen, ChevronLeft, Clock, Plus, Search, X } from 'lucide-react-native';
+import { BookOpen, ChevronLeft, Clock, DollarSign, Plus, Search, X } from 'lucide-react-native';
 import React, { useState } from 'react';
 import {
     FlatList,
@@ -31,7 +31,8 @@ export default function CoursesScreen() {
     const [formData, setFormData] = useState({
         name: '',
         hours: '',
-        minutes: ''
+        minutes: '',
+        price: ''
     });
 
     const filteredCourses = courses.filter(item =>
@@ -44,10 +45,11 @@ export default function CoursesScreen() {
                 id: Date.now().toString(),
                 name: formData.name,
                 hours: formData.hours || '0',
-                minutes: formData.minutes || '0'
+                minutes: formData.minutes || '0',
+                price: formData.price || '0'
             };
             addCourse(newCourse);
-            setFormData({ name: '', hours: '', minutes: '' });
+            setFormData({ name: '', hours: '', minutes: '', price: '' });
             setModalVisible(false);
         }
     };
@@ -60,14 +62,23 @@ export default function CoursesScreen() {
             <View style={styles.cardContent}>
                 <Text style={[styles.cardName, { color: colors.text }]}>{item.name}</Text>
                 <View style={styles.detailsRow}>
-                    <Clock size={14} color={colors.icon} />
-                    <Text style={[styles.detailText, { color: colors.icon }]}>
-                        {item.hours}h {item.minutes}m
-                    </Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: 15 }}>
+                        <Clock size={14} color={colors.icon} />
+                        <Text style={[styles.detailText, { color: colors.icon }]}>
+                            {item.hours}h {item.minutes}m
+                        </Text>
+                    </View>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <DollarSign size={14} color={colors.primary} />
+                        <Text style={[styles.detailText, { color: colors.primary, fontWeight: 'bold' }]}>
+                            {item.price}
+                        </Text>
+                    </View>
                 </View>
             </View>
         </View>
     );
+
 
     return (
         <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}>
@@ -176,6 +187,21 @@ export default function CoursesScreen() {
                                             />
                                         </View>
                                     </View>
+                                </View>
+                            </View>
+
+                            <View style={styles.formGroup}>
+                                <Text style={[styles.label, { color: colors.text }]}>Costo Mensual</Text>
+                                <View style={[styles.inputWrapper, { borderColor: colors.border }]}>
+                                    <DollarSign size={18} color={colors.icon} />
+                                    <TextInput
+                                        style={[styles.input, { color: colors.text }]}
+                                        placeholder="Ej. 150"
+                                        placeholderTextColor={colors.icon}
+                                        keyboardType="numeric"
+                                        value={formData.price}
+                                        onChangeText={(v) => setFormData({ ...formData, price: v })}
+                                    />
                                 </View>
                             </View>
 
