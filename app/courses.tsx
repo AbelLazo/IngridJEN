@@ -3,7 +3,7 @@ import { Course, useInstitution } from '@/context/InstitutionContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Picker } from '@react-native-picker/picker';
 import { Stack, useRouter } from 'expo-router';
-import { BookOpen, ChevronLeft, Clock, DollarSign, Edit3, Plus, Search, Trash2, X } from 'lucide-react-native';
+import { BookOpen, ChevronLeft, Clock, Coins, Edit3, Plus, Search, Trash2, X } from 'lucide-react-native';
 import React, { useState } from 'react';
 import {
     Alert,
@@ -167,9 +167,9 @@ export default function CoursesScreen() {
                                 </Text>
                             </View>
                             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                <DollarSign size={14} color={colors.primary} />
+                                <Coins size={14} color={colors.primary} />
                                 <Text style={[styles.detailText, { color: colors.primary, fontWeight: 'bold' }]}>
-                                    {item.price}
+                                    S/ {item.price}
                                 </Text>
                             </View>
                         </View>
@@ -323,7 +323,7 @@ export default function CoursesScreen() {
                             <View style={styles.formGroup}>
                                 <Text style={[styles.label, { color: colors.text }]}>Costo Mensual</Text>
                                 <View style={[styles.inputWrapper, { borderColor: colors.border }]}>
-                                    <DollarSign size={18} color={colors.icon} />
+                                    <Coins size={18} color={colors.icon} />
                                     <TextInput
                                         style={[styles.input, { color: colors.text }]}
                                         placeholder="Ej. 150"

@@ -39,6 +39,7 @@ interface Entity {
     lastName: string;
     phone: string;
     extra?: string;
+    status: 'active' | 'inactive';
     type: 'student' | 'teacher';
 }
 
@@ -55,7 +56,7 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
     const router = useRouter();
     const colorScheme = useColorScheme() ?? 'light';
     const colors = Colors[colorScheme as keyof typeof Colors];
-    const { courses, students, teachers, addStudent, addTeacher, updateStudent, updateTeacher, removeStudent, removeTeacher } = useInstitution();
+    const { courses, students, teachers, addStudent, addTeacher, updateStudent, updateTeacher, removeStudent, removeTeacher, academicCycles, currentCycleId, setCurrentCycleId, enrollments, classes } = useInstitution();
     const isDraggingGlobal = useSharedValue(0); // 0 = not dragging, 1 = dragging
 
     const [searchQuery, setSearchQuery] = useState('');
@@ -66,11 +67,12 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
         firstName: '',
         lastName: '',
         phone: '',
+        status: 'active' as 'active' | 'inactive',
         selectedSpecialties: [] as string[]
     });
 
     const resetForm = () => {
-        setFormData({ firstName: '', lastName: '', phone: '', selectedSpecialties: [] });
+        setFormData({ firstName: '', lastName: '', phone: '', status: 'active', selectedSpecialties: [] });
         setEditingEntityId(null);
     };
 
@@ -93,10 +95,20 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
 
     const currentEntities = type === 'teacher' ? teachers : students;
 
-    const filteredEntities = currentEntities.filter(item =>
-        `${item.firstName} ${item.lastName}`.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.phone.includes(searchQuery)
-    );
+    const filteredEntities = currentEntities.filter(item => {
+        const matchesSearch = `${item.firstName} ${item.lastName}`.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            item.phone.includes(searchQuery);
+
+        // Logic to show/prioritize active or enrolled
+        return matchesSearch;
+    }).sort((a, b) => {
+        // Enrolled in current cycle first
+        const isAEnrolled = type === 'student' && enrollments.some(e => e.studentId === a.id && classes.find(c => c.id === e.classId)?.cycleId === currentCycleId);
+        const isBEnrolled = type === 'student' && enrollments.some(e => e.studentId === b.id && classes.find(c => c.id === e.classId)?.cycleId === currentCycleId);
+        if (isAEnrolled && !isBEnrolled) return -1;
+        if (!isAEnrolled && isBEnrolled) return 1;
+        return 0;
+    });
 
     const handleDelete = (item: Entity) => {
         Alert.alert(
@@ -170,10 +182,19 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
                         <Text style={[styles.avatarText, { color: colors.primary }]}>{item.firstName.charAt(0)}</Text>
                     </View>
                     <View style={styles.cardContent}>
-                        <Text style={[styles.cardName, { color: colors.text }]}>{item.firstName} {item.lastName}</Text>
+                        <Text style={[
+                            styles.cardName,
+                            { color: colors.text },
+                            item.status === 'inactive' && { color: colors.icon, textDecorationLine: 'line-through' as any }
+                        ]}>
+                            {item.firstName} {item.lastName}
+                        </Text>
                         <View style={styles.cardInfoRow}>
                             <Phone size={14} color={colors.icon} />
                             <Text style={[styles.cardSub, { color: colors.icon, marginLeft: 4 }]}>{item.phone}</Text>
+                            {item.status === 'inactive' && (
+                                <Text style={{ fontSize: 10, color: '#FF4444', marginLeft: 10, fontWeight: 'bold' }}>(Inactivo)</Text>
+                            )}
                         </View>
                         {item.extra && item.extra.length > 0 && (
                             <View style={styles.specialtyTags}>
@@ -203,6 +224,7 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
                 firstName: formData.firstName,
                 lastName: formData.lastName,
                 phone: formData.phone,
+                status: formData.status,
                 type
             };
 
@@ -231,6 +253,7 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
             firstName: item.firstName,
             lastName: item.lastName,
             phone: item.phone,
+            status: item.status || 'active',
             selectedSpecialties: item.extra ? item.extra.split(', ') : []
         });
         setEditingEntityId(item.id);
@@ -276,12 +299,12 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
                 </TouchableOpacity>
             </View>
 
-            {/* Search Bar */}
-            <View style={[styles.searchContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            {/* Search Bar - Principal focus for simple management */}
+            <View style={[styles.searchContainer, { backgroundColor: colors.card, borderColor: colors.border, marginTop: 10 }]}>
                 <Search color={colors.icon} size={20} />
                 <TextInput
                     style={[styles.searchInput, { color: colors.text }]}
-                    placeholder="Buscar por nombre o celular..."
+                    placeholder={`Buscar ${title.toLowerCase()}...`}
                     placeholderTextColor={colors.icon}
                     value={searchQuery}
                     onChangeText={setSearchQuery}
@@ -352,18 +375,21 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
                             </View>
 
                             <View style={styles.formGroup}>
-                                <Text style={[styles.label, { color: colors.text }]}>Teléfono</Text>
-                                <View style={[styles.inputWrapper, { borderColor: colors.border }]}>
-                                    <Phone size={18} color={colors.icon} />
-                                    <TextInput
-                                        style={[styles.input, { color: colors.text }]}
-                                        placeholder="Número de contacto"
-                                        placeholderTextColor={colors.icon}
-                                        keyboardType="phone-pad"
-                                        value={formData.phone}
-                                        onChangeText={(v) => setFormData({ ...formData, phone: v })}
-                                    />
+                                <Text style={[styles.label, { color: colors.text }]}>Estado en la Institución</Text>
+                                <View style={[styles.inputWrapper, { borderColor: colors.border, paddingHorizontal: 0 }]}>
+                                    <Picker
+                                        selectedValue={formData.status}
+                                        onValueChange={(v) => setFormData({ ...formData, status: v })}
+                                        style={{ color: colors.text, width: '100%', height: 50 }}
+                                        dropdownIconColor={colors.primary}
+                                    >
+                                        <Picker.Item label="Habilitado (Activo)" value="active" />
+                                        <Picker.Item label="Inhabilitado (Inactivo)" value="inactive" />
+                                    </Picker>
                                 </View>
+                                <Text style={{ fontSize: 11, color: colors.icon, marginTop: 4, marginLeft: 4 }}>
+                                    * Solo alumnos habilitados pueden matricularse en nuevos cursos.
+                                </Text>
                             </View>
 
                             {type === 'teacher' && (
@@ -431,7 +457,6 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
         </View>
     );
 }
-
 const styles = StyleSheet.create({
     container: {
         flex: 1,
@@ -665,5 +690,34 @@ const styles = StyleSheet.create({
         paddingVertical: 4,
         borderRadius: 10,
         overflow: 'hidden'
+    },
+    cycleSelectorWrapper: { paddingVertical: 10 },
+    cycleScrollContent: { paddingHorizontal: 20, gap: 8 },
+    cycleChip: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 14,
+        paddingVertical: 8,
+        borderRadius: 20,
+        borderWidth: 1,
+        marginRight: 4
+    },
+    cycleChipLabel: { marginLeft: 6, fontWeight: 'bold', fontSize: 12 },
+    statusBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 8
+    },
+    statusDot: {
+        width: 6,
+        height: 6,
+        borderRadius: 3,
+        marginRight: 6
+    },
+    statusBadgeText: {
+        fontSize: 10,
+        fontWeight: 'bold'
     }
 });

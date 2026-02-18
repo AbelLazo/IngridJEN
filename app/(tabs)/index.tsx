@@ -1,9 +1,10 @@
 import DashboardGrid from '@/components/DashboardGrid';
 import { Colors } from '@/constants/theme';
+import { useInstitution } from '@/context/InstitutionContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Bell, Search } from 'lucide-react-native';
-import React from 'react';
+import { Bell, Calendar, Search } from 'lucide-react-native';
+import React, { useMemo } from 'react';
 import { ScrollView, StatusBar, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -12,38 +13,68 @@ export default function DashboardScreen() {
   const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme as keyof typeof Colors];
+  const { academicCycles, currentCycleId, enrollments, classes, students } = useInstitution();
 
   const isTablet = width > 600;
+
+  // Dynamic calculations based on cycle
+  const activeCycle = useMemo(() =>
+    academicCycles.find(c => c.id === currentCycleId),
+    [academicCycles, currentCycleId]
+  );
+
+  const activeStudentsCount = useMemo(() => {
+    // Unique students enrolled in any class of the current cycle
+    const enrolledIds = new Set(
+      enrollments
+        .filter(e => {
+          const cls = classes.find(c => c.id === e.classId);
+          return cls && cls.cycleId === currentCycleId;
+        })
+        .map(e => e.studentId)
+    );
+    return enrolledIds.size;
+  }, [enrollments, classes, currentCycleId]);
+
+  const classesTodayCount = useMemo(() => {
+    const days = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+    const today = days[new Date().getDay()];
+
+    return classes.filter(c =>
+      c.cycleId === currentCycleId &&
+      c.schedules.some(s => s.day === today)
+    ).length;
+  }, [classes, currentCycleId]);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} translucent backgroundColor="transparent" />
 
-      {/* 
-        Fixed Safe Area Spacer: 
-        This keeps the status bar area (clock, battery) static and prevents content 
-        from moving under it or pushing it differently during scroll.
-      */}
       <View style={{ height: insets.top, backgroundColor: colorScheme === 'dark' ? '#1e293b' : '#6366f1' }} />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        stickyHeaderIndices={[0]} // Optional: can make the greeting sticky if desired, but here we use it for a static top look
         contentContainerStyle={[
           styles.scrollContent,
           { paddingBottom: insets.bottom + 80 }
         ]}
       >
-        <View>
-          {/* Header Section */}
+        <View style={{ overflow: 'hidden' }}>
           <LinearGradient
             colors={colorScheme === 'dark' ? ['#1e293b', '#0f172a'] : ['#6366f1', '#4f46e5']}
             style={[styles.header, isTablet && styles.headerTablet]}
           >
             <View style={styles.headerTop}>
-              <View>
+              <View style={{ flex: 1 }}>
                 <Text style={[styles.greeting, { fontSize: isTablet ? 32 : 24 }]}>Hola, Admin 👋</Text>
-                <Text style={[styles.subGreeting, { fontSize: isTablet ? 18 : 14 }]}>Bienvenido a IngridJEN</Text>
+
+                {/* Cycle Indicator Badge */}
+                <View style={[styles.cycleBadge, { backgroundColor: 'rgba(255, 255, 255, 0.15)' }]}>
+                  <Calendar size={14} color="#fff" />
+                  <Text style={styles.cycleBadgeText}>
+                    Ciclo Activo: {activeCycle?.name || 'Cargando...'}
+                  </Text>
+                </View>
               </View>
               <View style={styles.headerIcons}>
                 <View style={styles.iconCircle}>
@@ -56,16 +87,16 @@ export default function DashboardScreen() {
               </View>
             </View>
 
-            {/* Quick Summary Card */}
+            {/* Quick Summary Card - Now Dynamic */}
             <View style={[styles.summaryCard, isTablet && styles.summaryCardTablet]}>
               <View style={styles.summaryItem}>
-                <Text style={[styles.summaryLabel, { fontSize: isTablet ? 14 : 12 }]}>Estudiantes Activos</Text>
-                <Text style={[styles.summaryValue, { fontSize: isTablet ? 28 : 20 }]}>1,284</Text>
+                <Text style={[styles.summaryLabel, { fontSize: isTablet ? 14 : 12 }]}>Estudiantes en {activeCycle?.name.split(' ')[0]}</Text>
+                <Text style={[styles.summaryValue, { fontSize: isTablet ? 28 : 22 }]}>{activeStudentsCount}</Text>
               </View>
               <View style={styles.summaryDivider} />
               <View style={styles.summaryItem}>
-                <Text style={[styles.summaryLabel, { fontSize: isTablet ? 14 : 12 }]}>Cursos Hoy</Text>
-                <Text style={[styles.summaryValue, { fontSize: isTablet ? 28 : 20 }]}>12</Text>
+                <Text style={[styles.summaryLabel, { fontSize: isTablet ? 14 : 12 }]}>Cursos para Hoy</Text>
+                <Text style={[styles.summaryValue, { fontSize: isTablet ? 28 : 22 }]}>{classesTodayCount}</Text>
               </View>
             </View>
           </LinearGradient>
@@ -196,5 +227,20 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     marginTop: 8,
+  },
+  cycleBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    marginTop: 10,
+  },
+  cycleBadgeText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '600',
+    marginLeft: 6,
   },
 });

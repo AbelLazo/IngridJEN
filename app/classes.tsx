@@ -4,14 +4,15 @@ import { Picker } from '@react-native-picker/picker';
 import { Stack, useRouter } from 'expo-router';
 import {
     BookOpen,
+    Calendar,
     CalendarDays,
     ChevronLeft,
     Clock,
     Edit3,
     List,
-    Minus,
+    Minus, // Added Phone icon
     Plus,
-    Search,
+    Search, // Added ShieldCheck icon
     Trash2,
     User,
     UserPlus,
@@ -59,6 +60,7 @@ interface ClassItem {
     duration: string;
     capacity: string;
     color: string;
+    cycleId: string;
 }
 
 import { Student, useInstitution } from '@/context/InstitutionContext';
@@ -68,7 +70,7 @@ export default function ClassesScreen() {
     const router = useRouter();
     const colorScheme = useColorScheme() ?? 'light';
     const colors = Colors[colorScheme as keyof typeof Colors];
-    const { courses, teachers, students, classes, addClass, updateClass, removeClass, addEnrollment, enrollments, removeEnrollment } = useInstitution();
+    const { courses, teachers, students, classes, addClass, updateClass, removeClass, addEnrollment, updateEnrollment, enrollments, removeEnrollment, academicCycles, currentCycleId, setCurrentCycleId } = useInstitution();
     const isDraggingGlobal = useSharedValue(0);
 
     const [viewMode, setViewMode] = useState<'list' | 'schedule'>('list');
@@ -98,15 +100,18 @@ export default function ClassesScreen() {
         minutes: '',
         capacity: '20',
         color: CLASS_COLORS[0],
+        cycleId: currentCycleId,
         schedules: [{ day: '', startHours: '08', startMinutes: '00' }]
     });
 
     const [enrolledInSelected, setEnrolledInSelected] = useState<string[]>([]);
 
-    const filteredClasses = classes.filter(item =>
-        item.courseName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.teacherName.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filteredClasses = classes.filter(item => {
+        const matchesSearch = item.courseName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            item.teacherName.toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesCycle = item.cycleId === currentCycleId;
+        return matchesSearch && matchesCycle;
+    });
 
     const calculateEndTime = (startTime: string, duration: string) => {
         const [startHours, startMinutes] = startTime.split(':').map(Number);
@@ -157,6 +162,7 @@ export default function ClassesScreen() {
             minutes: course?.minutes || '',
             capacity: cls.capacity || '20',
             color: cls.color || CLASS_COLORS[0],
+            cycleId: cls.cycleId || currentCycleId,
             schedules: cls.schedules.map(s => {
                 const [h, m] = s.startTime.split(':');
                 return { day: s.day, startHours: h, startMinutes: m };
@@ -190,10 +196,10 @@ export default function ClassesScreen() {
 
     const openEnrollment = (cls: ClassItem) => {
         setSelectedClassId(cls.id);
-        const currentEnrollments = enrollments
-            .filter(e => e.classId === cls.id)
+        const currentActiveEnrollments = enrollments
+            .filter(e => e.classId === cls.id && e.status === 'active') // Filter by active status
             .map(e => e.studentId);
-        setEnrolledInSelected(currentEnrollments);
+        setEnrolledInSelected(currentActiveEnrollments);
         setEnrollModalVisible(true);
     };
 
@@ -204,6 +210,10 @@ export default function ClassesScreen() {
         const studentName = `${student.firstName} ${student.lastName}`;
 
         if (!isEnrolled) {
+            // Check if there was a previous withdrawn enrollment to "reactivate" it or just add new
+            // For simplicity and cleaner history, we'll try to reactivate or just add new
+            const withdrawnEnrollment = enrollments.find(e => e.studentId === student.id && e.classId === selectedClassId && e.status === 'withdrawn');
+
             Alert.alert(
                 "Confirmar Matrícula",
                 `¿Deseas matricular a "${studentName}" en la clase de "${className}"?`,
@@ -213,11 +223,22 @@ export default function ClassesScreen() {
                         text: "Matricular",
                         onPress: () => {
                             if (selectedClassId) {
-                                addEnrollment({
-                                    id: `${student.id}-${selectedClassId}-${Date.now()}`,
-                                    studentId: student.id,
-                                    classId: selectedClassId
-                                });
+                                if (withdrawnEnrollment) {
+                                    updateEnrollment({
+                                        ...withdrawnEnrollment,
+                                        status: 'active',
+                                        date: new Date().toISOString().split('T')[0],
+                                        withdrawalDate: undefined
+                                    });
+                                } else {
+                                    addEnrollment({
+                                        id: `${student.id}-${selectedClassId}-${Date.now()}`,
+                                        studentId: student.id,
+                                        classId: selectedClassId,
+                                        date: new Date().toISOString().split('T')[0],
+                                        status: 'active'
+                                    });
+                                }
                                 setEnrolledInSelected(prev => [...prev, student.id]);
                             }
                         }
@@ -226,19 +247,23 @@ export default function ClassesScreen() {
             );
         } else {
             Alert.alert(
-                "Quitar Matrícula",
-                `¿Deseas retirar a "${studentName}" de la clase de "${className}"?`,
+                "Retirar del Curso",
+                `¿Deseas retirar a "${studentName}" de su curso vigente? Se conservarán sus registros de pagos históricos.`,
                 [
                     { text: "Cancelar", style: "cancel" },
                     {
-                        text: "Retirar",
+                        text: "Retirar Alumno",
                         style: "destructive",
                         onPress: () => {
-                            const enrollmentToRemove = enrollments.find(
-                                e => e.classId === selectedClassId && e.studentId === student.id
+                            const enrollmentToWithdraw = enrollments.find(
+                                e => e.classId === selectedClassId && e.studentId === student.id && e.status !== 'withdrawn'
                             );
-                            if (enrollmentToRemove) {
-                                removeEnrollment(enrollmentToRemove.id);
+                            if (enrollmentToWithdraw) {
+                                updateEnrollment({
+                                    ...enrollmentToWithdraw,
+                                    status: 'withdrawn',
+                                    withdrawalDate: new Date().toISOString().split('T')[0]
+                                });
                                 setEnrolledInSelected(prev => prev.filter(id => id !== student.id));
                             }
                         }
@@ -272,13 +297,14 @@ export default function ClassesScreen() {
                 })),
                 duration: `${formData.hours || '0'}h ${formData.minutes || '0'}m`,
                 capacity: formData.capacity || '20',
-                color: formData.color
+                color: formData.color,
+                cycleId: formData.cycleId
             };
 
             if (editingClassId) {
-                updateClass(classData as any);
+                updateClass(classData);
             } else {
-                addClass(classData as any);
+                addClass(classData);
             }
 
             resetForm();
@@ -424,6 +450,7 @@ export default function ClassesScreen() {
             minutes: '',
             capacity: '20',
             color: CLASS_COLORS[0],
+            cycleId: currentCycleId,
             schedules: [{ day: '', startHours: '08', startMinutes: '00' }]
         });
         setEditingClassId(null);
@@ -443,7 +470,7 @@ export default function ClassesScreen() {
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scheduleScroll}>
                 {days.map(day => {
                     const dayClasses = classes
-                        .filter(c => c.schedules.some(s => s.day === day))
+                        .filter(c => c.cycleId === currentCycleId && c.schedules.some(s => s.day === day))
                         .map(c => {
                             // Since a class can have multiple schedules on the same day (rare but possible), 
                             // we'll handle each schedule entry for this day
@@ -549,6 +576,38 @@ export default function ClassesScreen() {
                 </TouchableOpacity>
             </View>
 
+            {/* Global Cycle Selector - Visible in both List and Schedule */}
+            <View style={styles.cycleSelectorWrapper}>
+                <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.cycleScrollContent}
+                >
+                    {academicCycles.map(cycle => (
+                        <TouchableOpacity
+                            key={cycle.id}
+                            onPress={() => setCurrentCycleId(cycle.id)}
+                            style={[
+                                styles.cycleChip,
+                                { backgroundColor: colors.card, borderColor: colors.border },
+                                currentCycleId === cycle.id && { backgroundColor: colors.primary, borderColor: colors.primary }
+                            ]}
+                        >
+                            <Calendar
+                                size={14}
+                                color={currentCycleId === cycle.id ? '#fff' : colors.icon}
+                            />
+                            <Text style={[
+                                styles.cycleChipLabel,
+                                { color: currentCycleId === cycle.id ? '#fff' : colors.icon }
+                            ]}>
+                                {cycle.name}
+                            </Text>
+                        </TouchableOpacity>
+                    ))}
+                </ScrollView>
+            </View>
+
             {viewMode === 'list' ? (
                 <>
                     <View style={[styles.searchBar, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -598,6 +657,22 @@ export default function ClassesScreen() {
                                         <Picker.Item label="Selecciona una materia..." value="" color="#666" />
                                         {courses.map(course => (
                                             <Picker.Item key={course.id} label={course.name} value={course.id} color="#000000" />
+                                        ))}
+                                    </Picker>
+                                </View>
+                            </View>
+
+                            <View style={styles.formGroup}>
+                                <Text style={[styles.label, { color: colors.text }]}>Periodo Académico</Text>
+                                <View style={[styles.inputWrapper, { borderColor: colors.border, paddingHorizontal: 0 }]}>
+                                    <Picker
+                                        selectedValue={formData.cycleId}
+                                        onValueChange={(itemValue) => setFormData({ ...formData, cycleId: itemValue })}
+                                        style={{ color: colors.text, width: '100%', height: 50 }}
+                                        dropdownIconColor={colors.primary}
+                                    >
+                                        {academicCycles.map(cycle => (
+                                            <Picker.Item key={cycle.id} label={cycle.name} value={cycle.id} color="#000000" />
                                         ))}
                                     </Picker>
                                 </View>
@@ -786,7 +861,7 @@ export default function ClassesScreen() {
                             <View style={styles.formGroup}>
                                 <Text style={[styles.label, { color: colors.text, marginBottom: 15 }]}>Lista de Estudiantes</Text>
                                 <View style={styles.studentList}>
-                                    {students.map(student => {
+                                    {students.filter(s => s.status === 'active').map(student => {
                                         const isSelected = enrolledInSelected.includes(student.id);
                                         return (
                                             <View
@@ -1005,6 +1080,28 @@ const styles = StyleSheet.create({
         paddingVertical: 4,
         borderRadius: 10,
         overflow: 'hidden'
+    },
+    cycleSelectorWrapper: {
+        paddingVertical: 10,
+        marginBottom: 5
+    },
+    cycleScrollContent: {
+        paddingHorizontal: 20,
+        gap: 8
+    },
+    cycleChip: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 14,
+        paddingVertical: 8,
+        borderRadius: 20,
+        borderWidth: 1,
+        marginRight: 4
+    },
+    cycleChipLabel: {
+        marginLeft: 6,
+        fontWeight: 'bold',
+        fontSize: 12
     }
 });
 
