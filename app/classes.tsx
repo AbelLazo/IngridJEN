@@ -688,6 +688,16 @@ export default function ClassesScreen() {
     };
 
     const handleDeleteClass = (item: ClassItem) => {
+        const enrolledCount = enrollments.filter(e => e.classId === item.id && e.status === 'active').length;
+
+        if (enrolledCount > 0) {
+            Alert.alert(
+                "No se puede eliminar",
+                `La clase de ${item.courseName} no puede ser eliminada porque tiene ${enrolledCount} ${enrolledCount === 1 ? 'alumno activo' : 'alumnos activos'}. Por favor, retire o mueva a los alumnos primero.`
+            );
+            return;
+        }
+
         Alert.alert(
             "Eliminar Clase",
             `¿Estás seguro de que deseas eliminar la clase de ${item.courseName} con ${item.teacherName}?`,
