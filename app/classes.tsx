@@ -357,6 +357,12 @@ export default function ClassesScreen() {
         const targetCapacity = parseInt(targetClass.capacity) || 20;
         const targetEnrolledCount = enrollments.filter(e => e.classId === targetMoveClassId && e.status === 'active').length;
 
+        const existingTargetEnrollment = enrollments.find(e => e.classId === targetMoveClassId && e.studentId === moveStudentId && e.status === 'active');
+        if (existingTargetEnrollment) {
+            Alert.alert("Error", "Este alumno ya está inscrito activamente en la clase de destino seleccionada.");
+            return;
+        }
+
         const executeMove = () => {
             // Check overlaps in target class
             const studentActiveClasses = enrollments
@@ -900,7 +906,7 @@ export default function ClassesScreen() {
                             <Text style={[styles.dayTitle, { color: colors.text }]}>{day}</Text>
                             {dayClasses.length > 0 ? (
                                 dayClasses.map((c: any) => {
-                                    const studentCount = enrollments.filter(e => e.classId === c.id).length;
+                                    const studentCount = enrollments.filter(e => e.classId === c.id && e.status === 'active').length;
                                     return (
                                         <View
                                             key={`${c.id}-${c.currentStartTime}`}
