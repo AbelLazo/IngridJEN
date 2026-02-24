@@ -677,7 +677,7 @@ export default function ClassesScreen() {
                 duration: `${formData.hours || '0'}h ${formData.minutes || '0'}m`,
                 capacity: formData.capacity || '20',
                 color: formData.color,
-                cycleId: formData.cycleId
+                cycleId: currentCycleId || formData.cycleId // Forzar ciclo abierto en el Header
             };
 
             if (editingClassId) {
