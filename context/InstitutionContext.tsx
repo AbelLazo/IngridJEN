@@ -1,4 +1,17 @@
-import React, { createContext, ReactNode, useContext, useState } from 'react';
+import { db } from '@/lib/firebaseConfig';
+import {
+    addDoc,
+    collection,
+    deleteDoc,
+    deleteField,
+    doc,
+    onSnapshot,
+    orderBy,
+    query,
+    updateDoc
+} from 'firebase/firestore';
+import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
+import { Alert } from 'react-native';
 
 export interface Course {
     id: string;
@@ -14,6 +27,7 @@ export interface Student {
     lastName: string;
     phone: string;
     status: 'active' | 'inactive';
+    activeYear?: string | null; // e.g. "2026" or null
     type: 'student';
 }
 
@@ -41,16 +55,26 @@ export interface ClassItem {
     duration: string;
     capacity: string;
     color: string;
-    cycleId: string; // Link class to a specific cycle
+    cycleId: string;
+    mergedToClassId?: string;
 }
 
-/** 
- * NEW: Academic Cycle defines the "envelope" of the period (Summer vs Annual)
- */
+export interface EventDiscount {
+    id: string;
+    name: string;
+    startDate: string;
+    endDate: string;
+    targetMonthYear: string; // Format YYYY-MM
+    discountPercentage: number;
+}
+
 export interface AcademicCycle {
     id: string;
-    name: string; // e.g., "Verano 2024", "Anual 2024"
-    months: string[]; // e.g., ["2024-01", "2024-02"] for Summer
+    name: string;
+    months: string[];
+    startDate: string;
+    endDate: string;
+    events?: EventDiscount[];
 }
 
 export interface Enrollment {
@@ -60,27 +84,28 @@ export interface Enrollment {
     date: string;
     status?: 'active' | 'withdrawn';
     withdrawalDate?: string;
+    isImported?: boolean;
+    originalImportedClassId?: string;
 }
 
-/**
- * NEW: Pre-calculated Installment
- */
 export interface Installment {
     id: string;
     enrollmentId: string;
     studentId: string;
-    monthYear: string; // e.g., "2024-01"
+    monthYear: string;
     amount: string;
     isPaid: boolean;
     paymentId?: string;
     dueDate: string;
+    originalAmount?: string;
+    notes?: string;
 }
 
 export interface Payment {
     id: string;
     studentId: string;
     enrollmentId: string;
-    installmentId?: string; // Link to the specific pre-calculated installment
+    installmentId?: string;
     amount: string;
     date: string;
     monthYear: string;
@@ -109,170 +134,395 @@ interface InstitutionContextType {
     removeEnrollment: (id: string) => void;
     payments: Payment[];
     addPayment: (payment: Payment, installmentId?: string) => void;
-    // Cycle Management
     academicCycles: AcademicCycle[];
     currentCycleId: string;
     setCurrentCycleId: (id: string) => void;
-    // Installment Management
+    addCycle: (cycle: AcademicCycle) => void;
+    updateCycle: (cycle: AcademicCycle) => void;
+    deleteCycle: (id: string) => void;
     installments: Installment[];
 }
 
 const InstitutionContext = createContext<InstitutionContextType | undefined>(undefined);
 
 export function InstitutionProvider({ children }: { children: ReactNode }) {
-    // Dynamic Cycle Generation: Summer (Jan-Feb) and School (Mar-Dec)
-    const generateStandardCycles = (year: number) => [
-        {
-            id: `verano-${year}`,
-            name: `Verano ${year}`,
-            months: [`${year}-01`, `${year}-02`]
-        },
-        {
-            id: `anual-${year}`,
-            name: `Anual ${year}`,
-            months: [`${year}-03`, `${year}-04`, `${year}-05`, `${year}-06`, `${year}-07`, `${year}-08`, `${year}-09`, `${year}-10`, `${year}-11`, `${year}-12`]
-        }
-    ];
+    const [academicCycles, setAcademicCycles] = useState<AcademicCycle[]>([]);
 
-    const [academicCycles] = useState<AcademicCycle[]>(() => {
-        const currentYear = new Date().getFullYear();
-        return [
-            ...generateStandardCycles(currentYear),
-            ...generateStandardCycles(currentYear + 1)
-        ];
-    });
+    // Default current cycle ID (can be updated later based on logic or user preference)
+    const [currentCycleId, setCurrentCycleId] = useState<string>('');
 
-    const [currentCycleId, setCurrentCycleId] = useState<string>(() => {
-        const currentYear = new Date().getFullYear();
-        return `anual-${currentYear}`;
-    });
-
-    // Auto-detect current cycle based on today's date
-    React.useEffect(() => {
-        const today = new Date();
-        const currentMonthStr = `${today.getFullYear()}-${(today.getMonth() + 1).toString().padStart(2, '0')}`;
-
-        const detectedCycle = academicCycles.find(cycle =>
-            cycle.months.includes(currentMonthStr)
-        );
-
-        if (detectedCycle) {
-            setCurrentCycleId(detectedCycle.id);
-        }
-    }, [academicCycles]);
-
-    const [courses, setCourses] = useState<Course[]>([
-        { id: '1', name: 'Matemáticas Avanzadas', hours: '2', minutes: '0', price: '150' },
-        { id: '2', name: 'Física Cuántica', hours: '1', minutes: '30', price: '200' },
-    ]);
-
-    const [students, setStudents] = useState<Student[]>([
-        { id: 's1', firstName: 'Juan', lastName: 'Pérez', phone: '999111222', status: 'active', type: 'student' },
-        { id: 's2', firstName: 'Maria', lastName: 'Garcia', phone: '999777888', status: 'active', type: 'student' },
-    ]);
-
-    const [teachers, setTeachers] = useState<Teacher[]>([
-        { id: '1', firstName: 'Carlos', lastName: 'Ruíz', phone: '999111222', extra: 'Matemáticas Avanzadas', status: 'active', type: 'teacher' },
-        { id: '2', firstName: 'Ana', lastName: 'Belén', phone: '999333444', extra: 'Física Cuántica', status: 'active', type: 'teacher' },
-    ]);
-
-    const [classes, setClasses] = useState<ClassItem[]>([
-        {
-            id: 'c1',
-            courseId: '1',
-            courseName: 'Matemáticas Avanzadas',
-            teacherName: 'Carlos Ruíz',
-            schedules: [{ day: 'Lunes', startTime: '08:00' }],
-            duration: '2h 0m',
-            capacity: '20',
-            color: '#4C6EF5',
-            cycleId: 'anual-2026'
-        },
-    ]);
-
-    const [enrollments, setEnrollments] = useState<Enrollment[]>([
-        { id: 'e1', studentId: 's1', classId: 'c1', date: '2026-03-01', status: 'active' },
-        { id: 'e2', studentId: 's2', classId: 'c1', date: '2026-03-01', status: 'active' },
-    ]);
+    // Real-time states
+    const [courses, setCourses] = useState<Course[]>([]);
+    const [students, setStudents] = useState<Student[]>([]);
+    const [teachers, setTeachers] = useState<Teacher[]>([]);
+    const [classes, setClasses] = useState<ClassItem[]>([]);
+    const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
     const [installments, setInstallments] = useState<Installment[]>([]);
     const [payments, setPayments] = useState<Payment[]>([]);
 
-    // Automatically seed installments for initial enrollments
-    React.useEffect(() => {
-        if (installments.length === 0 && enrollments.length > 0) {
-            const initialInst: Installment[] = [];
-            enrollments.forEach(enrol => {
-                const cls = classes.find(c => c.id === enrol.classId);
-                const course = courses.find(co => co.id === cls?.courseId);
-                const cycle = academicCycles.find(cy => cy.id === cls?.cycleId);
-                if (cycle && course) {
-                    cycle.months.forEach(month => {
-                        initialInst.push({
-                            id: `${enrol.id}-${month}`,
-                            enrollmentId: enrol.id,
-                            studentId: enrol.studentId,
-                            monthYear: month,
-                            amount: course.price,
-                            isPaid: false,
-                            dueDate: `${month}-05`
-                        });
-                    });
-                }
-            });
-            setInstallments(initialInst);
-        }
+    // Subscribe to collections
+    useEffect(() => {
+        const unsubCycles = onSnapshot(query(collection(db, 'academicCycles'), orderBy('startDate', 'desc')), (shot) => {
+            const cycles = shot.docs.map(d => ({ id: d.id, ...d.data() } as AcademicCycle));
+            setAcademicCycles(cycles);
+            // Optionally set the first cycle as current if none is selected
+            if (cycles.length > 0 && !currentCycleId) {
+                setCurrentCycleId(cycles[0].id);
+            }
+        });
+        const unsubCourses = onSnapshot(collection(db, 'courses'), (shot) => {
+            setCourses(shot.docs.map(d => ({ id: d.id, ...d.data() } as Course)));
+        });
+        const unsubStudents = onSnapshot(query(collection(db, 'students'), orderBy('lastName')), (shot) => {
+            setStudents(shot.docs.map(d => ({ id: d.id, ...d.data() } as Student)));
+        });
+        const unsubTeachers = onSnapshot(collection(db, 'teachers'), (shot) => {
+            setTeachers(shot.docs.map(d => ({ id: d.id, ...d.data() } as Teacher)));
+        });
+        const unsubClasses = onSnapshot(collection(db, 'classes'), (shot) => {
+            setClasses(shot.docs.map(d => ({ id: d.id, ...d.data() } as ClassItem)));
+        });
+        const unsubEnrollments = onSnapshot(collection(db, 'enrollments'), (shot) => {
+            setEnrollments(shot.docs.map(d => ({ id: d.id, ...d.data() } as Enrollment)));
+        });
+        const unsubInstallments = onSnapshot(collection(db, 'installments'), (shot) => {
+            setInstallments(shot.docs.map(d => ({ id: d.id, ...d.data() } as Installment)));
+        });
+        const unsubPayments = onSnapshot(query(collection(db, 'payments'), orderBy('date', 'desc')), (shot) => {
+            setPayments(shot.docs.map(d => ({ id: d.id, ...d.data() } as Payment)));
+        });
+
+        return () => {
+            unsubCycles(); unsubCourses(); unsubStudents(); unsubTeachers();
+            unsubClasses(); unsubEnrollments(); unsubInstallments(); unsubPayments();
+        };
     }, []);
 
-    const addCourse = (course: Course) => setCourses(prev => [course, ...prev]);
-    const updateCourse = (updatedCourse: Course) => setCourses(prev => prev.map(c => c.id === updatedCourse.id ? updatedCourse : c));
-    const addStudent = (student: Student) => setStudents(prev => [student, ...prev]);
-    const updateStudent = (updatedStudent: Student) => setStudents(prev => prev.map(s => s.id === updatedStudent.id ? updatedStudent : s));
-    const addTeacher = (teacher: Teacher) => setTeachers(prev => [teacher, ...prev]);
-    const updateTeacher = (updatedTeacher: Teacher) => setTeachers(prev => prev.map(t => t.id === updatedTeacher.id ? updatedTeacher : t));
-    const addClass = (newItem: ClassItem) => setClasses(prev => [newItem, ...prev]);
-    const updateClass = (updatedItem: ClassItem) => setClasses(prev => prev.map(c => c.id === updatedItem.id ? updatedItem : c));
-    const removeClass = (id: string) => setClasses(prev => prev.filter(c => c.id !== id));
-    const removeStudent = (id: string) => setStudents(prev => prev.filter(s => s.id !== id));
-    const removeTeacher = (id: string) => setTeachers(prev => prev.filter(t => t.id !== id));
-    const removeCourse = (id: string) => setCourses(prev => prev.filter(c => c.id !== id));
 
-    // Updated Enrollment logic to generate Plan
-    const addEnrollment = (enrollment: Enrollment) => {
-        const cls = classes.find(c => c.id === enrollment.classId);
-        const course = courses.find(co => co.id === cls?.courseId);
-        const cycle = academicCycles.find(cy => cy.id === cls?.cycleId);
-
-        if (cycle && course) {
-            // Generate installments
-            const newInstallments: Installment[] = cycle.months.map((monthYear, idx) => ({
-                id: `${enrollment.id}-${monthYear}`,
-                enrollmentId: enrollment.id,
-                studentId: enrollment.studentId,
-                monthYear: monthYear,
-                amount: course.price,
-                isPaid: false,
-                dueDate: `${monthYear}-05` // Standard due date: 5th of each month
-            }));
-
-            setInstallments(prev => [...prev, ...newInstallments]);
+    // Helper functions for Firestore operations with Error Handling
+    const addCourse = async (course: Course) => {
+        try {
+            const { id, ...data } = course;
+            await addDoc(collection(db, 'courses'), data);
+        } catch (error: any) {
+            console.error('Error adding course:', error);
+            Alert.alert('Error', 'No se pudo guardar el curso: ' + error.message);
         }
-
-        setEnrollments(prev => [{ ...enrollment, status: 'active' }, ...prev]);
     };
 
-    const updateEnrollment = (updatedEnrollment: Enrollment) => setEnrollments(prev => prev.map(e => e.id === updatedEnrollment.id ? updatedEnrollment : e));
-    const removeEnrollment = (id: string) => {
-        setEnrollments(prev => prev.filter(e => e.id !== id));
-        setInstallments(prev => prev.filter(inst => inst.enrollmentId !== id));
+    const updateCourse = async (course: Course) => {
+        try {
+            const { id, ...data } = course;
+            await updateDoc(doc(db, 'courses', id), data);
+        } catch (error: any) {
+            console.error('Error updating course:', error);
+            Alert.alert('Error', 'No se pudo actualizar el curso: ' + error.message);
+        }
     };
 
-    const addPayment = (p: Payment, installmentId?: string) => {
-        if (installmentId) {
-            setInstallments(prev => prev.map(inst =>
-                inst.id === installmentId ? { ...inst, isPaid: true, paymentId: p.id } : inst
-            ));
+    const addStudent = async (student: Student) => {
+        try {
+            const { id, ...data } = student;
+            await addDoc(collection(db, 'students'), data);
+        } catch (error: any) {
+            console.error('Error adding student:', error);
+            Alert.alert('Error', 'No se pudo guardar el estudiante: ' + error.message);
         }
-        setPayments(prev => [p, ...prev]);
+    };
+
+    const updateStudent = async (student: Student) => {
+        try {
+            const { id, ...data } = student;
+            await updateDoc(doc(db, 'students', id), data);
+        } catch (error: any) {
+            console.error('Error updating student:', error);
+            Alert.alert('Error', 'No se pudo actualizar el estudiante: ' + error.message);
+        }
+    };
+
+    const addTeacher = async (teacher: Teacher) => {
+        try {
+            const { id, ...data } = teacher;
+            await addDoc(collection(db, 'teachers'), data);
+        } catch (error: any) {
+            console.error('Error adding teacher:', error);
+            Alert.alert('Error', 'No se pudo guardar el profesor: ' + error.message);
+        }
+    };
+
+    const updateTeacher = async (teacher: Teacher) => {
+        try {
+            const { id, ...data } = teacher;
+            await updateDoc(doc(db, 'teachers', id), data);
+        } catch (error: any) {
+            console.error('Error updating teacher:', error);
+            Alert.alert('Error', 'No se pudo actualizar el profesor: ' + error.message);
+        }
+    };
+
+    const addClass = async (newItem: ClassItem) => {
+        try {
+            const { id, ...data } = newItem;
+            await addDoc(collection(db, 'classes'), data);
+        } catch (error: any) {
+            console.error('Error adding class:', error);
+            Alert.alert('Error', 'No se pudo guardar la clase: ' + error.message);
+        }
+    };
+
+    const updateClass = async (updatedItem: ClassItem) => {
+        try {
+            const { id, ...data } = updatedItem;
+            // Clean undefined values for Firestore
+            const cleanData: any = { ...data };
+            Object.keys(cleanData).forEach(key => {
+                if (cleanData[key] === undefined) {
+                    cleanData[key] = deleteField();
+                }
+            });
+            await updateDoc(doc(db, 'classes', id), cleanData);
+        } catch (error: any) {
+            console.error('Error updating class:', error);
+            Alert.alert('Error', 'No se pudo actualizar la clase: ' + error.message);
+        }
+    };
+
+    const removeClass = async (id: string) => {
+        try {
+            await deleteDoc(doc(db, 'classes', id));
+        } catch (error: any) {
+            Alert.alert('Error', 'No se pudo eliminar la clase: ' + error.message);
+        }
+    };
+
+    const removeStudent = async (id: string) => {
+        try {
+            await deleteDoc(doc(db, 'students', id));
+        } catch (error: any) {
+            Alert.alert('Error', 'No se pudo eliminar el estudiante: ' + error.message);
+        }
+    };
+
+    const removeTeacher = async (id: string) => {
+        try {
+            await deleteDoc(doc(db, 'teachers', id));
+        } catch (error: any) {
+            Alert.alert('Error', 'No se pudo eliminar el profesor: ' + error.message);
+        }
+    };
+
+    const removeCourse = async (id: string) => {
+        try {
+            await deleteDoc(doc(db, 'courses', id));
+        } catch (error: any) {
+            Alert.alert('Error', 'No se pudo eliminar el curso: ' + error.message);
+        }
+    };
+
+    const addEnrollment = async (enrollment: Enrollment) => {
+        try {
+            const { id, ...data } = enrollment;
+            const cls = classes.find(c => c.id === enrollment.classId);
+            const course = courses.find(co => co.id === cls?.courseId);
+            const cycle = academicCycles.find(cy => cy.id === cls?.cycleId);
+
+            const enrolRef = await addDoc(collection(db, 'enrollments'), { ...data, status: 'active' });
+
+            // 1. Determine Payment Day (based on earliest enrollment date)
+            const studentEnrolDates = enrollments
+                .filter(e => e.studentId === enrollment.studentId)
+                .map(e => new Date(`${e.date}T12:00:00`).getTime());
+
+            studentEnrolDates.push(new Date(`${enrollment.date}T12:00:00`).getTime()); // Include current
+
+            const earliestTime = Math.min(...studentEnrolDates);
+            const paymentDay = new Date(earliestTime).getDate();
+
+            if (cycle && course && cycle.startDate && cycle.endDate) {
+                // 2. Determine Start Date (don't charge for months prior to enrollment)
+                const cycleStart = new Date(`${cycle.startDate}T12:00:00`);
+                const enrolDate = new Date(`${enrollment.date}T12:00:00`);
+
+                let current = enrolDate > cycleStart ? new Date(enrolDate) : new Date(cycleStart);
+                current.setDate(1); // Set to 1st of month to avoid overflow during iteration
+
+                const end = new Date(`${cycle.endDate}T12:00:00`);
+                const endMonthObj = new Date(end);
+                endMonthObj.setDate(1);
+
+                while (current <= endMonthObj) {
+                    const year = current.getFullYear();
+                    const month = current.getMonth();
+                    const monthYear = `${year}-${(month + 1).toString().padStart(2, '0')}`;
+
+                    // 3. Calculate safe Due Date for this specific month
+                    const lastDayOfMonth = new Date(year, month + 1, 0).getDate();
+                    const safePaymentDay = Math.min(paymentDay, lastDayOfMonth);
+                    const calculatedDueDate = `${year}-${(month + 1).toString().padStart(2, '0')}-${safePaymentDay.toString().padStart(2, '0')}`;
+
+                    let finalAmount = parseFloat(course.price);
+                    let finalNotes = '';
+
+                    if (cycle.events && cycle.events.length > 0) {
+                        const monthEvents = cycle.events.filter(e => e.targetMonthYear === monthYear);
+                        if (monthEvents.length > 0) {
+                            let totalDiscountPercentage = 0;
+                            const eventNames: string[] = [];
+
+                            monthEvents.forEach(e => {
+                                totalDiscountPercentage += e.discountPercentage;
+                                eventNames.push(`${e.name} (${e.discountPercentage}%)`);
+                            });
+
+                            if (totalDiscountPercentage > 100) totalDiscountPercentage = 100;
+
+                            const discountAmount = finalAmount * (totalDiscountPercentage / 100);
+                            finalAmount = finalAmount - discountAmount;
+                            finalNotes = `Descuento automático: ${eventNames.join(', ')}`;
+                        }
+                    }
+
+                    const instData = {
+                        enrollmentId: enrolRef.id,
+                        studentId: enrollment.studentId,
+                        monthYear: monthYear,
+                        amount: finalAmount.toFixed(2).toString(),
+                        originalAmount: course.price,
+                        isPaid: false,
+                        dueDate: calculatedDueDate,
+                        ...(finalNotes ? { notes: finalNotes } : {})
+                    };
+                    await addDoc(collection(db, 'installments'), instData);
+
+                    // Move to next month
+                    current.setMonth(current.getMonth() + 1);
+                }
+            } else if (cycle && course) {
+                // Fallback to legacy months array if dates are missing for some reason
+                for (const monthYear of cycle.months) {
+                    // Extract year/month from string if possible to calculate safe due date
+                    let calculatedDueDate = `${monthYear}-${paymentDay.toString().padStart(2, '0')}`;
+                    const parts = monthYear.split('-');
+                    if (parts.length === 2) {
+                        const mYear = parseInt(parts[0]);
+                        const mMon = parseInt(parts[1]) - 1;
+                        const lastDayOfMonth = new Date(mYear, mMon + 1, 0).getDate();
+                        const safePaymentDay = Math.min(paymentDay, lastDayOfMonth);
+                        calculatedDueDate = `${parts[0]}-${parts[1]}-${safePaymentDay.toString().padStart(2, '0')}`;
+                    }
+
+                    let finalAmount = parseFloat(course.price);
+                    let finalNotes = '';
+
+                    if (cycle.events && cycle.events.length > 0) {
+                        const monthEvents = cycle.events.filter(e => e.targetMonthYear === monthYear);
+                        if (monthEvents.length > 0) {
+                            let totalDiscountPercentage = 0;
+                            const eventNames: string[] = [];
+
+                            monthEvents.forEach(e => {
+                                totalDiscountPercentage += e.discountPercentage;
+                                eventNames.push(`${e.name} (${e.discountPercentage}%)`);
+                            });
+
+                            if (totalDiscountPercentage > 100) totalDiscountPercentage = 100;
+
+                            const discountAmount = finalAmount * (totalDiscountPercentage / 100);
+                            finalAmount = finalAmount - discountAmount;
+                            finalNotes = `Descuento automático: ${eventNames.join(', ')}`;
+                        }
+                    }
+
+                    const instData = {
+                        enrollmentId: enrolRef.id,
+                        studentId: enrollment.studentId,
+                        monthYear: monthYear,
+                        amount: finalAmount.toFixed(2).toString(),
+                        originalAmount: course.price,
+                        isPaid: false,
+                        dueDate: calculatedDueDate,
+                        ...(finalNotes ? { notes: finalNotes } : {})
+                    };
+                    await addDoc(collection(db, 'installments'), instData);
+                }
+            }
+        } catch (error: any) {
+            console.error('Error adding enrollment:', error);
+            Alert.alert('Error', 'No se pudo matricular: ' + error.message);
+        }
+    };
+
+    const updateEnrollment = async (updatedEnrollment: Enrollment) => {
+        try {
+            const { id, ...data } = updatedEnrollment;
+            // Clean undefined values for Firestore
+            const cleanData: any = { ...data };
+            Object.keys(cleanData).forEach(key => {
+                if (cleanData[key] === undefined) {
+                    cleanData[key] = deleteField();
+                }
+            });
+            await updateDoc(doc(db, 'enrollments', id), cleanData);
+        } catch (error: any) {
+            Alert.alert('Error', 'No se pudo actualizar la matrícula: ' + error.message);
+        }
+    };
+
+    const removeEnrollment = async (id: string) => {
+        try {
+            await deleteDoc(doc(db, 'enrollments', id));
+            const relatedInsts = installments.filter(inst => inst.enrollmentId === id);
+            for (const inst of relatedInsts) {
+                await deleteDoc(doc(db, 'installments', inst.id));
+            }
+        } catch (error: any) {
+            Alert.alert('Error', 'No se pudo eliminar la matrícula: ' + error.message);
+        }
+    };
+
+    const addPayment = async (p: Payment, installmentId?: string) => {
+        try {
+            const { id, ...data } = p;
+            const payRef = await addDoc(collection(db, 'payments'), data);
+            if (installmentId) {
+                await updateDoc(doc(db, 'installments', installmentId), {
+                    isPaid: true,
+                    paymentId: payRef.id
+                });
+            }
+        } catch (error: any) {
+            Alert.alert('Error', 'No se pudo registrar el pago: ' + error.message);
+        }
+    };
+
+    // Cycle CRUD
+    const addCycle = async (cycle: AcademicCycle) => {
+        try {
+            const { id, ...data } = cycle;
+            await addDoc(collection(db, 'academicCycles'), data);
+        } catch (error: any) {
+            console.error('Error adding cycle:', error);
+            Alert.alert('Error', 'No se pudo guardar el ciclo: ' + error.message);
+        }
+    };
+
+    const updateCycle = async (cycle: AcademicCycle) => {
+        try {
+            const { id, ...data } = cycle;
+            await updateDoc(doc(db, 'academicCycles', id), data);
+        } catch (error: any) {
+            console.error('Error updating cycle:', error);
+            Alert.alert('Error', 'No se pudo actualizar el ciclo: ' + error.message);
+        }
+    };
+
+    const deleteCycle = async (id: string) => {
+        try {
+            await deleteDoc(doc(db, 'academicCycles', id));
+        } catch (error: any) {
+            console.error('Error deleting cycle:', error);
+            Alert.alert('Error', 'No se pudo eliminar el ciclo: ' + error.message);
+        }
     };
 
     return (
@@ -284,7 +534,7 @@ export function InstitutionProvider({ children }: { children: ReactNode }) {
             removeStudent, removeTeacher, removeCourse,
             enrollments, addEnrollment, updateEnrollment, removeEnrollment,
             payments, addPayment,
-            academicCycles, currentCycleId, setCurrentCycleId,
+            academicCycles, currentCycleId, setCurrentCycleId, addCycle, updateCycle, deleteCycle,
             installments
         }}>
             {children}

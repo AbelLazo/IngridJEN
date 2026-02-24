@@ -56,7 +56,7 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
     const router = useRouter();
     const colorScheme = useColorScheme() ?? 'light';
     const colors = Colors[colorScheme as keyof typeof Colors];
-    const { courses, students, teachers, addStudent, addTeacher, updateStudent, updateTeacher, removeStudent, removeTeacher, academicCycles, currentCycleId, setCurrentCycleId, enrollments, classes } = useInstitution();
+    const { courses, students, teachers, addStudent, addTeacher, updateStudent, updateTeacher, removeStudent, removeTeacher, academicCycles, currentCycleId, enrollments, classes } = useInstitution();
     const isDraggingGlobal = useSharedValue(0); // 0 = not dragging, 1 = dragging
 
     const [searchQuery, setSearchQuery] = useState('');
@@ -68,12 +68,24 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
         lastName: '',
         phone: '',
         status: 'active' as 'active' | 'inactive',
+        activeYear: new Date().getFullYear().toString(),
         selectedSpecialties: [] as string[]
     });
+    const [errors, setErrors] = useState<Record<string, boolean>>({});
+    const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
     const resetForm = () => {
-        setFormData({ firstName: '', lastName: '', phone: '', status: 'active', selectedSpecialties: [] });
+        setFormData({
+            firstName: '',
+            lastName: '',
+            phone: '',
+            status: 'active',
+            activeYear: new Date().getFullYear().toString(),
+            selectedSpecialties: []
+        });
         setEditingEntityId(null);
+        setErrorMsg(null);
+        setErrors({});
     };
 
     const handleAddSpecialty = (name: string) => {
@@ -93,13 +105,19 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
     };
 
 
+    const currentCycleYear = React.useMemo(() => {
+        const cycle = academicCycles.find(c => c.id === currentCycleId);
+        if (!cycle) return new Date().getFullYear().toString();
+        const parts = cycle.name.split(' ');
+        return parts.length > 1 ? parts[1] : new Date().getFullYear().toString();
+    }, [currentCycleId, academicCycles]);
+
     const currentEntities = type === 'teacher' ? teachers : students;
 
     const filteredEntities = currentEntities.filter(item => {
         const matchesSearch = `${item.firstName} ${item.lastName}`.toLowerCase().includes(searchQuery.toLowerCase()) ||
             item.phone.includes(searchQuery);
 
-        // Logic to show/prioritize active or enrolled
         return matchesSearch;
     }).sort((a, b) => {
         // Enrolled in current cycle first
@@ -111,6 +129,20 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
     });
 
     const handleDelete = (item: Entity) => {
+        if (type === 'student') {
+            const hasEnrollments = enrollments.some(e => e.studentId === item.id);
+            if (hasEnrollments) {
+                Alert.alert("Acción Denegada", "No se puede eliminar a este estudiante porque tiene registros de historial o matrícula.");
+                return;
+            }
+        } else {
+            const hasClasses = classes.some(c => `${item.firstName} ${item.lastName}` === c.teacherName);
+            if (hasClasses) {
+                Alert.alert("Acción Denegada", "No se puede eliminar a este profesor porque tiene clases asignadas.");
+                return;
+            }
+        }
+
         Alert.alert(
             "Eliminar Registro",
             `¿Estás seguro de que deseas eliminar a ${item.firstName} ${item.lastName}?`,
@@ -175,6 +207,10 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
             };
         });
 
+        const computedStatus = (type === 'student' && item.activeYear)
+            ? (item.status === 'active' && item.activeYear === currentCycleYear ? 'active' : 'inactive')
+            : item.status;
+
         return (
             <GestureDetector gesture={panGesture}>
                 <Animated.View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }, animatedStyle]}>
@@ -185,15 +221,17 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
                         <Text style={[
                             styles.cardName,
                             { color: colors.text },
-                            item.status === 'inactive' && { color: colors.icon, textDecorationLine: 'line-through' as any }
+                            computedStatus === 'inactive' && { color: colors.icon, textDecorationLine: 'line-through' as any }
                         ]}>
                             {item.firstName} {item.lastName}
                         </Text>
                         <View style={styles.cardInfoRow}>
                             <Phone size={14} color={colors.icon} />
                             <Text style={[styles.cardSub, { color: colors.icon, marginLeft: 4 }]}>{item.phone}</Text>
-                            {item.status === 'inactive' && (
-                                <Text style={{ fontSize: 10, color: '#FF4444', marginLeft: 10, fontWeight: 'bold' }}>(Inactivo)</Text>
+                            {computedStatus === 'inactive' && (
+                                <Text style={{ fontSize: 10, color: '#FF4444', marginLeft: 10, fontWeight: 'bold' }}>
+                                    (Inactivo{type === 'student' && item.activeYear && item.activeYear !== currentCycleYear ? ` - ${item.activeYear}` : ''})
+                                </Text>
                             )}
                         </View>
                         {item.extra && item.extra.length > 0 && (
@@ -217,8 +255,20 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
         );
     };
 
-    const handleSave = () => {
-        if (formData.firstName && formData.lastName && formData.phone) {
+    const handleSave = async () => {
+        setErrorMsg(null);
+
+        const newErrors: Record<string, boolean> = {};
+        if (!formData.firstName.trim()) newErrors.firstName = true;
+        if (!formData.lastName.trim()) newErrors.lastName = true;
+        if (!formData.phone.trim() || formData.phone.length !== 9) newErrors.phone = true;
+
+        if (Object.keys(newErrors).length > 0) {
+            setErrors(newErrors);
+            return;
+        }
+
+        try {
             const entityData: any = {
                 id: editingEntityId || Date.now().toString(),
                 firstName: formData.firstName,
@@ -229,22 +279,34 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
             };
 
             if (type === 'teacher') {
+                if (editingEntityId && formData.status === 'inactive') {
+                    const teacherName = `${formData.firstName} ${formData.lastName}`;
+                    const activeClasses = classes.some(c => c.teacherName === teacherName && c.cycleId === currentCycleId);
+                    if (activeClasses) {
+                        setErrorMsg("❌ No se puede inactivar: El profesor está asignado a clases en el ciclo actual.");
+                        return;
+                    }
+                }
+
                 entityData.extra = formData.selectedSpecialties.join(', ');
                 if (editingEntityId) {
-                    updateTeacher(entityData);
+                    await updateTeacher(entityData);
                 } else {
-                    addTeacher(entityData);
+                    await addTeacher(entityData);
                 }
             } else {
+                entityData.activeYear = formData.status === 'active' ? formData.activeYear : null;
                 if (editingEntityId) {
-                    updateStudent(entityData);
+                    await updateStudent(entityData);
                 } else {
-                    addStudent(entityData);
+                    await addStudent(entityData);
                 }
             }
 
             resetForm();
             setModalVisible(false);
+        } catch (err: any) {
+            setErrorMsg("❌ Error: " + err.message);
         }
     };
 
@@ -254,8 +316,10 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
             lastName: item.lastName,
             phone: item.phone,
             status: item.status || 'active',
+            activeYear: (item as any).activeYear || currentCycleYear,
             selectedSpecialties: item.extra ? item.extra.split(', ') : []
         });
+        setErrors({});
         setEditingEntityId(item.id);
         setModalVisible(true);
     };
@@ -282,11 +346,11 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
     });
 
     return (
-        <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}>
+        <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]} >
             <Stack.Screen options={{ headerShown: false }} />
 
             {/* Header */}
-            <View style={styles.header}>
+            <View style={styles.header} >
                 <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
                     <ChevronLeft color={colors.text} size={28} />
                 </TouchableOpacity>
@@ -297,10 +361,10 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
                 >
                     <Plus color="#fff" size={24} />
                 </TouchableOpacity>
-            </View>
+            </View >
 
             {/* Search Bar - Principal focus for simple management */}
-            <View style={[styles.searchContainer, { backgroundColor: colors.card, borderColor: colors.border, marginTop: 10 }]}>
+            < View style={[styles.searchContainer, { backgroundColor: colors.card, borderColor: colors.border, marginTop: 10 }]} >
                 <Search color={colors.icon} size={20} />
                 <TextInput
                     style={[styles.searchInput, { color: colors.text }]}
@@ -309,18 +373,18 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
                     value={searchQuery}
                     onChangeText={setSearchQuery}
                 />
-            </View>
+            </View >
 
             {/* List */}
-            <FlatList
+            < FlatList
                 data={filteredEntities}
                 renderItem={renderItem}
                 keyExtractor={item => item.id}
                 contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 20 }]}
                 ListEmptyComponent={
-                    <View style={styles.emptyContainer}>
+                    < View style={styles.emptyContainer} >
                         <Text style={{ color: colors.icon }}>No se encontraron resultados.</Text>
-                    </View>
+                    </View >
                 }
             />
 
@@ -347,48 +411,99 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
 
                         <ScrollView showsVerticalScrollIndicator={false}>
                             <View style={styles.formGroup}>
-                                <Text style={[styles.label, { color: colors.text }]}>Nombres</Text>
-                                <View style={[styles.inputWrapper, { borderColor: colors.border }]}>
-                                    <UserPlus size={18} color={colors.icon} />
+                                <Text style={[styles.label, { color: colors.text }]}>Nombres *</Text>
+                                <View style={[styles.inputWrapper, { borderColor: errors.firstName ? '#ff4d4d' : colors.border, backgroundColor: errors.firstName ? '#ff4d4d10' : 'transparent' }]}>
+                                    <UserPlus size={18} color={errors.firstName ? '#ff4d4d' : colors.icon} />
                                     <TextInput
                                         style={[styles.input, { color: colors.text }]}
                                         placeholder="Ej. Juan Alberto"
                                         placeholderTextColor={colors.icon}
                                         value={formData.firstName}
-                                        onChangeText={(v) => setFormData({ ...formData, firstName: v })}
+                                        onChangeText={(v) => {
+                                            setFormData({ ...formData, firstName: v });
+                                            if (errors.firstName) setErrors(prev => ({ ...prev, firstName: false }));
+                                        }}
                                     />
                                 </View>
+                                {errors.firstName && <Text style={styles.errorText}>Este campo es requerido</Text>}
                             </View>
 
                             <View style={styles.formGroup}>
-                                <Text style={[styles.label, { color: colors.text }]}>Apellidos</Text>
-                                <View style={[styles.inputWrapper, { borderColor: colors.border }]}>
-                                    <UserPlus size={18} color={colors.icon} />
+                                <Text style={[styles.label, { color: colors.text }]}>Apellidos *</Text>
+                                <View style={[styles.inputWrapper, { borderColor: errors.lastName ? '#ff4d4d' : colors.border, backgroundColor: errors.lastName ? '#ff4d4d10' : 'transparent' }]}>
+                                    <UserPlus size={18} color={errors.lastName ? '#ff4d4d' : colors.icon} />
                                     <TextInput
                                         style={[styles.input, { color: colors.text }]}
                                         placeholder="Ej. Pérez García"
                                         placeholderTextColor={colors.icon}
                                         value={formData.lastName}
-                                        onChangeText={(v) => setFormData({ ...formData, lastName: v })}
+                                        onChangeText={(v) => {
+                                            setFormData({ ...formData, lastName: v });
+                                            if (errors.lastName) setErrors(prev => ({ ...prev, lastName: false }));
+                                        }}
                                     />
                                 </View>
+                                {errors.lastName && <Text style={styles.errorText}>Este campo es requerido</Text>}
+                            </View>
+
+                            <View style={styles.formGroup}>
+                                <Text style={[styles.label, { color: colors.text }]}>Teléfono de Contacto *</Text>
+                                <View style={[styles.inputWrapper, { borderColor: errors.phone ? '#ff4d4d' : colors.border, backgroundColor: errors.phone ? '#ff4d4d10' : 'transparent' }]}>
+                                    <Phone size={18} color={errors.phone ? '#ff4d4d' : colors.icon} />
+                                    <TextInput
+                                        style={[styles.input, { color: colors.text }]}
+                                        placeholder="Ej. 994555888"
+                                        placeholderTextColor={colors.icon}
+                                        keyboardType="phone-pad"
+                                        maxLength={9}
+                                        value={formData.phone}
+                                        onChangeText={(v) => {
+                                            const numericValue = v.replace(/[^0-9]/g, '');
+                                            setFormData({ ...formData, phone: numericValue });
+                                            if (errors.phone && numericValue.length === 9) setErrors(prev => ({ ...prev, phone: false }));
+                                        }}
+                                    />
+                                </View>
+                                {errors.phone && <Text style={styles.errorText}>El teléfono debe tener 9 dígitos</Text>}
                             </View>
 
                             <View style={styles.formGroup}>
                                 <Text style={[styles.label, { color: colors.text }]}>Estado en la Institución</Text>
-                                <View style={[styles.inputWrapper, { borderColor: colors.border, paddingHorizontal: 0 }]}>
-                                    <Picker
-                                        selectedValue={formData.status}
-                                        onValueChange={(v) => setFormData({ ...formData, status: v })}
-                                        style={{ color: colors.text, width: '100%', height: 50 }}
-                                        dropdownIconColor={colors.primary}
-                                    >
-                                        <Picker.Item label="Habilitado (Activo)" value="active" />
-                                        <Picker.Item label="Inhabilitado (Inactivo)" value="inactive" />
-                                    </Picker>
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                                    <View style={[styles.inputWrapper, { borderColor: colors.border, paddingHorizontal: 0, flex: 1, marginRight: (type === 'student' && formData.status === 'active') ? 10 : 0 }]}>
+                                        <Picker
+                                            selectedValue={formData.status}
+                                            onValueChange={(v) => setFormData({ ...formData, status: v })}
+                                            style={{ color: colors.text, width: '100%', height: 50 }}
+                                            dropdownIconColor={colors.primary}
+                                        >
+                                            <Picker.Item label="Activo" value="active" />
+                                            <Picker.Item label="Inactivo" value="inactive" />
+                                        </Picker>
+                                    </View>
+
+                                    {type === 'student' && formData.status === 'active' && (
+                                        <View style={[styles.inputWrapper, { borderColor: colors.border, paddingHorizontal: 0, flex: 0.8 }]}>
+                                            <Picker
+                                                selectedValue={formData.activeYear}
+                                                onValueChange={(v) => setFormData({ ...formData, activeYear: v })}
+                                                style={{ color: colors.text, width: '100%', height: 50 }}
+                                                dropdownIconColor={colors.primary}
+                                            >
+                                                {[...Array(2)].map((_, i) => {
+                                                    const year = (new Date().getFullYear() + i).toString();
+                                                    return <Picker.Item key={year} label={`Año ${year}`} value={year} />;
+                                                })}
+                                            </Picker>
+                                        </View>
+                                    )}
                                 </View>
                                 <Text style={{ fontSize: 11, color: colors.icon, marginTop: 4, marginLeft: 4 }}>
-                                    * Solo alumnos habilitados pueden matricularse en nuevos cursos.
+                                    {type === 'teacher'
+                                        ? "* Solo los profesores activos podrán ser asignados a nuevos cursos y horarios."
+                                        : (formData.status === 'active' && formData.activeYear)
+                                            ? `* El alumno solo figurará como activo en los periodos del año ${formData.activeYear}.`
+                                            : "* Solo alumnos activos pueden matricularse en nuevos cursos."}
                                 </Text>
                             </View>
 
@@ -433,6 +548,12 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
                             )}
 
 
+                            {errorMsg && (
+                                <View style={{ backgroundColor: '#ff4d4d20', padding: 12, borderRadius: 10, marginBottom: 15 }}>
+                                    <Text style={{ color: '#ff4d4d', textAlign: 'center', fontWeight: 'bold' }}>{errorMsg}</Text>
+                                </View>
+                            )}
+
                             <TouchableOpacity
                                 style={[styles.submitButton, { backgroundColor: colors.primary }]}
                                 onPress={handleSave}
@@ -454,7 +575,7 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
                 </View>
                 <Text style={styles.trashText}>Suelta para eliminar</Text>
             </Animated.View>
-        </View>
+        </View >
     );
 }
 const styles = StyleSheet.create({
@@ -719,5 +840,11 @@ const styles = StyleSheet.create({
     statusBadgeText: {
         fontSize: 10,
         fontWeight: 'bold'
+    },
+    errorText: {
+        color: '#ff4d4d',
+        fontSize: 12,
+        marginTop: 4,
+        marginLeft: 4,
     }
 });

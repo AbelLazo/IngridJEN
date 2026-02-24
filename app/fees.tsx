@@ -1,3 +1,4 @@
+import PeriodHeader from '@/components/PeriodHeader';
 import { Colors } from '@/constants/theme';
 import { useInstitution } from '@/context/InstitutionContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -5,7 +6,6 @@ import { Stack, useRouter } from 'expo-router';
 import {
     Calendar,
     ChevronDown,
-    ChevronLeft,
     ChevronUp,
     Coins,
     CreditCard,
@@ -18,7 +18,6 @@ import React, { useMemo, useState } from 'react';
 import {
     Alert,
     FlatList,
-    ScrollView,
     StyleSheet,
     Text,
     TextInput,
@@ -58,6 +57,11 @@ const EnrollmentItem = ({ student, detail, colors, onPay, onShowDetail }: Enroll
                                 detail.isPaid ? 'Al día' : `Deuda: S/ ${detail.debt}`
                             )}
                         </Text>
+                        {detail.status !== 'withdrawn' && !detail.isPaid && (
+                            <Text style={{ fontSize: 12, color: colors.primary, marginTop: 2, fontWeight: '500' }}>
+                                Próximo pago: {detail.nextDate}
+                            </Text>
+                        )}
                     </View>
                 </View>
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -106,7 +110,7 @@ const EnrollmentItem = ({ student, detail, colors, onPay, onShowDetail }: Enroll
                                 >
                                     <CreditCard size={14} color="#fff" />
                                     <Text style={styles.payMonthText}>
-                                        {month.isOverdue ? 'Pagar Deuda' : 'Adelantar'}
+                                        {month.isOverdue ? 'Pagar Deuda' : 'Pagar mes'}
                                     </Text>
                                 </TouchableOpacity>
                             )}
@@ -204,7 +208,10 @@ export default function FeesScreen() {
         const todayStr = today.toISOString().split('T')[0];
 
         return students.map(student => {
-            const studentEnrollments = enrollments.filter(e => e.studentId === student.id);
+            const studentEnrollments = enrollments.filter(e => {
+                const cls = classes.find(c => c.id === e.classId);
+                return e.studentId === student.id && cls?.cycleId === currentCycleId;
+            });
             let totalToPay = 0;
 
             const enrollmentDetails = studentEnrollments.map(enrol => {
@@ -356,13 +363,10 @@ export default function FeesScreen() {
         <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}>
             <Stack.Screen options={{ headerShown: false }} />
 
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-                    <ChevronLeft color={colors.text} size={28} />
-                </TouchableOpacity>
-                <Text style={[styles.headerTitle, { color: colors.text }]}>Mensualidades</Text>
-                <View style={styles.placeholder} />
-            </View>
+            <PeriodHeader
+                title="Mensualidades"
+                onBack={() => router.back()}
+            />
 
             <View style={[styles.toggleContainer, { backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 }]}>
                 <TouchableOpacity
@@ -395,37 +399,6 @@ export default function FeesScreen() {
                         </View>
                     </View>
 
-                    {/* Cycle Selector - Horizontal Scroll for more space */}
-                    <View style={styles.cycleSelectorWrapper}>
-                        <ScrollView
-                            horizontal
-                            showsHorizontalScrollIndicator={false}
-                            contentContainerStyle={styles.cycleScrollContent}
-                        >
-                            {academicCycles.map(cycle => (
-                                <TouchableOpacity
-                                    key={cycle.id}
-                                    onPress={() => setCurrentCycleId(cycle.id)}
-                                    style={[
-                                        styles.cycleChip,
-                                        { backgroundColor: colors.card, borderColor: colors.border },
-                                        currentCycleId === cycle.id && { backgroundColor: colors.primary, borderColor: colors.primary }
-                                    ]}
-                                >
-                                    <Calendar
-                                        size={16}
-                                        color={currentCycleId === cycle.id ? '#fff' : colors.icon}
-                                    />
-                                    <Text style={[
-                                        styles.cycleChipLabel,
-                                        { color: currentCycleId === cycle.id ? '#fff' : colors.icon }
-                                    ]}>
-                                        {cycle.name}
-                                    </Text>
-                                </TouchableOpacity>
-                            ))}
-                        </ScrollView>
-                    </View>
 
                     <View style={[styles.searchContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
                         <Search color={colors.icon} size={20} />

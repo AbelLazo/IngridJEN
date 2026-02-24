@@ -23,6 +23,7 @@ const MENU_ITEMS = [
     { id: 'classes', label: 'Clases', icon: Presentation, color: '#ec4899', route: '/classes' },
     { id: 'schedule', label: 'Horario', icon: Calendar, color: '#8b5cf6', route: '/schedule' },
     { id: 'tuition', label: 'Mensualidad', icon: Wallet, color: '#ef4444', route: '/fees' },
+    { id: 'cycles', label: 'Ciclos', icon: Calendar, color: '#14b8a6', route: '/cycles' },
 ];
 
 export default function DashboardGrid() {

@@ -48,9 +48,11 @@ export default function CoursesScreen() {
         minutes: '',
         price: ''
     });
+    const [errors, setErrors] = useState<Record<string, boolean>>({});
 
     const resetForm = () => {
         setFormData({ name: '', hours: '', minutes: '', price: '' });
+        setErrors({});
         setEditingCourseId(null);
     };
 
@@ -59,24 +61,32 @@ export default function CoursesScreen() {
     );
 
     const handleSave = () => {
-        if (formData.name && (formData.hours || formData.minutes)) {
-            const courseData = {
-                id: editingCourseId || Date.now().toString(),
-                name: formData.name,
-                hours: formData.hours || '0',
-                minutes: formData.minutes || '0',
-                price: formData.price || '0'
-            };
+        const newErrors: Record<string, boolean> = {};
 
-            if (editingCourseId) {
-                updateCourse(courseData);
-            } else {
-                addCourse(courseData);
-            }
+        if (!formData.name.trim()) newErrors.name = true;
+        if (!formData.hours && !formData.minutes) newErrors.duration = true;
 
-            resetForm();
-            setModalVisible(false);
+        if (Object.keys(newErrors).length > 0) {
+            setErrors(newErrors);
+            return;
         }
+
+        const courseData = {
+            id: editingCourseId || Date.now().toString(),
+            name: formData.name,
+            hours: formData.hours || '0',
+            minutes: formData.minutes || '0',
+            price: formData.price || '0'
+        };
+
+        if (editingCourseId) {
+            updateCourse(courseData);
+        } else {
+            addCourse(courseData);
+        }
+
+        resetForm();
+        setModalVisible(false);
     };
 
     const handleEditPress = (course: Course) => {
@@ -86,6 +96,7 @@ export default function CoursesScreen() {
             minutes: course.minutes,
             price: course.price
         });
+        setErrors({});
         setEditingCourseId(course.id);
         setModalVisible(true);
     };
@@ -272,27 +283,34 @@ export default function CoursesScreen() {
 
                         <ScrollView showsVerticalScrollIndicator={false}>
                             <View style={styles.formGroup}>
-                                <Text style={[styles.label, { color: colors.text }]}>Nombre de la Materia</Text>
-                                <View style={[styles.inputWrapper, { borderColor: colors.border }]}>
-                                    <BookOpen size={18} color={colors.icon} />
+                                <Text style={[styles.label, { color: colors.text }]}>Nombre de la Materia *</Text>
+                                <View style={[styles.inputWrapper, { borderColor: errors.name ? '#ff4d4d' : colors.border, backgroundColor: errors.name ? '#ff4d4d10' : 'transparent' }]}>
+                                    <BookOpen size={18} color={errors.name ? '#ff4d4d' : colors.icon} />
                                     <TextInput
                                         style={[styles.input, { color: colors.text }]}
                                         placeholder="Ej. Álgebra Elemental"
                                         placeholderTextColor={colors.icon}
                                         value={formData.name}
-                                        onChangeText={(v) => setFormData({ ...formData, name: v })}
+                                        onChangeText={(v) => {
+                                            setFormData({ ...formData, name: v });
+                                            if (errors.name) setErrors(prev => ({ ...prev, name: false }));
+                                        }}
                                     />
                                 </View>
+                                {errors.name && <Text style={styles.errorText}>Este campo es requerido</Text>}
                             </View>
 
                             <View style={styles.formGroup}>
-                                <Text style={[styles.label, { color: colors.text }]}>Duración</Text>
+                                <Text style={[styles.label, { color: colors.text }]}>Duración *</Text>
                                 <View style={styles.durationRow}>
                                     <View style={[styles.durationInputGroup, { flex: 1, marginRight: 10 }]}>
-                                        <View style={[styles.inputWrapper, { borderColor: colors.border, paddingHorizontal: 0 }]}>
+                                        <View style={[styles.inputWrapper, { borderColor: errors.duration ? '#ff4d4d' : colors.border, paddingHorizontal: 0, backgroundColor: errors.duration ? '#ff4d4d10' : 'transparent' }]}>
                                             <Picker
                                                 selectedValue={formData.hours || '0'}
-                                                onValueChange={(v) => setFormData({ ...formData, hours: v })}
+                                                onValueChange={(v) => {
+                                                    setFormData({ ...formData, hours: v });
+                                                    if (errors.duration && (v !== '0' || formData.minutes !== '0')) setErrors(prev => ({ ...prev, duration: false }));
+                                                }}
                                                 style={{ color: colors.text, width: '100%', height: 50 }}
                                                 dropdownIconColor={colors.primary}
                                             >
@@ -304,10 +322,13 @@ export default function CoursesScreen() {
                                     </View>
 
                                     <View style={[styles.durationInputGroup, { flex: 1 }]}>
-                                        <View style={[styles.inputWrapper, { borderColor: colors.border, paddingHorizontal: 0 }]}>
+                                        <View style={[styles.inputWrapper, { borderColor: errors.duration ? '#ff4d4d' : colors.border, paddingHorizontal: 0, backgroundColor: errors.duration ? '#ff4d4d10' : 'transparent' }]}>
                                             <Picker
                                                 selectedValue={formData.minutes || '0'}
-                                                onValueChange={(v) => setFormData({ ...formData, minutes: v })}
+                                                onValueChange={(v) => {
+                                                    setFormData({ ...formData, minutes: v });
+                                                    if (errors.duration && (formData.hours !== '0' || v !== '0')) setErrors(prev => ({ ...prev, duration: false }));
+                                                }}
                                                 style={{ color: colors.text, width: '100%', height: 50 }}
                                                 dropdownIconColor={colors.primary}
                                             >
@@ -318,6 +339,7 @@ export default function CoursesScreen() {
                                         </View>
                                     </View>
                                 </View>
+                                {errors.duration && <Text style={styles.errorText}>Especifica una duración válida</Text>}
                             </View>
 
                             <View style={styles.formGroup}>
@@ -552,5 +574,11 @@ const styles = StyleSheet.create({
         paddingVertical: 4,
         borderRadius: 10,
         overflow: 'hidden'
+    },
+    errorText: {
+        color: '#ff4d4d',
+        fontSize: 12,
+        marginTop: 4,
+        marginLeft: 4,
     }
 });

@@ -1,18 +1,22 @@
+import PeriodHeader from '@/components/PeriodHeader';
 import { Colors } from '@/constants/theme';
+import { Student, useInstitution } from '@/context/InstitutionContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Picker } from '@react-native-picker/picker';
 import { Stack, useRouter } from 'expo-router';
 import {
+    ArrowRight,
     BookOpen,
-    Calendar,
     CalendarDays,
-    ChevronLeft,
+    Check,
     Clock,
+    Download,
     Edit3,
     List,
-    Minus, // Added Phone icon
+    Minus,
     Plus,
-    Search, // Added ShieldCheck icon
+    RefreshCcw,
+    Search,
     Trash2,
     User,
     UserPlus,
@@ -63,8 +67,6 @@ interface ClassItem {
     cycleId: string;
 }
 
-import { Student, useInstitution } from '@/context/InstitutionContext';
-
 export default function ClassesScreen() {
     const insets = useSafeAreaInsets();
     const router = useRouter();
@@ -106,6 +108,11 @@ export default function ClassesScreen() {
 
     const [enrolledInSelected, setEnrolledInSelected] = useState<string[]>([]);
 
+    // Additional modals
+    const [mergeModalVisible, setMergeModalVisible] = useState(false);
+    const [selectedSourceClassIds, setSelectedSourceClassIds] = useState<string[]>([]);
+    const [moveStudentId, setMoveStudentId] = useState<string | null>(null);
+    const [targetMoveClassId, setTargetMoveClassId] = useState<string | null>(null);
     const filteredClasses = classes.filter(item => {
         const matchesSearch = item.courseName.toLowerCase().includes(searchQuery.toLowerCase()) ||
             item.teacherName.toLowerCase().includes(searchQuery.toLowerCase());
@@ -130,6 +137,26 @@ export default function ClassesScreen() {
         endHours = endHours % 24; // Handle wrap around if class ends next day
 
         return `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`;
+    };
+
+    const checkTimeOverlap = (start1: string, duration1: string, start2: string, duration2: string) => {
+        const getMinutes = (time: string) => {
+            const [h, m] = time.split(':').map(Number);
+            return h * 60 + m;
+        };
+        const getDurMins = (dur: string) => {
+            const hMatch = dur.match(/(\d+)h/);
+            const mMatch = dur.match(/(\d+)m/);
+            const h = hMatch ? parseInt(hMatch[1]) : 0;
+            const m = mMatch ? parseInt(mMatch[1]) : 0;
+            return h * 60 + m;
+        };
+        const s1 = getMinutes(start1);
+        const e1 = s1 + getDurMins(duration1);
+        const s2 = getMinutes(start2);
+        const e2 = s2 + getDurMins(duration2);
+
+        return s1 < e2 && s2 < e1;
     };
 
     const handleCourseSelect = (courseId: string) => {
@@ -206,45 +233,90 @@ export default function ClassesScreen() {
     const handleEnrollAction = (student: Student) => {
         const isEnrolled = enrolledInSelected.includes(student.id);
         const currentClass = classes.find(c => c.id === selectedClassId);
-        const className = currentClass?.courseName || 'la clase';
+        if (!currentClass) return;
+
+        const className = currentClass.courseName || 'la clase';
         const studentName = `${student.firstName} ${student.lastName}`;
 
         if (!isEnrolled) {
-            // Check if there was a previous withdrawn enrollment to "reactivate" it or just add new
-            // For simplicity and cleaner history, we'll try to reactivate or just add new
             const withdrawnEnrollment = enrollments.find(e => e.studentId === student.id && e.classId === selectedClassId && e.status === 'withdrawn');
 
-            Alert.alert(
-                "Confirmar Matrícula",
-                `¿Deseas matricular a "${studentName}" en la clase de "${className}"?`,
-                [
-                    { text: "Cancelar", style: "cancel" },
-                    {
-                        text: "Matricular",
-                        onPress: () => {
-                            if (selectedClassId) {
-                                if (withdrawnEnrollment) {
-                                    updateEnrollment({
-                                        ...withdrawnEnrollment,
-                                        status: 'active',
-                                        date: new Date().toISOString().split('T')[0],
-                                        withdrawalDate: undefined
-                                    });
-                                } else {
-                                    addEnrollment({
-                                        id: `${student.id}-${selectedClassId}-${Date.now()}`,
-                                        studentId: student.id,
-                                        classId: selectedClassId,
-                                        date: new Date().toISOString().split('T')[0],
-                                        status: 'active'
-                                    });
+            const proceedEnrollment = () => {
+                // Check student schedule overlaps
+                const studentActiveClasses = enrollments
+                    .filter(e => e.studentId === student.id && e.status === 'active' && e.classId !== selectedClassId)
+                    .map(e => classes.find(c => c.id === e.classId && c.cycleId === currentCycleId))
+                    .filter(c => c !== undefined) as ClassItem[];
+
+                let conflictFound = false;
+                let conflictMsg = '';
+
+                for (const existingClass of studentActiveClasses) {
+                    for (const existingSchedule of existingClass.schedules) {
+                        for (const targetSchedule of currentClass.schedules) {
+                            if (existingSchedule.day === targetSchedule.day) {
+                                if (checkTimeOverlap(targetSchedule.startTime, currentClass.duration, existingSchedule.startTime, existingClass.duration)) {
+                                    conflictFound = true;
+                                    conflictMsg = `El alumno ya tiene la clase de "${existingClass.courseName}" en este horario.`;
+                                    break;
                                 }
-                                setEnrolledInSelected(prev => [...prev, student.id]);
                             }
                         }
+                        if (conflictFound) break;
                     }
-                ]
-            );
+                    if (conflictFound) break;
+                }
+
+                if (conflictFound) {
+                    Alert.alert("Conflicto de Horario", conflictMsg);
+                    return;
+                }
+
+                Alert.alert(
+                    "Confirmar Matrícula",
+                    `¿Deseas matricular a "${studentName}" en la clase de "${className}"?`,
+                    [
+                        { text: "Cancelar", style: "cancel" },
+                        {
+                            text: "Matricular",
+                            onPress: () => {
+                                if (selectedClassId) {
+                                    if (withdrawnEnrollment) {
+                                        updateEnrollment({
+                                            ...withdrawnEnrollment,
+                                            status: 'active',
+                                            date: new Date().toISOString().split('T')[0],
+                                            withdrawalDate: undefined
+                                        });
+                                    } else {
+                                        addEnrollment({
+                                            id: `${student.id}-${selectedClassId}-${Date.now()}`,
+                                            studentId: student.id,
+                                            classId: selectedClassId,
+                                            date: new Date().toISOString().split('T')[0],
+                                            status: 'active',
+                                            isImported: false
+                                        });
+                                    }
+                                    setEnrolledInSelected(prev => [...prev, student.id]);
+                                }
+                            }
+                        }
+                    ]
+                );
+            };
+
+            const currentCapacity = parseInt(currentClass.capacity) || 20;
+            const currentEnrolledCount = enrollments.filter(e => e.classId === selectedClassId && e.status === 'active').length;
+
+            if (currentEnrolledCount >= currentCapacity) {
+                Alert.alert(
+                    "Aforo Excedido",
+                    `La clase ha alcanzado su límite de ${currentCapacity} alumnos. No se pueden matricular más alumnos de forma individual.`
+                );
+            } else {
+                proceedEnrollment();
+            }
         } else {
             Alert.alert(
                 "Retirar del Curso",
@@ -273,10 +345,277 @@ export default function ClassesScreen() {
         }
     };
 
-    const closeEnrollModal = () => {
-        setEnrollModalVisible(false);
+    const handleFinalizeMove = () => {
+        if (!moveStudentId || !targetMoveClassId || !selectedClassId) return;
+
+        const targetClass = classes.find(c => c.id === targetMoveClassId);
+        if (!targetClass) return;
+
+        const currentEnrollment = enrollments.find(e => e.classId === selectedClassId && e.studentId === moveStudentId && e.status === 'active');
+        if (!currentEnrollment) return;
+
+        const targetCapacity = parseInt(targetClass.capacity) || 20;
+        const targetEnrolledCount = enrollments.filter(e => e.classId === targetMoveClassId && e.status === 'active').length;
+
+        const executeMove = () => {
+            // Check overlaps in target class
+            const studentActiveClasses = enrollments
+                .filter(e => e.studentId === moveStudentId && e.status === 'active' && e.classId !== targetMoveClassId)
+                .map(e => classes.find(c => c.id === e.classId && c.cycleId === currentCycleId))
+                .filter(c => c !== undefined) as ClassItem[];
+
+            let conflictFound = false;
+            let conflictMsg = '';
+
+            for (const existingClass of studentActiveClasses) {
+                for (const existingSchedule of existingClass.schedules) {
+                    for (const targetSchedule of targetClass.schedules) {
+                        if (existingSchedule.day === targetSchedule.day) {
+                            if (checkTimeOverlap(targetSchedule.startTime, targetClass.duration, existingSchedule.startTime, existingClass.duration)) {
+                                conflictFound = true;
+                                conflictMsg = `El alumno ya tiene la clase de "${existingClass.courseName}" en este horario.`;
+                                break;
+                            }
+                        }
+                    }
+                    if (conflictFound) break;
+                }
+                if (conflictFound) break;
+            }
+
+            if (conflictFound) {
+                Alert.alert("Conflicto de Horario", conflictMsg);
+                return;
+            }
+
+            // Perform move
+            // 1. Withdraw from current
+            updateEnrollment({
+                ...currentEnrollment,
+                status: 'withdrawn',
+                withdrawalDate: new Date().toISOString().split('T')[0]
+            });
+
+            // 2. Enroll in target
+            const withdrawnTarget = enrollments.find(e => e.studentId === moveStudentId && e.classId === targetMoveClassId && e.status === 'withdrawn');
+            const isImportedFlag = currentEnrollment.isImported;
+            const originalImportId = currentEnrollment.originalImportedClassId || (isImportedFlag ? selectedClassId : undefined);
+
+            if (withdrawnTarget) {
+                updateEnrollment({
+                    ...withdrawnTarget,
+                    status: 'active',
+                    date: new Date().toISOString().split('T')[0],
+                    withdrawalDate: undefined,
+                    isImported: isImportedFlag,
+                    originalImportedClassId: originalImportId
+                });
+            } else {
+                addEnrollment({
+                    id: `${moveStudentId}-${targetMoveClassId}-${Date.now()}`,
+                    studentId: moveStudentId,
+                    classId: targetMoveClassId,
+                    date: new Date().toISOString().split('T')[0],
+                    status: 'active',
+                    isImported: isImportedFlag,
+                    originalImportedClassId: originalImportId
+                });
+            }
+
+            setEnrolledInSelected(prev => prev.filter(id => id !== moveStudentId));
+            setMoveStudentId(null);
+            setTargetMoveClassId(null);
+        };
+
+        if (targetEnrolledCount >= targetCapacity) {
+            Alert.alert(
+                "Aforo Excedido en Destino",
+                `La clase destino ha alcanzado su límite de ${targetCapacity} alumnos. No puedes añadir más alumnos manualmente.`
+            );
+        } else {
+            executeMove();
+        }
     };
 
+    const handleRevertMerge = (targetClass: ClassItem) => {
+        const sourceClasses = classes.filter(c => c.mergedToClassId === targetClass.id);
+
+        if (sourceClasses.length === 0) {
+            Alert.alert("Error", "No se encontraron clases de origen vinculadas a esta importación.");
+            return;
+        }
+
+        Alert.alert(
+            "Deshacer Importación",
+            `¿Estás seguro que deseas deshacer la importación masiva? Esta acción retirará a todos los alumnos importados de la clase actual ("${targetClass.courseName}") y de cualquier otra a la que hayan sido movidos posteriormente, además eliminará el vínculo de fusión de las clases de origen.`,
+            [
+                { text: "Cancelar", style: "cancel" },
+                {
+                    text: "Deshacer Importación",
+                    style: "destructive",
+                    onPress: () => {
+                        const importedEnrollments = enrollments.filter(e => {
+                            const isImportedFlag = e.isImported === true;
+                            const isDirectImport = e.classId === targetClass.id && !e.originalImportedClassId;
+                            const isTrackedImport = e.originalImportedClassId === targetClass.id;
+                            return isImportedFlag && (isDirectImport || isTrackedImport);
+                        });
+
+                        importedEnrollments.forEach(e => {
+                            removeEnrollment(e.id);
+                        });
+
+                        sourceClasses.forEach(sourceClass => {
+                            const updatedSourceClass = { ...sourceClass };
+                            delete updatedSourceClass.mergedToClassId;
+                            updateClass({ ...updatedSourceClass, mergedToClassId: null } as any);
+                        });
+
+                        Alert.alert("Éxito", "La importación ha sido deshecha exitosamente.");
+                    }
+                }
+            ]
+        );
+    };
+
+    const handleConfirmImportState = (targetClass: ClassItem) => {
+        const sourceClasses = classes.filter(c => c.mergedToClassId === targetClass.id);
+
+        if (sourceClasses.length === 0) {
+            Alert.alert("Error", "No se encontraron clases de origen vinculadas a esta importación.");
+            return;
+        }
+
+        Alert.alert(
+            "Confirmar Importación",
+            `¿Estás seguro que deseas confirmar la importación masiva? Esta acción consolidará permanentemente a los alumnos importados en la clase actual ("${targetClass.courseName}") y no se podrá deshacer masivamente.`,
+            [
+                { text: "Cancelar", style: "cancel" },
+                {
+                    text: "Confirmar y Consolidar",
+                    onPress: () => {
+                        sourceClasses.forEach(sourceClass => {
+                            updateClass({
+                                ...sourceClass,
+                                mergedToClassId: undefined
+                            });
+                        });
+                        Alert.alert("Éxito", "Las importaciones han sido confirmadas.");
+                    }
+                }
+            ]
+        );
+    };
+
+    const handleConfirmMerge = () => {
+        if (!selectedClassId || selectedSourceClassIds.length === 0) return;
+
+        const targetClass = classes.find(c => c.id === selectedClassId);
+        if (!targetClass) return;
+
+        const sourceStudents = enrollments
+            .filter(e => selectedSourceClassIds.includes(e.classId) && e.status === 'active')
+            .map(e => e.studentId);
+
+        const uniqueSourceStudents = Array.from(new Set(sourceStudents));
+
+        const alreadyEnrolled = enrollments
+            .filter(e => e.classId === selectedClassId && e.status === 'active')
+            .map(e => e.studentId);
+
+        const studentsToImport = uniqueSourceStudents.filter(id => !alreadyEnrolled.includes(id));
+
+        if (studentsToImport.length === 0) {
+            Alert.alert("Atención", "Todos los estudiantes de las clases origen ya están en la clase destino.");
+            setMergeModalVisible(false);
+            setSelectedSourceClassIds([]);
+            return;
+        }
+
+        const targetCapacity = parseInt(targetClass.capacity) || 20;
+        const potentialTotal = alreadyEnrolled.length + studentsToImport.length;
+
+        const proceedMerge = () => {
+            let conflictFound = false;
+            let conflictMsg = '';
+
+            for (const studentId of studentsToImport) {
+                const studentActiveClasses = enrollments
+                    .filter(e => e.studentId === studentId && e.status === 'active' && e.classId !== selectedClassId)
+                    .map(e => classes.find(c => c.id === e.classId && c.cycleId === currentCycleId))
+                    .filter(c => c !== undefined) as ClassItem[];
+
+                for (const existingClass of studentActiveClasses) {
+                    for (const existingSchedule of existingClass.schedules) {
+                        for (const targetSchedule of targetClass.schedules) {
+                            if (existingSchedule.day === targetSchedule.day) {
+                                if (checkTimeOverlap(targetSchedule.startTime, targetClass.duration, existingSchedule.startTime, existingClass.duration)) {
+                                    conflictFound = true;
+                                    const student = students.find(s => s.id === studentId);
+                                    conflictMsg = `El alumno ${student?.firstName} ya tiene la clase "${existingClass.courseName}" en este horario. Importación cancelada.`;
+                                    break;
+                                }
+                            }
+                        }
+                        if (conflictFound) break;
+                    }
+                    if (conflictFound) break;
+                }
+                if (conflictFound) break;
+            }
+
+            if (conflictFound) {
+                Alert.alert("Conflicto de Horario", conflictMsg);
+                return;
+            }
+
+            studentsToImport.forEach(studentId => {
+                addEnrollment({
+                    id: `${studentId}-${selectedClassId}-${Date.now()}-${Math.random()}`,
+                    studentId: studentId,
+                    classId: selectedClassId,
+                    date: new Date().toISOString().split('T')[0],
+                    status: 'active',
+                    isImported: true,
+                    originalImportedClassId: selectedClassId
+                });
+            });
+
+            selectedSourceClassIds.forEach(sourceId => {
+                const sourceClass = classes.find(c => c.id === sourceId);
+                if (sourceClass) {
+                    updateClass({
+                        ...sourceClass,
+                        mergedToClassId: selectedClassId
+                    });
+                }
+            });
+
+            setMergeModalVisible(false);
+            setSelectedSourceClassIds([]);
+            setEnrollModalVisible(false);
+            Alert.alert("Éxito", `Se han importado ${studentsToImport.length} alumnos correctamente.`);
+        };
+
+        if (potentialTotal > targetCapacity) {
+            Alert.alert(
+                "Aforo Excedido en Destino",
+                `La importación sumará un total de ${potentialTotal} alumnos, superando el límite de ${targetCapacity}.`,
+                [
+                    { text: "Cancelar", style: "cancel" },
+                    { text: "Continuar (Importar)", onPress: proceedMerge }
+                ]
+            );
+        } else {
+            proceedMerge();
+        }
+    };
+
+    const closeEnrollModal = () => {
+        setEnrollModalVisible(false);
+        setMoveStudentId(null);
+        setTargetMoveClassId(null);
+    };
 
     const handleSaveClass = () => {
         const selectedCourse = courses.find(c => c.id === formData.courseId);
@@ -286,6 +625,40 @@ export default function ClassesScreen() {
         const allDaysSelected = formData.schedules.every(s => s.day !== '');
 
         if (selectedCourse && selectedTeacher && allDaysSelected) {
+            const newDuration = `${formData.hours || '0'}h ${formData.minutes || '0'}m`;
+
+            // Validate Teacher Schedule Overlap
+            const cycleClasses = classes.filter(
+                c => c.id !== editingClassId && c.cycleId === currentCycleId
+            );
+
+            let conflictFound = false;
+            let conflictMsg = '';
+
+            for (const existingClass of cycleClasses) {
+                for (const existingSchedule of existingClass.schedules) {
+                    for (const targetSchedule of formData.schedules) {
+                        if (existingSchedule.day === targetSchedule.day) {
+                            const newStart = `${targetSchedule.startHours}:${targetSchedule.startMinutes}`;
+                            if (checkTimeOverlap(existingSchedule.startTime, existingClass.duration, newStart, newDuration)) {
+                                if (existingClass.teacherName === `${selectedTeacher.firstName} ${selectedTeacher.lastName}`) {
+                                    conflictFound = true;
+                                    conflictMsg = `El docente ya dicta la clase "${existingClass.courseName}" el ${existingSchedule.day} a las ${existingSchedule.startTime}.`;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    if (conflictFound) break;
+                }
+                if (conflictFound) break;
+            }
+
+            if (conflictFound) {
+                Alert.alert("Conflicto de Horario", conflictMsg);
+                return;
+            }
+
             const classData: ClassItem = {
                 id: editingClassId || Date.now().toString(),
                 courseId: selectedCourse.id,
@@ -338,6 +711,10 @@ export default function ClassesScreen() {
         const isDragging = useSharedValue(false);
 
         const screenHeight = Dimensions.get('window').height;
+
+        const enrolledCount = enrollments.filter(e => e.classId === item.id && e.status === 'active').length;
+        const capacityInt = parseInt(item.capacity || '20');
+        const isOverflow = enrolledCount > capacityInt;
 
         const panGesture = Gesture.Pan()
             .onStart(() => {
@@ -402,13 +779,40 @@ export default function ClassesScreen() {
                             ))}
 
                             <View style={styles.infoRow}>
-                                <Users size={14} color={colors.icon} />
-                                <Text style={[styles.infoText, { color: colors.icon }]}>Capacidad: {item.capacity}</Text>
+                                <Users size={14} color={isOverflow ? '#ff4d4d' : colors.icon} />
+                                <Text style={[styles.infoText, { color: isOverflow ? '#ff4d4d' : colors.icon, fontWeight: isOverflow ? 'bold' : 'normal' }]}>
+                                    Capacidad: {enrolledCount}/{item.capacity} {isOverflow ? '(Sobrecupo)' : ''}
+                                </Text>
                             </View>
                         </View>
                     </View>
 
                     <View style={styles.cardActions}>
+                        {classes.some(c => c.mergedToClassId === item.id) && (
+                            <>
+                                <TouchableOpacity
+                                    style={[styles.editCircle, { backgroundColor: '#4CAF5020', marginRight: 8 }]}
+                                    onPress={() => handleConfirmImportState(item)}
+                                >
+                                    <Check size={18} color="#4CAF50" />
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={[styles.editCircle, { backgroundColor: '#ff4d4d20', marginRight: 8 }]}
+                                    onPress={() => handleRevertMerge(item)}
+                                >
+                                    <RefreshCcw size={18} color="#ff4d4d" />
+                                </TouchableOpacity>
+                            </>
+                        )}
+                        {!item.mergedToClassId && !classes.some(c => c.mergedToClassId === item.id) &&
+                            enrollments.filter(e => e.classId === item.id && e.status === 'active').length === 0 && (
+                                <TouchableOpacity
+                                    style={[styles.editCircle, { backgroundColor: colors.primary + '20', marginRight: 8 }]}
+                                    onPress={() => { setSelectedClassId(item.id); setSelectedSourceClassIds([]); setMergeModalVisible(true); }}
+                                >
+                                    <Download size={18} color={colors.primary} />
+                                </TouchableOpacity>
+                            )}
                         <TouchableOpacity
                             style={[styles.editCircle, { backgroundColor: colors.primary + '10' }]}
                             onPress={() => onEdit(item)}
@@ -544,19 +948,24 @@ export default function ClassesScreen() {
         <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}>
             <Stack.Screen options={{ headerShown: false }} />
 
-            {/* Header */}
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-                    <ChevronLeft color={colors.text} size={28} />
-                </TouchableOpacity>
-                <Text style={[styles.headerTitle, { color: colors.text }]}>Gestión de Clases</Text>
-                <TouchableOpacity
-                    style={[styles.addButton, { backgroundColor: colors.primary }]}
-                    onPress={() => setModalVisible(true)}
-                >
-                    <Plus color="#fff" size={24} />
-                </TouchableOpacity>
-            </View>
+            <PeriodHeader
+                title="Gestión de Clases"
+                onBack={() => router.back()}
+                rightAction={
+                    <TouchableOpacity
+                        style={[styles.addButton, { backgroundColor: colors.primary }]}
+                        onPress={() => {
+                            if (!currentCycleId) {
+                                Alert.alert('Seleccionar Periodo', 'Debe seleccionar un periodo antes de crear una clase.');
+                                return;
+                            }
+                            setModalVisible(true);
+                        }}
+                    >
+                        <Plus color="#fff" size={24} />
+                    </TouchableOpacity>
+                }
+            />
 
             {/* View Toggle */}
             <View style={[styles.toggleContainer, { backgroundColor: colors.card }]}>
@@ -576,37 +985,7 @@ export default function ClassesScreen() {
                 </TouchableOpacity>
             </View>
 
-            {/* Global Cycle Selector - Visible in both List and Schedule */}
-            <View style={styles.cycleSelectorWrapper}>
-                <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.cycleScrollContent}
-                >
-                    {academicCycles.map(cycle => (
-                        <TouchableOpacity
-                            key={cycle.id}
-                            onPress={() => setCurrentCycleId(cycle.id)}
-                            style={[
-                                styles.cycleChip,
-                                { backgroundColor: colors.card, borderColor: colors.border },
-                                currentCycleId === cycle.id && { backgroundColor: colors.primary, borderColor: colors.primary }
-                            ]}
-                        >
-                            <Calendar
-                                size={14}
-                                color={currentCycleId === cycle.id ? '#fff' : colors.icon}
-                            />
-                            <Text style={[
-                                styles.cycleChipLabel,
-                                { color: currentCycleId === cycle.id ? '#fff' : colors.icon }
-                            ]}>
-                                {cycle.name}
-                            </Text>
-                        </TouchableOpacity>
-                    ))}
-                </ScrollView>
-            </View>
+
 
             {viewMode === 'list' ? (
                 <>
@@ -847,10 +1226,24 @@ export default function ClassesScreen() {
                     <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
                         <View style={styles.modalHeader}>
                             <View>
-                                <Text style={[styles.modalTitle, { color: colors.text }]}>Matricular Estudiantes</Text>
-                                <Text style={{ color: colors.icon, fontSize: 13 }}>
-                                    {classes.find(c => c.id === selectedClassId)?.courseName}
-                                </Text>
+                                {(() => {
+                                    const currentClass = classes.find(c => c.id === selectedClassId);
+                                    const currentCapacity = parseInt(currentClass?.capacity || '20');
+                                    const currentEnrolled = enrollments.filter(e => e.classId === selectedClassId && e.status === 'active').length;
+                                    const isOverflow = currentEnrolled > currentCapacity;
+
+                                    return (
+                                        <>
+                                            <Text style={[styles.modalTitle, { color: colors.text }]}>Matricular Estudiantes</Text>
+                                            <Text style={{ color: colors.icon, fontSize: 13 }}>
+                                                {currentClass?.courseName}
+                                            </Text>
+                                            <Text style={{ color: isOverflow ? '#ff4d4d' : colors.icon, fontSize: 13, fontWeight: isOverflow ? 'bold' : 'normal', marginTop: 4 }}>
+                                                Aforo: {currentEnrolled}/{currentCapacity} {isOverflow ? '(Sobrecupo)' : ''}
+                                            </Text>
+                                        </>
+                                    );
+                                })()}
                             </View>
                             <TouchableOpacity onPress={() => closeEnrollModal()}>
                                 <X color={colors.text} size={24} />
@@ -883,19 +1276,34 @@ export default function ClassesScreen() {
                                                     </Text>
                                                 </View>
 
-                                                <TouchableOpacity
-                                                    style={[
-                                                        styles.actionCircle,
-                                                        { backgroundColor: isSelected ? '#ff4d4d' + '20' : colors.primary + '20' }
-                                                    ]}
-                                                    onPress={() => handleEnrollAction(student)}
-                                                >
-                                                    {isSelected ? (
-                                                        <X size={18} color="#ff4d4d" />
-                                                    ) : (
-                                                        <Plus size={18} color={colors.primary} />
+                                                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                                    {isSelected && (
+                                                        <TouchableOpacity
+                                                            style={[
+                                                                styles.actionCircle,
+                                                                { backgroundColor: colors.primary + '20', marginRight: 10 }
+                                                            ]}
+                                                            onPress={() => {
+                                                                setMoveStudentId(student.id);
+                                                            }}
+                                                        >
+                                                            <ArrowRight size={18} color={colors.primary} />
+                                                        </TouchableOpacity>
                                                     )}
-                                                </TouchableOpacity>
+                                                    <TouchableOpacity
+                                                        style={[
+                                                            styles.actionCircle,
+                                                            { backgroundColor: isSelected ? '#ff4d4d' + '20' : colors.primary + '20' }
+                                                        ]}
+                                                        onPress={() => handleEnrollAction(student)}
+                                                    >
+                                                        {isSelected ? (
+                                                            <X size={18} color="#ff4d4d" />
+                                                        ) : (
+                                                            <Plus size={18} color={colors.primary} />
+                                                        )}
+                                                    </TouchableOpacity>
+                                                </View>
                                             </View>
 
                                         );
@@ -913,7 +1321,130 @@ export default function ClassesScreen() {
                 </View>
             </Modal>
 
+            {/* Move Student Modal */}
+            <Modal visible={!!moveStudentId} transparent animationType="slide">
+                <View style={[styles.modalOverlay, { justifyContent: 'center', padding: 20 }]}>
+                    <View style={[styles.modalContent, { backgroundColor: colors.card, maxHeight: '80%', borderRadius: 24 }]}>
+                        <View style={styles.modalHeader}>
+                            <Text style={[styles.modalTitle, { color: colors.text }]}>Mover Alumno</Text>
+                            <TouchableOpacity onPress={() => setMoveStudentId(null)}>
+                                <X color={colors.text} size={24} />
+                            </TouchableOpacity>
+                        </View>
+                        <Text style={{ color: colors.text, marginBottom: 15 }}>
+                            Selecciona la nueva clase para {students.find(s => s.id === moveStudentId)?.firstName}:
+                        </Text>
+                        <ScrollView style={{ maxHeight: 300 }}>
+                            {classes
+                                .filter(c => c.cycleId === currentCycleId && c.id !== selectedClassId)
+                                .map(c => {
+                                    const isSelected = targetMoveClassId === c.id;
+                                    return (
+                                        <TouchableOpacity
+                                            key={c.id}
+                                            style={[
+                                                styles.studentItem,
+                                                { backgroundColor: colors.background, borderColor: isSelected ? colors.primary : colors.border, marginBottom: 10 }
+                                            ]}
+                                            onPress={() => setTargetMoveClassId(c.id)}
+                                        >
+                                            <View>
+                                                <Text style={{ color: colors.text, fontWeight: 'bold' }}>{c.courseName}</Text>
+                                                <Text style={{ color: colors.icon, fontSize: 12 }}>{c.teacherName}</Text>
+                                                <Text style={{ color: colors.icon, fontSize: 12 }}>
+                                                    {c.schedules.map(s => `${s.day} ${s.startTime}`).join(', ')}
+                                                </Text>
+                                            </View>
+                                            <View style={{
+                                                width: 24, height: 24, borderRadius: 12,
+                                                borderWidth: 2, borderColor: isSelected ? colors.primary : colors.icon,
+                                                justifyContent: 'center', alignItems: 'center'
+                                            }}>
+                                                {isSelected && <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: colors.primary }} />}
+                                            </View>
+                                        </TouchableOpacity>
+                                    );
+                                })}
+                            {classes.filter(c => c.cycleId === currentCycleId && c.id !== selectedClassId).length === 0 && (
+                                <Text style={{ color: colors.icon, textAlign: 'center', marginTop: 20 }}>No hay otras clases en este periodo.</Text>
+                            )}
+                        </ScrollView>
 
+                        <TouchableOpacity
+                            style={[styles.saveButton, { backgroundColor: targetMoveClassId ? colors.primary : colors.icon, marginTop: 20, marginBottom: 0 }]}
+                            disabled={!targetMoveClassId}
+                            onPress={handleFinalizeMove}
+                        >
+                            <Text style={styles.saveText}>Confirmar Movimiento</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
+
+            {/* Merge Class / Import Students Modal */}
+            <Modal visible={mergeModalVisible} transparent animationType="slide">
+                <View style={[styles.modalOverlay, { justifyContent: 'center', padding: 20 }]}>
+                    <View style={[styles.modalContent, { backgroundColor: colors.card, maxHeight: '80%', borderRadius: 24 }]}>
+                        <View style={styles.modalHeader}>
+                            <Text style={[styles.modalTitle, { color: colors.text }]}>Importar Alumnos</Text>
+                            <TouchableOpacity onPress={() => { setMergeModalVisible(false); setSelectedSourceClassIds([]); }}>
+                                <X color={colors.text} size={24} />
+                            </TouchableOpacity>
+                        </View>
+                        <Text style={{ color: colors.text, marginBottom: 15 }}>
+                            Selecciona una o más clases de origen para importar a sus alumnos:
+                        </Text>
+                        <ScrollView style={{ maxHeight: 300 }}>
+                            {classes
+                                .filter(c => c.id !== selectedClassId && !c.mergedToClassId) // dont show already merged sources
+                                .map(c => {
+                                    const cycleName = academicCycles.find(ac => ac.id === c.cycleId)?.name || 'Ciclo Desconocido';
+                                    const sourceEnrolled = enrollments.filter(e => e.classId === c.id && e.status === 'active').length;
+                                    const isSelected = selectedSourceClassIds.includes(c.id);
+                                    return (
+                                        <TouchableOpacity
+                                            key={c.id}
+                                            style={[
+                                                styles.studentItem,
+                                                { backgroundColor: colors.background, borderColor: isSelected ? colors.primary : colors.border, marginBottom: 10 }
+                                            ]}
+                                            onPress={() => {
+                                                if (isSelected) {
+                                                    setSelectedSourceClassIds(prev => prev.filter(id => id !== c.id));
+                                                } else {
+                                                    setSelectedSourceClassIds(prev => [...prev, c.id]);
+                                                }
+                                            }}
+                                        >
+                                            <View style={{ flex: 1 }}>
+                                                <Text style={{ color: colors.text, fontWeight: 'bold' }}>{c.courseName}</Text>
+                                                <Text style={{ color: colors.icon, fontSize: 12 }}>{cycleName} - {c.teacherName}</Text>
+                                                <Text style={{ color: colors.primary, fontSize: 12, marginTop: 4 }}>
+                                                    {sourceEnrolled} alumnos activos
+                                                </Text>
+                                            </View>
+                                            <View style={{
+                                                width: 24, height: 24, borderRadius: 12,
+                                                borderWidth: 2, borderColor: isSelected ? colors.primary : colors.icon,
+                                                justifyContent: 'center', alignItems: 'center'
+                                            }}>
+                                                {isSelected && <Check size={14} color={colors.primary} />}
+                                            </View>
+                                        </TouchableOpacity>
+                                    );
+                                })}
+                        </ScrollView>
+
+                        <TouchableOpacity
+                            style={[styles.saveButton, { backgroundColor: selectedSourceClassIds.length > 0 ? colors.primary : colors.icon, marginTop: 20, marginBottom: 0 }]}
+                            disabled={selectedSourceClassIds.length === 0}
+                            onPress={handleConfirmMerge}
+                        >
+                            <Text style={styles.saveText}>Importar de {selectedSourceClassIds.length} {selectedSourceClassIds.length === 1 ? 'clase' : 'clases'}</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
             {/* Deletion Trash Zone */}
             <Animated.View style={[styles.trashZone, trashAnimatedStyle]}>
                 <View style={[styles.trashCircle, { backgroundColor: '#FF4444' }]}>
