@@ -821,7 +821,8 @@ export default function ClassesScreen() {
                             </>
                         )}
                         {!item.mergedToClassId && !classes.some(c => c.mergedToClassId === item.id) &&
-                            enrollments.filter(e => e.classId === item.id && e.status === 'active').length === 0 && (
+                            enrollments.filter(e => e.classId === item.id && e.status === 'active').length === 0 &&
+                            academicCycles.find(ac => ac.id === item.cycleId)?.name.toLowerCase().includes('anual') && (
                                 <TouchableOpacity
                                     style={[styles.editCircle, { backgroundColor: colors.primary + '20', marginRight: 8 }]}
                                     onPress={() => { setSelectedClassId(item.id); setSelectedSourceClassIds([]); setMergeModalVisible(true); }}
@@ -1412,7 +1413,19 @@ export default function ClassesScreen() {
                         </Text>
                         <ScrollView style={{ maxHeight: 300 }}>
                             {classes
-                                .filter(c => c.id !== selectedClassId && !c.mergedToClassId) // dont show already merged sources
+                                .filter(c => {
+                                    if (c.id === selectedClassId || c.mergedToClassId) return false;
+                                    const sourceCycle = academicCycles.find(ac => ac.id === c.cycleId);
+                                    const targetClass = classes.find(tc => tc.id === selectedClassId);
+                                    const targetCycle = academicCycles.find(ac => ac.id === targetClass?.cycleId);
+
+                                    if (!sourceCycle || !targetCycle) return false;
+
+                                    const sourceYear = sourceCycle.name.match(/\d{4}/)?.[0];
+                                    const targetYear = targetCycle.name.match(/\d{4}/)?.[0];
+
+                                    return sourceCycle.name.toLowerCase().includes('verano') && sourceYear === targetYear;
+                                })
                                 .map(c => {
                                     const cycleName = academicCycles.find(ac => ac.id === c.cycleId)?.name || 'Ciclo Desconocido';
                                     const sourceEnrolled = enrollments.filter(e => e.classId === c.id && e.status === 'active').length;
