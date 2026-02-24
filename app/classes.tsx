@@ -1058,21 +1058,6 @@ export default function ClassesScreen() {
                                 </View>
                             </View>
 
-                            <View style={styles.formGroup}>
-                                <Text style={[styles.label, { color: colors.text }]}>Periodo Académico</Text>
-                                <View style={[styles.inputWrapper, { borderColor: colors.border, paddingHorizontal: 0 }]}>
-                                    <Picker
-                                        selectedValue={formData.cycleId}
-                                        onValueChange={(itemValue) => setFormData({ ...formData, cycleId: itemValue })}
-                                        style={{ color: colors.text, width: '100%', height: 50 }}
-                                        dropdownIconColor={colors.primary}
-                                    >
-                                        {academicCycles.map(cycle => (
-                                            <Picker.Item key={cycle.id} label={cycle.name} value={cycle.id} color="#000000" />
-                                        ))}
-                                    </Picker>
-                                </View>
-                            </View>
 
                             <View style={styles.formGroup}>
                                 <Text style={[styles.label, { color: colors.text }]}>Seleccionar Profesor</Text>
