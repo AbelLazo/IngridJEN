@@ -3,9 +3,9 @@ import { Colors } from '@/constants/theme';
 import { useInstitution } from '@/context/InstitutionContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Bell, Calendar, Search } from 'lucide-react-native';
-import React, { useMemo } from 'react';
-import { ScrollView, StatusBar, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Bell, Calendar, Check, ChevronDown, Search, X } from 'lucide-react-native';
+import React, { useMemo, useState } from 'react';
+import { Modal, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, TouchableWithoutFeedback, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function DashboardScreen() {
@@ -13,7 +13,8 @@ export default function DashboardScreen() {
   const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme as keyof typeof Colors];
-  const { academicCycles, currentCycleId, enrollments, classes, students } = useInstitution();
+  const { academicCycles, currentCycleId, setCurrentCycleId, enrollments, classes, students } = useInstitution();
+  const [isCycleMenuVisible, setIsCycleMenuVisible] = useState(false);
 
   const isTablet = width > 600;
 
@@ -68,13 +69,18 @@ export default function DashboardScreen() {
               <View style={{ flex: 1 }}>
                 <Text style={[styles.greeting, { fontSize: isTablet ? 32 : 24 }]}>Hola, Admin 👋</Text>
 
-                {/* Cycle Indicator Badge */}
-                <View style={[styles.cycleBadge, { backgroundColor: 'rgba(255, 255, 255, 0.15)' }]}>
+                {/* Cycle Indicator Badge / Selector */}
+                <TouchableOpacity
+                  style={[styles.cycleBadge, { backgroundColor: 'rgba(255, 255, 255, 0.15)' }]}
+                  onPress={() => setIsCycleMenuVisible(true)}
+                  activeOpacity={0.7}
+                >
                   <Calendar size={14} color="#fff" />
                   <Text style={styles.cycleBadgeText}>
                     Ciclo Activo: {activeCycle?.name || 'Cargando...'}
                   </Text>
-                </View>
+                  <ChevronDown size={14} color="#fff" style={{ marginLeft: 6 }} />
+                </TouchableOpacity>
               </View>
               <View style={styles.headerIcons}>
                 <View style={styles.iconCircle}>
@@ -114,6 +120,56 @@ export default function DashboardScreen() {
           </View>
         </View>
       </ScrollView>
+
+      {/* Dropdown Menu Modal */}
+      <Modal
+        visible={isCycleMenuVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setIsCycleMenuVisible(false)}
+      >
+        <TouchableWithoutFeedback onPress={() => setIsCycleMenuVisible(false)}>
+          <View style={styles.modalOverlay}>
+            <TouchableOpacity activeOpacity={1} style={[styles.menuContainer, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
+              <View style={styles.menuHeader}>
+                <Text style={[styles.menuTitle, { color: colors.text }]}>Seleccionar Período</Text>
+                <TouchableOpacity onPress={() => setIsCycleMenuVisible(false)}>
+                  <X size={20} color={colors.icon} />
+                </TouchableOpacity>
+              </View>
+
+              {academicCycles.map((cycle) => {
+                const isSelected = cycle.id === currentCycleId;
+                return (
+                  <TouchableOpacity
+                    key={cycle.id}
+                    style={[
+                      styles.menuItem,
+                      isSelected && { backgroundColor: colors.primary + '10' }
+                    ]}
+                    onPress={() => {
+                      setCurrentCycleId(cycle.id);
+                      setIsCycleMenuVisible(false);
+                    }}
+                  >
+                    <View style={styles.menuItemContent}>
+                      <Calendar size={18} color={isSelected ? colors.primary : colors.icon} />
+                      <Text style={[
+                        styles.cycleName,
+                        { color: isSelected ? colors.primary : colors.text },
+                        isSelected && { fontWeight: 'bold' }
+                      ]}>
+                        {cycle.name}
+                      </Text>
+                    </View>
+                    {isSelected && <Check size={18} color={colors.primary} />}
+                  </TouchableOpacity>
+                );
+              })}
+            </TouchableOpacity>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
     </View>
   );
 }
@@ -242,5 +298,49 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     marginLeft: 6,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    justifyContent: 'flex-start',
+  },
+  menuContainer: {
+    marginTop: 100,
+    marginHorizontal: 20,
+    borderRadius: 20,
+    padding: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  menuHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 15,
+    borderBottomWidth: 0.5,
+    borderBottomColor: 'rgba(0,0,0,0.05)',
+  },
+  menuTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 15,
+    borderRadius: 12,
+    marginVertical: 2,
+  },
+  menuItemContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  cycleName: {
+    fontSize: 15,
   },
 });

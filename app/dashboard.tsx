@@ -6,7 +6,7 @@ import { useRouter } from 'expo-router';
 import { AlertCircle, Award, Calendar, ChevronLeft, DollarSign, TrendingUp, Users } from 'lucide-react-native';
 import React, { useMemo } from 'react';
 import { Dimensions, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
-import { BarChart, PieChart } from 'react-native-chart-kit';
+import { BarChart, PieChart } from 'react-native-gifted-charts';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function DashboardScreen() {
@@ -48,10 +48,11 @@ export default function DashboardScreen() {
     }, [enrollments, classes, currentCycleId, students, activeCycle]);
 
     // Financial Metrics with Retroactive Discount logic
-    const { totalCollected, totalDebt, monthlyData } = useMemo(() => {
+    const { totalCollected, totalDebt, monthlyData, maxValue } = useMemo(() => {
         let collected = 0;
         let debt = 0;
         const monthlyCollectedMap: Record<string, number> = {};
+        const allMonthsSet = new Set<string>();
 
         const cycleEnrollments = enrollments.filter(e =>
             classes.some(c => c.id === e.classId && c.cycleId === currentCycleId)
@@ -73,6 +74,7 @@ export default function DashboardScreen() {
 
                 if (isAfterWithdrawal) return;
 
+                allMonthsSet.add(inst.monthYear);
                 let finalAmount = parseFloat(inst.amount);
 
                 if (inst.isPaid) {
@@ -108,31 +110,69 @@ export default function DashboardScreen() {
             });
         });
 
-        const sortedMonths = Object.keys(monthlyCollectedMap).sort();
-        const last6Months = sortedMonths.slice(-6);
+        // Completar meses intermedios (incluso con 0 ingresos)
+        const uniqueMonths = Array.from(allMonthsSet).sort();
+        let chartMonths: string[] = [];
+
+        if (uniqueMonths.length > 0) {
+            const minMonthStr = uniqueMonths[0];
+            const maxMonthStr = uniqueMonths[uniqueMonths.length - 1];
+
+            let [minY, minM] = minMonthStr.split('-').map(Number);
+            const [maxY, maxM] = maxMonthStr.split('-').map(Number);
+
+            while (minY < maxY || (minY === maxY && minM <= maxM)) {
+                const monthStr = `${minY}-${minM.toString().padStart(2, '0')}`;
+                chartMonths.push(monthStr);
+                if (!monthlyCollectedMap[monthStr]) {
+                    monthlyCollectedMap[monthStr] = 0;
+                }
+                minM++;
+                if (minM > 12) {
+                    minM = 1;
+                    minY++;
+                }
+            }
+        }
 
         const MONTH_NAMES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 
-        // Solo agrupamos para gráfica. Collected y Debt mantienen su lógica anterior para KPIs
+        // Formato para react-native-gifted-charts
+        // Calculamos el valor máximo para estimar la altura en pantalla de cada barra
+        let maxValue = chartMonths.length > 0 ? Math.max(...chartMonths.map(m => monthlyCollectedMap[m] || 0)) : 0;
+        if (maxValue === 0) maxValue = 1; // Prevenir división por cero
+        const chartHeight = 220;
+
+        // Formato para react-native-gifted-charts
         return {
             totalCollected: collected,
             totalDebt: debt,
-            monthlyData: {
-                labels: last6Months.length > 0 ? last6Months.map(m => {
-                    // Formato original era YYYY-MM
-                    const parts = m.split('-');
-                    if (parts.length === 2) {
-                        const monthIndex = parseInt(parts[1], 10) - 1;
-                        return `${MONTH_NAMES[monthIndex]}`; // Ej: "Abr"
-                    }
-                    return m;
-                }) : ['S/D'],
-                datasets: [
-                    {
-                        data: last6Months.length > 0 ? last6Months.map(m => monthlyCollectedMap[m]) : [0]
-                    }
-                ]
-            }
+            monthlyData: chartMonths.length > 0 ? chartMonths.map(m => {
+                const val = monthlyCollectedMap[m] || 0;
+                let label = m;
+                const parts = m.split('-');
+                if (parts.length === 2) {
+                    const monthIndex = parseInt(parts[1], 10) - 1;
+                    label = MONTH_NAMES[monthIndex];
+                }
+
+                return {
+                    value: val,
+                    label,
+                    topLabelComponent: val > 0 ? () => {
+                        // Desplazar el label hacia la mitad de la barra visual (+ offset)
+                        const barHeightPixels = (val / (maxValue * 1.2)) * chartHeight;
+                        return (
+                            <View style={{ position: 'absolute', top: barHeightPixels / 2, width: 35, alignItems: 'center', zIndex: 10, transform: [{ rotate: '-90deg' }] }}>
+                                <Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' }}>
+                                    {val.toFixed(0)}
+                                </Text>
+                            </View>
+                        );
+                    } : undefined
+                };
+            }) : [{ value: 0, label: 'S/D' }],
+            maxValue: maxValue * 1.2 // Añadir 20% de holgura superior
         };
     }, [enrollments, classes, currentCycleId, installments, payments, activeCycle, courses]);
 
@@ -169,18 +209,18 @@ export default function DashboardScreen() {
 
     const pieChartData = [
         {
-            name: 'Recaudado',
-            population: totalCollected,
-            color: '#8b5cf6', // Púrpura Vibrante
-            legendFontColor: colors.text,
-            legendFontSize: 12
+            value: totalCollected,
+            color: '#10b981', // Esmeralda
+            gradientCenterColor: '#059669',
+            text: 'S/' + totalCollected.toFixed(0),
+            textColor: '#FFF'
         },
         {
-            name: 'Por Cobrar',
-            population: totalDebt,
-            color: '#f97316', // Naranja Intenso
-            legendFontColor: colors.text,
-            legendFontSize: 12
+            value: totalDebt,
+            color: '#f43f5e', // Rosa fuerte / Rojo
+            gradientCenterColor: '#e11d48',
+            text: 'S/' + totalDebt.toFixed(0),
+            textColor: '#FFF'
         }
     ];
 
@@ -248,64 +288,80 @@ export default function DashboardScreen() {
                     <Text style={[styles.sectionTitle, { color: colors.text, fontSize: isTablet ? 24 : 18 }]}>Salud Financiera (Ciclo Actual)</Text>
 
                     <View style={[styles.chartCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                        <Text style={{ color: colors.text, fontWeight: 'bold', marginBottom: 10 }}>Ingresos Históricos (Por Mes)</Text>
-                        <BarChart
-                            data={monthlyData}
-                            width={Dimensions.get('window').width - (isTablet ? 80 : 40)}
-                            height={220}
-                            yAxisLabel="S/"
-                            yAxisSuffix=""
-                            fromZero={true}
-                            chartConfig={{
-                                backgroundColor: colors.card,
-                                backgroundGradientFrom: colors.card,
-                                backgroundGradientTo: colors.card,
-                                decimalPlaces: 0,
-                                color: (opacity = 1) => `rgba(99, 102, 241, ${opacity})`,
-                                labelColor: (opacity = 1) => colors.icon,
-                                style: { borderRadius: 16 },
-                                propsForLabels: { fontSize: 11 }
-                            }}
-                            verticalLabelRotation={0}
-                            style={{ marginVertical: 8, borderRadius: 16 }}
-                        />
+                        <Text style={{ color: colors.text, fontWeight: 'bold', marginBottom: 20 }}>Ingresos Históricos (S/ Por Mes)</Text>
+                        <View style={{ width: '100%', alignItems: 'center' }}>
+                            <BarChart
+                                data={monthlyData}
+                                maxValue={maxValue}
+                                width={Dimensions.get('window').width - (isTablet ? 140 : 100)}
+                                height={220}
+                                barWidth={isTablet ? 35 : 22}
+                                spacing={isTablet ? 30 : 18}
+                                initialSpacing={15}
+                                roundedTop
+                                yAxisThickness={0}
+                                hideYAxisText
+                                hideRules
+                                xAxisThickness={1}
+                                xAxisColor={colors.border}
+                                xAxisLabelTextStyle={{ color: colors.icon, fontSize: 11 }}
+                                frontColor="#6366f1"
+                                isAnimated
+                                showFractionalValues={false}
+                            />
+                        </View>
                     </View>
 
-                    <View style={[styles.chartCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                        <Text style={{ color: colors.text, fontWeight: 'bold', marginBottom: 10 }}>Balance de Cuotas</Text>
+                    <View style={[styles.chartCard, { backgroundColor: colors.card, borderColor: colors.border, alignItems: 'center' }]}>
+                        <Text style={{ color: colors.text, fontWeight: 'bold', marginBottom: 20, alignSelf: 'flex-start' }}>Balance de Cuotas</Text>
                         {totalCollected === 0 && totalDebt === 0 ? (
                             <Text style={{ color: colors.icon, marginVertical: 20 }}>No hay cuotas registradas en este ciclo.</Text>
                         ) : (
-                            <View style={{ position: 'relative', height: 220, justifyContent: 'center', alignItems: 'center' }}>
-                                {/* Base Cylinder (Darker Layer) - Desplazada hacia abajo para simular relieve/volumen 3D */}
-                                <View style={{ position: 'absolute', top: 15 }}>
-                                    <PieChart
-                                        data={[
-                                            { name: '', population: totalCollected, color: '#6d28d9', legendFontColor: 'transparent', legendFontSize: 0 },
-                                            { name: '', population: totalDebt, color: '#c2410c', legendFontColor: 'transparent', legendFontSize: 0 }
-                                        ]}
-                                        width={Dimensions.get('window').width - (isTablet ? 80 : 40)}
-                                        height={200}
-                                        chartConfig={{ color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})` }}
-                                        accessor="population"
-                                        backgroundColor="transparent"
-                                        paddingLeft="15"
-                                        hasLegend={false}
-                                        absolute
-                                    />
+                            <View style={{ alignItems: 'center', marginVertical: 10 }}>
+                                <View style={{ position: 'relative', height: 220, justifyContent: 'center', alignItems: 'center', width: '100%' }}>
+                                    {/* Capa Base / Extrusión 3D (Colores Oscuros) */}
+                                    <View style={{ position: 'absolute', top: 15 }}>
+                                        <PieChart
+                                            data={[
+                                                { value: totalCollected, color: '#065f46' }, // Esmeralda muy oscuro
+                                                { value: totalDebt, color: '#9f1239' }       // Rosa/Rojo oscuro
+                                            ]}
+                                            donut={false}
+                                            isThreeD
+                                            shadowWidth={0}
+                                            tiltAngle="50"
+                                            radius={110}
+                                            innerRadius={0}
+                                            strokeWidth={0}
+                                        />
+                                    </View>
+
+                                    {/* Capa Superior Brillante */}
+                                    <View style={{ position: 'absolute', top: 0 }}>
+                                        <PieChart
+                                            data={pieChartData}
+                                            donut={false}
+                                            isThreeD
+                                            shadowWidth={0}
+                                            tiltAngle="50"
+                                            radius={110}
+                                            innerRadius={0}
+                                            showText
+                                            fontWeight="bold"
+                                            strokeWidth={0}
+                                        />
+                                    </View>
                                 </View>
-                                {/* Top Face (Lighter Layer) - Posición Normal */}
-                                <View style={{ position: 'absolute', top: 0 }}>
-                                    <PieChart
-                                        data={pieChartData}
-                                        width={Dimensions.get('window').width - (isTablet ? 80 : 40)}
-                                        height={200}
-                                        chartConfig={{ color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})` }}
-                                        accessor="population"
-                                        backgroundColor="transparent"
-                                        paddingLeft="15"
-                                        absolute
-                                    />
+                                {/* Custom Legend */}
+                                <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: 30, flexWrap: 'wrap' }}>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: 20 }}>
+                                        <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: '#10b981', marginRight: 8, elevation: 2 }} />
+                                        <Text style={{ color: colors.text, fontWeight: '600' }}>Recaudado</Text>
+                                    </View>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                        <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: '#f43f5e', marginRight: 8, elevation: 2 }} />
+                                        <Text style={{ color: colors.text, fontWeight: '600' }}>Por Cobrar</Text>
+                                    </View>
                                 </View>
                             </View>
                         )}
