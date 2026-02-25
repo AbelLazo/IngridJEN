@@ -59,6 +59,24 @@ export interface ClassItem {
     mergedToClassId?: string;
 }
 
+export type AttendanceStatus = 'present' | 'absent' | 'late' | 'excused';
+
+export interface AttendanceStudent {
+    studentId: string;
+    status: AttendanceStatus;
+    notes?: string;
+}
+
+export interface AttendanceRecord {
+    id: string;
+    classId: string;
+    date: string; // YYYY-MM-DD
+    teacherId: string;
+    teacherStatus: 'present' | 'absent' | 'late' | 'substitute';
+    students: AttendanceStudent[];
+    updatedAt: string;
+}
+
 export interface EventDiscount {
     id: string;
     name: string;
@@ -141,6 +159,8 @@ interface InstitutionContextType {
     updateCycle: (cycle: AcademicCycle) => void;
     deleteCycle: (id: string) => void;
     installments: Installment[];
+    attendances: AttendanceRecord[];
+    saveAttendance: (record: AttendanceRecord) => Promise<void>;
 }
 
 const InstitutionContext = createContext<InstitutionContextType | undefined>(undefined);
@@ -159,6 +179,7 @@ export function InstitutionProvider({ children }: { children: ReactNode }) {
     const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
     const [installments, setInstallments] = useState<Installment[]>([]);
     const [payments, setPayments] = useState<Payment[]>([]);
+    const [attendances, setAttendances] = useState<AttendanceRecord[]>([]);
 
     // Subscribe to collections
     useEffect(() => {
@@ -191,10 +212,14 @@ export function InstitutionProvider({ children }: { children: ReactNode }) {
         const unsubPayments = onSnapshot(query(collection(db, 'payments'), orderBy('date', 'desc')), (shot) => {
             setPayments(shot.docs.map(d => ({ id: d.id, ...d.data() } as Payment)));
         });
+        const unsubAttendances = onSnapshot(collection(db, 'attendances'), (shot) => {
+            setAttendances(shot.docs.map(d => ({ id: d.id, ...d.data() } as AttendanceRecord)));
+        });
 
         return () => {
             unsubCycles(); unsubCourses(); unsubStudents(); unsubTeachers();
             unsubClasses(); unsubEnrollments(); unsubInstallments(); unsubPayments();
+            unsubAttendances();
         };
     }, []);
 
@@ -540,6 +565,28 @@ export function InstitutionProvider({ children }: { children: ReactNode }) {
         }
     };
 
+    // Attendance CRUD
+    const saveAttendance = async (record: AttendanceRecord) => {
+        try {
+            // Find existing record for this class and date
+            const existingRecord = attendances.find(a => a.classId === record.classId && a.date === record.date);
+            const dataToSave = { ...record, updatedAt: new Date().toISOString() };
+            // Cannot save 'id' as a field in doc identically as an existing document in firebase if it's the doc Id.
+            const { id, ...dataObj } = dataToSave;
+
+            if (existingRecord) {
+                // Update
+                await updateDoc(doc(db, 'attendances', existingRecord.id), dataObj);
+            } else {
+                // Create
+                await addDoc(collection(db, 'attendances'), dataObj);
+            }
+        } catch (error: any) {
+            console.error('Error saving attendance:', error);
+            Alert.alert('Error', 'No se pudo guardar la asistencia: ' + error.message);
+        }
+    };
+
     return (
         <InstitutionContext.Provider value={{
             courses, addCourse, updateCourse,
@@ -550,7 +597,8 @@ export function InstitutionProvider({ children }: { children: ReactNode }) {
             enrollments, addEnrollment, updateEnrollment, removeEnrollment,
             payments, addPayment,
             academicCycles, currentCycleId, setCurrentCycleId, addCycle, updateCycle, deleteCycle,
-            installments
+            installments,
+            attendances, saveAttendance
         }}>
             {children}
         </InstitutionContext.Provider>
