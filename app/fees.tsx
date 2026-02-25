@@ -76,7 +76,7 @@ const EnrollmentItem = ({ student, detail, colors, onPay, onShowDetail }: Enroll
                 <View style={styles.expandableContent}>
                     {detail.allMonths.map((month: any, idx: number) => (
                         <View key={month.id} style={[styles.monthRow, idx === 0 && { borderTopWidth: 0 }]}>
-                            <View>
+                            <View style={{ flex: 1, paddingRight: 10 }}>
                                 <Text style={[styles.monthName, { color: colors.text, opacity: month.isPaid ? 0.6 : 1 }]}>
                                     {month.monthName}
                                 </Text>
@@ -88,6 +88,14 @@ const EnrollmentItem = ({ student, detail, colors, onPay, onShowDetail }: Enroll
                                 }}>
                                     {month.isPaid ? 'PAGADO ✓' : (month.isOverdue ? 'VENCIDO: ' : 'Vence: ') + month.paymentDate}
                                 </Text>
+                                {month.notes && (
+                                    <Text
+                                        style={{ fontSize: 10, color: colors.primary, marginTop: 4, marginBottom: 4, fontStyle: 'italic', opacity: month.isPaid ? 0.6 : 0.8 }}
+                                        numberOfLines={2}
+                                    >
+                                        {month.notes.replace('Descuento automático: ', '🎁 ')}
+                                    </Text>
+                                )}
                             </View>
 
                             {month.isPaid ? (
@@ -238,16 +246,61 @@ export default function FeesScreen() {
 
                     const isOverdue = inst.dueDate <= todayStr && !inst.isPaid && !isAfterWithdrawal;
 
+                    let finalInstAmount = parseFloat(inst.amount);
+                    let displayNotes = (inst as any).notes;
+
+                    // Retroactive discount calculation for legacy unpaid installments
+                    if (!inst.isPaid && cls?.cycleId) {
+                        const activeCycle = academicCycles.find(cy => cy.id === cls.cycleId);
+                        if (activeCycle && activeCycle.events && activeCycle.events.length > 0) {
+                            const monthEvents = activeCycle.events.filter(e => {
+                                let evtTarget = e.targetMonthYear;
+                                const parts = evtTarget.split('-');
+                                if (parts.length === 2) evtTarget = `${parts[0]}-${parts[1].padStart(2, '0')}`;
+
+                                let instTarget = inst.monthYear;
+                                const instParts = instTarget.split('-');
+                                if (instParts.length === 2) instTarget = `${instParts[0]}-${instParts[1].padStart(2, '0')}`;
+
+                                return evtTarget === instTarget;
+                            });
+
+                            if (monthEvents.length > 0) {
+                                let totalDiscountPercentage = 0;
+                                const eventNames: string[] = [];
+
+                                monthEvents.forEach(e => {
+                                    totalDiscountPercentage += e.discountPercentage;
+                                    eventNames.push(`${e.name} (${e.discountPercentage}%)`);
+                                });
+
+                                if (totalDiscountPercentage > 100) totalDiscountPercentage = 100;
+
+                                // If the current recorded amount equals the full course price, it means
+                                // the discount wasn't originally applied at generation time.
+                                const coursePrice = parseFloat(course?.price || '0');
+                                if (finalInstAmount >= coursePrice) {
+                                    const discountAmount = coursePrice * (totalDiscountPercentage / 100);
+                                    finalInstAmount = coursePrice - discountAmount;
+                                    if (!displayNotes || displayNotes === "") {
+                                        displayNotes = `Descuento automático (recuperado): ${eventNames.join(', ')}`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
                     return {
                         id: inst.id,
                         monthName: monthDisplay,
                         paymentDate: inst.dueDate,
-                        amount: parseFloat(inst.amount),
+                        amount: finalInstAmount,
                         isOverdue,
                         isPaid: inst.isPaid,
                         monthYearSearch: inst.monthYear,
                         paymentRecord,
-                        isIgnored: isAfterWithdrawal
+                        isIgnored: isAfterWithdrawal,
+                        notes: displayNotes
                     };
                 }).filter(m => !m.isIgnored); // Only show relevant months for the student's status
 
@@ -276,15 +329,16 @@ export default function FeesScreen() {
             };
         }).filter(s => s.enrollmentDetails.length > 0)
             .sort((a, b) => b.totalDebt - a.totalDebt);
-    }, [students, enrollments, classes, courses, payments, installments, networkTime]);
+    }, [students, enrollments, classes, courses, payments, installments, networkTime, currentCycleId]);
 
     const handleRegisterPayment = (student: any, enrollment: any, month: any) => {
         const today = networkTime || new Date();
         const monthYear = month.monthYearSearch;
+        const discountText = month.notes ? `\n\n(${month.notes})` : '';
 
         Alert.alert(
             "Registrar Pago",
-            `¿Confirmas el pago de S/ ${month.amount} por "${enrollment.courseName}" correspondiente a ${month.monthName} para ${student.firstName}?`,
+            `¿Confirmas el pago de S/ ${month.amount} por "${enrollment.courseName}" correspondiente a ${month.monthName} para ${student.firstName}?${discountText}`,
             [
                 { text: "Cancelar", style: "cancel" },
                 {

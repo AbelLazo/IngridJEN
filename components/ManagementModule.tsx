@@ -68,7 +68,7 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
         lastName: '',
         phone: '',
         status: 'active' as 'active' | 'inactive',
-        activeYear: new Date().getFullYear().toString(),
+        activeYears: [new Date().getFullYear().toString()] as string[],
         selectedSpecialties: [] as string[]
     });
     const [errors, setErrors] = useState<Record<string, boolean>>({});
@@ -80,7 +80,7 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
             lastName: '',
             phone: '',
             status: 'active',
-            activeYear: new Date().getFullYear().toString(),
+            activeYears: [currentCycleYear],
             selectedSpecialties: []
         });
         setEditingEntityId(null);
@@ -101,6 +101,39 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
         setFormData(prev => ({
             ...prev,
             selectedSpecialties: prev.selectedSpecialties.filter(s => s !== name)
+        }));
+    };
+
+    const handleAddYear = (year: string) => {
+        if (year && !formData.activeYears.includes(year)) {
+            setFormData(prev => ({
+                ...prev,
+                activeYears: [...prev.activeYears, year]
+            }));
+        }
+    };
+
+    const handleRemoveYear = (year: string) => {
+        if (editingEntityId) {
+            // Verificar si el estudiante tiene alguna matrícula en este año específico
+            const hasEnrollmentsInYear = enrollments.some(e => {
+                if (e.studentId !== editingEntityId) return false;
+                const classItem = classes.find(c => c.id === e.classId);
+                if (!classItem) return false;
+                const cycle = academicCycles.find(ac => ac.id === classItem.cycleId);
+                const cycleYear = cycle?.name.match(/\d{4}/)?.[0];
+                return cycleYear === year;
+            });
+
+            if (hasEnrollmentsInYear) {
+                Alert.alert("Acción Denegada", `No se puede remover la asignación al año ${year} porque el estudiante tiene matrículas o historial académico en él.`);
+                return;
+            }
+        }
+
+        setFormData(prev => ({
+            ...prev,
+            activeYears: prev.activeYears.filter(y => y !== year)
         }));
     };
 
@@ -207,8 +240,8 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
             };
         });
 
-        const computedStatus = (type === 'student' && item.activeYear)
-            ? (item.status === 'active' && item.activeYear === currentCycleYear ? 'active' : 'inactive')
+        const computedStatus = (type === 'student' && item.activeYears)
+            ? (item.status === 'active' && item.activeYears.includes(currentCycleYear) ? 'active' : 'inactive')
             : item.status;
 
         return (
@@ -230,7 +263,7 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
                             <Text style={[styles.cardSub, { color: colors.icon, marginLeft: 4 }]}>{item.phone}</Text>
                             {computedStatus === 'inactive' && (
                                 <Text style={{ fontSize: 10, color: '#FF4444', marginLeft: 10, fontWeight: 'bold' }}>
-                                    (Inactivo{type === 'student' && item.activeYear && item.activeYear !== currentCycleYear ? ` - ${item.activeYear}` : ''})
+                                    (Inactivo{type === 'student' && item.activeYears && !item.activeYears.includes(currentCycleYear) ? ` - Sin registro en este periodo` : ''})
                                 </Text>
                             )}
                         </View>
@@ -295,7 +328,15 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
                     await addTeacher(entityData);
                 }
             } else {
-                entityData.activeYear = formData.status === 'active' ? formData.activeYear : null;
+                if (editingEntityId && formData.status === 'inactive') {
+                    const hasActiveEnrollments = enrollments.some(e => e.studentId === editingEntityId);
+                    if (hasActiveEnrollments) {
+                        setErrorMsg("❌ No se puede inactivar globalmente: El estudiante posee historial de matrículas. Para retirar un alumno, desmatrículalo primero o remueve su etiqueta de año actual correspondiente.");
+                        return;
+                    }
+                }
+
+                entityData.activeYears = formData.activeYears;
                 if (editingEntityId) {
                     await updateStudent(entityData);
                 } else {
@@ -316,7 +357,7 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
             lastName: item.lastName,
             phone: item.phone,
             status: item.status || 'active',
-            activeYear: (item as any).activeYear || currentCycleYear,
+            activeYears: (item as any).activeYears || [currentCycleYear],
             selectedSpecialties: item.extra ? item.extra.split(', ') : []
         });
         setErrors({});
@@ -482,15 +523,16 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
                                         </Picker>
                                     </View>
 
-                                    {type === 'student' && formData.status === 'active' && (
+                                    {type === 'student' && (
                                         <View style={[styles.inputWrapper, { borderColor: colors.border, paddingHorizontal: 0, flex: 0.8 }]}>
                                             <Picker
-                                                selectedValue={formData.activeYear}
-                                                onValueChange={(v) => setFormData({ ...formData, activeYear: v })}
+                                                selectedValue=""
+                                                onValueChange={(v) => handleAddYear(v)}
                                                 style={{ color: colors.text, width: '100%', height: 50 }}
                                                 dropdownIconColor={colors.primary}
                                             >
-                                                {[...Array(2)].map((_, i) => {
+                                                <Picker.Item label="Añadir..." value="" />
+                                                {[...Array(3)].map((_, i) => {
                                                     const year = (new Date().getFullYear() + i).toString();
                                                     return <Picker.Item key={year} label={`Año ${year}`} value={year} />;
                                                 })}
@@ -498,12 +540,38 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
                                         </View>
                                     )}
                                 </View>
+
+                                {/* Selected Active Years Display */}
+                                {type === 'student' && formData.activeYears.length > 0 && (
+                                    <View style={[styles.specialtiesSelector, { marginTop: 12 }]}>
+                                        {formData.activeYears.map((year, idx) => {
+                                            const isPastYear = parseInt(year) < parseInt(currentCycleYear);
+                                            // Ocultamiento visual del historial inactivo tal y como solicitó el usuario, para la limpia del Form
+                                            if (isPastYear) return null;
+
+                                            return (
+                                                <TouchableOpacity
+                                                    key={idx}
+                                                    onPress={() => handleRemoveYear(year)}
+                                                    style={[styles.specialtyChip, {
+                                                        backgroundColor: colors.primary,
+                                                        borderColor: colors.primary,
+                                                        flexDirection: 'row',
+                                                        alignItems: 'center'
+                                                    }]}
+                                                >
+                                                    <Text style={[styles.specialtyChipText, { color: '#fff', marginRight: 5 }]}>{year}</Text>
+                                                    <X size={14} color="#fff" />
+                                                </TouchableOpacity>
+                                            )
+                                        })}
+                                    </View>
+                                )}
+
                                 <Text style={{ fontSize: 11, color: colors.icon, marginTop: 4, marginLeft: 4 }}>
                                     {type === 'teacher'
                                         ? "* Solo los profesores activos podrán ser asignados a nuevos cursos y horarios."
-                                        : (formData.status === 'active' && formData.activeYear)
-                                            ? `* El alumno solo figurará como activo en los periodos del año ${formData.activeYear}.`
-                                            : "* Solo alumnos activos pueden matricularse en nuevos cursos."}
+                                        : "* Solo figurará como activo para matricularse en los periodos de los años listados arriba."}
                                 </Text>
                             </View>
 

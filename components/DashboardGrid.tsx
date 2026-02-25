@@ -16,7 +16,7 @@ import { StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'r
 const GAP = 16;
 
 const MENU_ITEMS = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, color: '#6366f1', route: '/(tabs)' },
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, color: '#6366f1', route: '/dashboard' },
     { id: 'students', label: 'Estudiantes', icon: Users, color: '#f59e0b', route: '/students' },
     { id: 'teachers', label: 'Profesores', icon: GraduationCap, color: '#10b981', route: '/teachers' },
     { id: 'courses', label: 'Cursos', icon: BookOpen, color: '#3b82f6', route: '/courses' },

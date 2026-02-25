@@ -113,6 +113,17 @@ export default function ClassesScreen() {
     const [selectedSourceClassIds, setSelectedSourceClassIds] = useState<string[]>([]);
     const [moveStudentId, setMoveStudentId] = useState<string | null>(null);
     const [targetMoveClassId, setTargetMoveClassId] = useState<string | null>(null);
+
+    const getValidActiveEnrollments = (classId: string) => {
+        return enrollments.filter(e => {
+            if (e.classId !== classId || e.status !== 'active') return false;
+            const student = students.find(s => s.id === e.studentId);
+            if (!student || student.status !== 'active') return false;
+            const currentCycle = academicCycles.find(ac => ac.id === currentCycleId);
+            const cycleYear = currentCycle?.name.match(/\d{4}/)?.[0];
+            return cycleYear ? student.activeYears?.includes(cycleYear) : false;
+        });
+    };
     const filteredClasses = classes.filter(item => {
         const matchesSearch = item.courseName.toLowerCase().includes(searchQuery.toLowerCase()) ||
             item.teacherName.toLowerCase().includes(searchQuery.toLowerCase());
@@ -223,9 +234,7 @@ export default function ClassesScreen() {
 
     const openEnrollment = (cls: ClassItem) => {
         setSelectedClassId(cls.id);
-        const currentActiveEnrollments = enrollments
-            .filter(e => e.classId === cls.id && e.status === 'active') // Filter by active status
-            .map(e => e.studentId);
+        const currentActiveEnrollments = getValidActiveEnrollments(cls.id).map(e => e.studentId);
         setEnrolledInSelected(currentActiveEnrollments);
         setEnrollModalVisible(true);
     };
@@ -307,7 +316,7 @@ export default function ClassesScreen() {
             };
 
             const currentCapacity = parseInt(currentClass.capacity) || 20;
-            const currentEnrolledCount = enrollments.filter(e => e.classId === selectedClassId && e.status === 'active').length;
+            const currentEnrolledCount = selectedClassId ? getValidActiveEnrollments(selectedClassId).length : 0;
 
             if (currentEnrolledCount >= currentCapacity) {
                 Alert.alert(
@@ -355,7 +364,7 @@ export default function ClassesScreen() {
         if (!currentEnrollment) return;
 
         const targetCapacity = parseInt(targetClass.capacity) || 20;
-        const targetEnrolledCount = enrollments.filter(e => e.classId === targetMoveClassId && e.status === 'active').length;
+        const targetEnrolledCount = targetMoveClassId ? getValidActiveEnrollments(targetMoveClassId).length : 0;
 
         const existingTargetEnrollment = enrollments.find(e => e.classId === targetMoveClassId && e.studentId === moveStudentId && e.status === 'active');
         if (existingTargetEnrollment) {
@@ -521,13 +530,18 @@ export default function ClassesScreen() {
 
         const sourceStudents = enrollments
             .filter(e => selectedSourceClassIds.includes(e.classId) && e.status === 'active')
+            .filter(e => {
+                const s = students.find(st => st.id === e.studentId);
+                if (!s || s.status !== 'active') return false;
+                const currentCycle = academicCycles.find(ac => ac.id === currentCycleId);
+                const cycleYear = currentCycle?.name.match(/\d{4}/)?.[0];
+                return cycleYear ? s.activeYears?.includes(cycleYear) : false;
+            })
             .map(e => e.studentId);
 
         const uniqueSourceStudents = Array.from(new Set(sourceStudents));
 
-        const alreadyEnrolled = enrollments
-            .filter(e => e.classId === selectedClassId && e.status === 'active')
-            .map(e => e.studentId);
+        const alreadyEnrolled = selectedClassId ? getValidActiveEnrollments(selectedClassId).map(e => e.studentId) : [];
 
         const studentsToImport = uniqueSourceStudents.filter(id => !alreadyEnrolled.includes(id));
 
@@ -633,7 +647,7 @@ export default function ClassesScreen() {
         if (selectedCourse && selectedTeacher && allDaysSelected) {
             const newDuration = `${formData.hours || '0'}h ${formData.minutes || '0'}m`;
 
-            // Validate Teacher Schedule Overlap
+            // Validate General Schedule Overlap (Single Environment)
             const cycleClasses = classes.filter(
                 c => c.id !== editingClassId && c.cycleId === currentCycleId
             );
@@ -647,11 +661,9 @@ export default function ClassesScreen() {
                         if (existingSchedule.day === targetSchedule.day) {
                             const newStart = `${targetSchedule.startHours}:${targetSchedule.startMinutes}`;
                             if (checkTimeOverlap(existingSchedule.startTime, existingClass.duration, newStart, newDuration)) {
-                                if (existingClass.teacherName === `${selectedTeacher.firstName} ${selectedTeacher.lastName}`) {
-                                    conflictFound = true;
-                                    conflictMsg = `El docente ya dicta la clase "${existingClass.courseName}" el ${existingSchedule.day} a las ${existingSchedule.startTime}.`;
-                                    break;
-                                }
+                                conflictFound = true;
+                                conflictMsg = `Ya existe la clase "${existingClass.courseName}" dictada por ${existingClass.teacherName} el ${existingSchedule.day} a las ${existingSchedule.startTime}. Todo opera en el mismo ambiente.`;
+                                break;
                             }
                         }
                     }
@@ -694,7 +706,7 @@ export default function ClassesScreen() {
     };
 
     const handleDeleteClass = (item: ClassItem) => {
-        const enrolledCount = enrollments.filter(e => e.classId === item.id && e.status === 'active').length;
+        const enrolledCount = getValidActiveEnrollments(item.id).length;
 
         if (enrolledCount > 0) {
             Alert.alert(
@@ -728,7 +740,7 @@ export default function ClassesScreen() {
 
         const screenHeight = Dimensions.get('window').height;
 
-        const enrolledCount = enrollments.filter(e => e.classId === item.id && e.status === 'active').length;
+        const enrolledCount = getValidActiveEnrollments(item.id).length;
         const capacityInt = parseInt(item.capacity || '20');
         const isOverflow = enrolledCount > capacityInt;
 
@@ -821,7 +833,7 @@ export default function ClassesScreen() {
                             </>
                         )}
                         {!item.mergedToClassId && !classes.some(c => c.mergedToClassId === item.id) &&
-                            enrollments.filter(e => e.classId === item.id && e.status === 'active').length === 0 &&
+                            getValidActiveEnrollments(item.id).length === 0 &&
                             academicCycles.find(ac => ac.id === item.cycleId)?.name.toLowerCase().includes('anual') && (
                                 <TouchableOpacity
                                     style={[styles.editCircle, { backgroundColor: colors.primary + '20', marginRight: 8 }]}
@@ -907,7 +919,7 @@ export default function ClassesScreen() {
                             <Text style={[styles.dayTitle, { color: colors.text }]}>{day}</Text>
                             {dayClasses.length > 0 ? (
                                 dayClasses.map((c: any) => {
-                                    const studentCount = enrollments.filter(e => e.classId === c.id && e.status === 'active').length;
+                                    const studentCount = getValidActiveEnrollments(c.id).length;
                                     return (
                                         <View
                                             key={`${c.id}-${c.currentStartTime}`}
@@ -1231,7 +1243,7 @@ export default function ClassesScreen() {
                                 {(() => {
                                     const currentClass = classes.find(c => c.id === selectedClassId);
                                     const currentCapacity = parseInt(currentClass?.capacity || '20');
-                                    const currentEnrolled = enrollments.filter(e => e.classId === selectedClassId && e.status === 'active').length;
+                                    const currentEnrolled = selectedClassId ? getValidActiveEnrollments(selectedClassId).length : 0;
                                     const isOverflow = currentEnrolled > currentCapacity;
 
                                     return (
@@ -1256,7 +1268,14 @@ export default function ClassesScreen() {
                             <View style={styles.formGroup}>
                                 <Text style={[styles.label, { color: colors.text, marginBottom: 15 }]}>Lista de Estudiantes</Text>
                                 <View style={styles.studentList}>
-                                    {students.filter(s => s.status === 'active').map(student => {
+                                    {students.filter(s => {
+                                        if (s.status !== 'active') return false;
+
+                                        const currentCycle = academicCycles.find(ac => ac.id === currentCycleId);
+                                        const cycleYear = currentCycle?.name.match(/\d{4}/)?.[0];
+
+                                        return cycleYear ? s.activeYears?.includes(cycleYear) : false;
+                                    }).map(student => {
                                         const isSelected = enrolledInSelected.includes(student.id);
                                         return (
                                             <View

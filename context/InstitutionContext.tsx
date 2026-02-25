@@ -27,7 +27,7 @@ export interface Student {
     lastName: string;
     phone: string;
     status: 'active' | 'inactive';
-    activeYear?: string | null; // e.g. "2026" or null
+    activeYears?: string[]; // e.g. ["2024", "2025", "2026"]
     type: 'student';
 }
 
@@ -364,7 +364,12 @@ export function InstitutionProvider({ children }: { children: ReactNode }) {
                     let finalNotes = '';
 
                     if (cycle.events && cycle.events.length > 0) {
-                        const monthEvents = cycle.events.filter(e => e.targetMonthYear === monthYear);
+                        const monthEvents = cycle.events.filter(e => {
+                            let evtTarget = e.targetMonthYear;
+                            const parts = evtTarget.split('-');
+                            if (parts.length === 2) evtTarget = `${parts[0]}-${parts[1].padStart(2, '0')}`;
+                            return evtTarget === monthYear;
+                        });
                         if (monthEvents.length > 0) {
                             let totalDiscountPercentage = 0;
                             const eventNames: string[] = [];
@@ -399,10 +404,15 @@ export function InstitutionProvider({ children }: { children: ReactNode }) {
                 }
             } else if (cycle && course) {
                 // Fallback to legacy months array if dates are missing for some reason
-                for (const monthYear of cycle.months) {
+                for (const rawMonthYear of cycle.months) {
+                    let normalizedMonthYear = rawMonthYear;
+                    const parts = rawMonthYear.split('-');
+                    if (parts.length === 2) {
+                        normalizedMonthYear = `${parts[0]}-${parts[1].padStart(2, '0')}`;
+                    }
+
                     // Extract year/month from string if possible to calculate safe due date
-                    let calculatedDueDate = `${monthYear}-${paymentDay.toString().padStart(2, '0')}`;
-                    const parts = monthYear.split('-');
+                    let calculatedDueDate = `${normalizedMonthYear}-${paymentDay.toString().padStart(2, '0')}`;
                     if (parts.length === 2) {
                         const mYear = parseInt(parts[0]);
                         const mMon = parseInt(parts[1]) - 1;
@@ -415,7 +425,12 @@ export function InstitutionProvider({ children }: { children: ReactNode }) {
                     let finalNotes = '';
 
                     if (cycle.events && cycle.events.length > 0) {
-                        const monthEvents = cycle.events.filter(e => e.targetMonthYear === monthYear);
+                        const monthEvents = cycle.events.filter(e => {
+                            let evtTarget = e.targetMonthYear;
+                            const parts = evtTarget.split('-');
+                            if (parts.length === 2) evtTarget = `${parts[0]}-${parts[1].padStart(2, '0')}`;
+                            return evtTarget === normalizedMonthYear;
+                        });
                         if (monthEvents.length > 0) {
                             let totalDiscountPercentage = 0;
                             const eventNames: string[] = [];
@@ -436,7 +451,7 @@ export function InstitutionProvider({ children }: { children: ReactNode }) {
                     const instData = {
                         enrollmentId: enrolRef.id,
                         studentId: enrollment.studentId,
-                        monthYear: monthYear,
+                        monthYear: normalizedMonthYear,
                         amount: finalAmount.toFixed(2).toString(),
                         originalAmount: course.price,
                         isPaid: false,
