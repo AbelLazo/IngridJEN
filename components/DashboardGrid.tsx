@@ -1,4 +1,5 @@
 import { Colors } from '@/constants/theme';
+import { useAuth } from '@/context/AuthContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useRouter } from 'expo-router';
 import {
@@ -24,13 +25,22 @@ const MENU_ITEMS = [
     { id: 'schedule', label: 'Horario', icon: Calendar, color: '#8b5cf6', route: '/schedule' },
     { id: 'tuition', label: 'Mensualidad', icon: Wallet, color: '#ef4444', route: '/fees' },
     { id: 'cycles', label: 'Ciclos', icon: Calendar, color: '#14b8a6', route: '/cycles' },
+    { id: 'admin-users', label: 'Usuarios', icon: Users, color: '#4f46e5', route: '/users' },
 ];
 
 export default function DashboardGrid() {
     const { width } = useWindowDimensions();
     const colorScheme = useColorScheme() ?? 'light';
     const colors = Colors[colorScheme as keyof typeof Colors];
+    const { userRole } = useAuth();
     const router = useRouter();
+
+    const filteredMenuItems = MENU_ITEMS.filter(item => {
+        if (userRole === 'professor') {
+            return ['dashboard', 'classes', 'schedule'].includes(item.id);
+        }
+        return true;
+    });
 
     // Responsive logic: 2 columns on phones, 3 or more on tablets
     const columnCount = width > 600 ? 3 : 2;
@@ -38,7 +48,7 @@ export default function DashboardGrid() {
 
     return (
         <View style={styles.container}>
-            {MENU_ITEMS.map((item) => (
+            {filteredMenuItems.map((item) => (
                 <TouchableOpacity
                     key={item.id}
                     style={[

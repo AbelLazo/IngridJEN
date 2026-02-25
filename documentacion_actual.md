@@ -9,12 +9,15 @@ Este documento detalla todas las funcionalidades, reglas de negocio y arquitectu
 La aplicación ha sido migrada completamente de un estado local a un backend profesional alojado en **Firebase (Google Cloud)**.
 
 ### Características del Backend:
-1. **Sincronización en Tiempo Real (`InstitutionContext.tsx`)**: 
+1. **Autenticación y RBAC (`AuthContext.tsx`)**: 
+   - El acceso a la aplicación está protegido por **Firebase Authentication**.
+   - Integra un sistema de **Control de Acceso Basado en Roles (RBAC)** que diferencia entre `admin` (acceso total) y `professor` (acceso restringido a dashboard, clases y horarios).
+2. **Sincronización en Tiempo Real (`InstitutionContext.tsx`)**: 
    - Utiliza conexiones `onSnapshot` de Firestore. Cualquier cambio (crear estudiante, registrar pago, etc.) se refleja **instantáneamente** en todos los dispositivos conectados sin necesidad de recargar la aplicación.
-2. **Persistencia y Modo Offline**:
+3. **Persistencia y Modo Offline**:
    - Los datos están respaldados en la nube. Si el dispositivo pierde conexión, Firebase guarda en caché las operaciones locales y las sincroniza automáticamente al recuperar la red.
-3. **Escalabilidad**:
-   - Bases de datos organizadas en colecciones claras: `academicCycles`, `courses`, `students`, `teachers`, `classes`, `enrollments`, `installments`, y `payments`.
+4. **Escalabilidad**:
+   - Bases de datos organizadas en colecciones claras: `users`, `academicCycles`, `courses`, `students`, `teachers`, `classes`, `enrollments`, `installments`, y `payments`.
 
 ---
 

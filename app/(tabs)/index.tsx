@@ -1,9 +1,11 @@
 import DashboardGrid from '@/components/DashboardGrid';
 import { Colors } from '@/constants/theme';
+import { useAuth } from '@/context/AuthContext';
 import { useInstitution } from '@/context/InstitutionContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Bell, Calendar, Check, ChevronDown, Search, X } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
+import { Calendar, Check, ChevronDown, LogOut, X } from 'lucide-react-native';
 import React, { useMemo, useState } from 'react';
 import { Modal, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, TouchableWithoutFeedback, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -14,7 +16,9 @@ export default function DashboardScreen() {
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme as keyof typeof Colors];
   const { academicCycles, currentCycleId, setCurrentCycleId, enrollments, classes, students } = useInstitution();
+  const { user, userRole } = useAuth();
   const [isCycleMenuVisible, setIsCycleMenuVisible] = useState(false);
+  const router = useRouter();
 
   const isTablet = width > 600;
 
@@ -47,6 +51,17 @@ export default function DashboardScreen() {
     ).length;
   }, [classes, currentCycleId]);
 
+  const handleLogout = async () => {
+    try {
+      const { auth } = await import('@/lib/firebaseConfig');
+      const { signOut } = await import('firebase/auth');
+      await signOut(auth);
+      // The _layout guard will automatically redirect to login
+    } catch (error) {
+      console.error("Error logging out", error);
+    }
+  };
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} translucent backgroundColor="transparent" />
@@ -67,7 +82,9 @@ export default function DashboardScreen() {
           >
             <View style={styles.headerTop}>
               <View style={{ flex: 1 }}>
-                <Text style={[styles.greeting, { fontSize: isTablet ? 32 : 24 }]}>Hola, Admin 👋</Text>
+                <Text style={[styles.greeting, { fontSize: isTablet ? 32 : 24 }]}>
+                  Hola, {user?.displayName || user?.email?.split('@')[0] || 'Usuario'}
+                </Text>
 
                 {/* Cycle Indicator Badge / Selector */}
                 <TouchableOpacity
@@ -83,13 +100,9 @@ export default function DashboardScreen() {
                 </TouchableOpacity>
               </View>
               <View style={styles.headerIcons}>
-                <View style={styles.iconCircle}>
-                  <Search size={isTablet ? 24 : 20} color="#fff" />
-                </View>
-                <View style={[styles.iconCircle, { marginLeft: 12 }]}>
-                  <Bell size={isTablet ? 24 : 20} color="#fff" />
-                  <View style={styles.badge} />
-                </View>
+                <TouchableOpacity style={styles.iconCircle} onPress={handleLogout}>
+                  <LogOut size={isTablet ? 24 : 20} color="#fff" />
+                </TouchableOpacity>
               </View>
             </View>
 
@@ -111,13 +124,6 @@ export default function DashboardScreen() {
         <View style={[styles.content, isTablet && styles.contentTablet]}>
           <Text style={[styles.sectionTitle, { color: colors.text, fontSize: isTablet ? 24 : 18 }]}>Menú Principal</Text>
           <DashboardGrid />
-
-          <Text style={[styles.sectionTitle, { color: colors.text, marginTop: 16, fontSize: isTablet ? 24 : 18 }]}>Actividad Reciente</Text>
-          <View style={[styles.recentActivity, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Text style={{ color: colors.icon, textAlign: 'center', padding: isTablet ? 40 : 20, fontSize: isTablet ? 18 : 14 }}>
-              No hay actividad reciente para mostrar.
-            </Text>
-          </View>
         </View>
       </ScrollView>
 
