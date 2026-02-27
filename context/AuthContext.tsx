@@ -42,19 +42,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     const userDocRef = doc(db, 'users', currentUser.uid);
 
                     roleUnsubscribe = onSnapshot(userDocRef, async (userDocSnap) => {
+                        console.log("AuthContext: Snapshot received, exists:", userDocSnap.exists());
                         if (userDocSnap.exists()) {
                             const userData = userDocSnap.data();
+                            console.log("AuthContext: Role found:", userData.role);
                             setUserRole(userData.role === undefined ? null : (userData.role as UserRole));
                         } else {
-                            // AUTOMATIC ROLE GRANT (Root Admin or default Professor)
-                            const newRole = currentUser.email === 'abelazo16052001@gmail.com' ? 'admin' : 'professor';
-
-                            await setDoc(userDocRef, {
-                                email: currentUser.email,
-                                role: newRole,
-                                createdAt: new Date().toISOString()
-                            });
-                            // State updates will naturally trigger once setDoc completes and fires the listener again
+                            console.log("AuthContext: User doc does not exist. Checking for root admin...");
+                            // NO MORE AUTOMATIC ROLE GRANT for general users.
+                            // Only the root admin can be auto-provisioned if necessary
+                            if (currentUser.email === 'abelazo6969@gmail.com') {
+                                console.log("AuthContext: Provisioning root admin...");
+                                await setDoc(userDocRef, {
+                                    email: currentUser.email,
+                                    role: 'admin',
+                                    createdAt: new Date().toISOString()
+                                });
+                            } else {
+                                console.log("AuthContext: Not root admin, access denied.");
+                                // If no doc exists, the user has NO permission (Access Denied)
+                                setUserRole(null);
+                            }
                         }
                         setIsLoading(false);
                     }, (error) => {

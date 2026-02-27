@@ -1,7 +1,8 @@
 import { Colors } from '@/constants/theme';
+import { useAuth } from '@/context/AuthContext';
 import { useInstitution } from '@/context/InstitutionContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 import { useRouter } from 'expo-router';
 import { AlertCircle, Award, Calendar, ChevronLeft, DollarSign, TrendingUp, Users } from 'lucide-react-native';
 import React, { useMemo } from 'react';
@@ -16,7 +17,24 @@ export default function DashboardScreen() {
     const colors = Colors[colorScheme as keyof typeof Colors];
     const router = useRouter();
     const { academicCycles, currentCycleId, enrollments, classes, students, installments, payments, courses } = useInstitution();
+    const { userRole } = useAuth();
     const isTablet = width > 600;
+
+    if (userRole !== 'admin') {
+        return (
+            <View style={[styles.container, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }]}>
+                <AlertCircle size={48} color={colors.secondary} />
+                <Text style={{ color: colors.text, fontSize: 18, fontWeight: 'bold', marginTop: 16 }}>Acceso Denegado</Text>
+                <Text style={{ color: colors.icon, marginTop: 8 }}>Solo los administradores pueden ver este dashboard.</Text>
+                <TouchableOpacity
+                    onPress={() => router.back()}
+                    style={{ marginTop: 24, paddingHorizontal: 20, paddingVertical: 10, backgroundColor: colors.primary, borderRadius: 12 }}
+                >
+                    <Text style={{ color: '#FFF', fontWeight: 'bold' }}>Volver</Text>
+                </TouchableOpacity>
+            </View>
+        );
+    }
 
     const activeCycle = useMemo(() =>
         academicCycles.find(c => c.id === currentCycleId),
@@ -210,15 +228,15 @@ export default function DashboardScreen() {
     const pieChartData = [
         {
             value: totalCollected,
-            color: '#10b981', // Esmeralda
-            gradientCenterColor: '#059669',
+            color: '#22D3EE', // Cyan Eléctrico (Recaudado)
+            gradientCenterColor: '#0891B2',
             text: 'S/' + totalCollected.toFixed(0),
             textColor: '#FFF'
         },
         {
             value: totalDebt,
-            color: '#f43f5e', // Rosa fuerte / Rojo
-            gradientCenterColor: '#e11d48',
+            color: '#C084FC', // Violeta Neón (Deuda)
+            gradientCenterColor: '#9333EA',
             text: 'S/' + totalDebt.toFixed(0),
             textColor: '#FFF'
         }
@@ -229,66 +247,112 @@ export default function DashboardScreen() {
     return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
             <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} translucent backgroundColor="transparent" />
-            <View style={{ height: insets.top, backgroundColor: colorScheme === 'dark' ? '#1e293b' : '#6366f1' }} />
+            <View style={{ height: insets.top }} />
 
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 80 }]}>
                 <View style={{ overflow: 'hidden' }}>
-                    <LinearGradient colors={colorScheme === 'dark' ? ['#1e293b', '#0f172a'] : ['#6366f1', '#4f46e5']} style={[styles.header, isTablet && styles.headerTablet]}>
+                    <View style={[styles.header, isTablet && styles.headerTablet]}>
                         <View style={styles.headerTop}>
-                            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-                                <ChevronLeft size={24} color="#fff" />
+                            <TouchableOpacity onPress={() => router.back()} style={[styles.backButton, { backgroundColor: colorScheme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]}>
+                                <ChevronLeft size={24} color={colors.text} />
                             </TouchableOpacity>
                             <View style={{ flex: 1, marginLeft: 15 }}>
-                                <Text style={[styles.greeting, { fontSize: isTablet ? 32 : 24 }]}>Dashboard de Negocio</Text>
-                                <View style={[styles.cycleBadge, { backgroundColor: 'rgba(255, 255, 255, 0.15)' }]}>
-                                    <Calendar size={14} color="#fff" />
-                                    <Text style={styles.cycleBadgeText}>Ciclo: {activeCycle?.name || 'Cargando...'}</Text>
+                                <Text style={[styles.greeting, { fontSize: isTablet ? 32 : 24, color: colors.text }]}>Dashboard de Negocio</Text>
+                                <View style={[styles.cycleBadge, { backgroundColor: colorScheme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)' }]}>
+                                    <Calendar size={14} color={colors.primary} />
+                                    <Text style={[styles.cycleBadgeText, { color: colors.text }]}>Ciclo: {activeCycle?.name || 'Cargando...'}</Text>
                                 </View>
                             </View>
                         </View>
 
                         {/* 4 KPIs Row */}
-                        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -20, paddingHorizontal: 20 }}>
-                            <View style={styles.kpiCard}>
-                                <View style={[styles.kpiIcon, { backgroundColor: '#4C6EF520' }]}>
-                                    <Users size={20} color="#4C6EF5" />
+                        <ScrollView
+                            horizontal
+                            showsHorizontalScrollIndicator={false}
+                            style={styles.kpiScrollView}
+                            contentContainerStyle={styles.kpiScrollContent}
+                        >
+                            <BlurView
+                                intensity={90}
+                                tint={colorScheme === 'light' ? 'light' : 'dark'}
+                                style={[styles.kpiCard, {
+                                    backgroundColor: colorScheme === 'light' ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.08)',
+                                    borderColor: colorScheme === 'light' ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.15)'
+                                }]}
+                            >
+                                <View style={styles.liquidHighlight} />
+                                <View style={[styles.kpiIcon, { backgroundColor: colorScheme === 'light' ? '#4C6EF515' : '#4C6EF530' }]}>
+                                    <Users size={22} color="#4C6EF5" />
                                 </View>
-                                <Text style={styles.kpiValue}>{activeStudentsCount}</Text>
-                                <Text style={styles.kpiLabel}>Alumnos Activos</Text>
-                            </View>
+                                <Text style={[styles.kpiValue, { color: colors.text }]}>{activeStudentsCount}</Text>
+                                <Text style={[styles.kpiLabel, { color: colors.icon }]}>Alumnos Activos</Text>
+                            </BlurView>
 
-                            <View style={styles.kpiCard}>
-                                <View style={[styles.kpiIcon, { backgroundColor: '#12B88620' }]}>
-                                    <DollarSign size={20} color="#12B886" />
+                            <BlurView
+                                intensity={90}
+                                tint={colorScheme === 'light' ? 'light' : 'dark'}
+                                style={[styles.kpiCard, {
+                                    backgroundColor: colorScheme === 'light' ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.08)',
+                                    borderColor: colorScheme === 'light' ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.15)'
+                                }]}
+                            >
+                                <View style={styles.liquidHighlight} />
+                                <View style={[styles.kpiIcon, { backgroundColor: colorScheme === 'light' ? '#12B88615' : '#12B88630' }]}>
+                                    <DollarSign size={22} color="#12B886" />
                                 </View>
-                                <Text style={styles.kpiValue}>{formatCurrency(totalCollected)}</Text>
-                                <Text style={styles.kpiLabel}>Recaudado</Text>
-                            </View>
+                                <Text style={[styles.kpiValue, { color: colors.text }]}>{formatCurrency(totalCollected)}</Text>
+                                <Text style={[styles.kpiLabel, { color: colors.icon }]}>Recaudado</Text>
+                            </BlurView>
 
-                            <View style={styles.kpiCard}>
-                                <View style={[styles.kpiIcon, { backgroundColor: '#FA525220' }]}>
-                                    <TrendingUp size={20} color="#FA5252" />
+                            <BlurView
+                                intensity={90}
+                                tint={colorScheme === 'light' ? 'light' : 'dark'}
+                                style={[styles.kpiCard, {
+                                    backgroundColor: colorScheme === 'light' ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.08)',
+                                    borderColor: colorScheme === 'light' ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.15)'
+                                }]}
+                            >
+                                <View style={styles.liquidHighlight} />
+                                <View style={[styles.kpiIcon, { backgroundColor: colorScheme === 'light' ? '#FA525215' : '#FA525230' }]}>
+                                    <TrendingUp size={22} color="#FA5252" />
                                 </View>
-                                <Text style={styles.kpiValue}>{formatCurrency(totalDebt)}</Text>
-                                <Text style={styles.kpiLabel}>Cuentas X Cobrar</Text>
-                            </View>
+                                <Text style={[styles.kpiValue, { color: colors.text }]}>{formatCurrency(totalDebt)}</Text>
+                                <Text style={[styles.kpiLabel, { color: colors.icon }]}>Cuentas X Cobrar</Text>
+                            </BlurView>
 
-                            <View style={[styles.kpiCard, { marginRight: 40 }]}>
-                                <View style={[styles.kpiIcon, { backgroundColor: '#FAB00520' }]}>
-                                    <Award size={20} color="#FAB005" />
+                            <BlurView
+                                intensity={90}
+                                tint={colorScheme === 'light' ? 'light' : 'dark'}
+                                style={[styles.kpiCard, {
+                                    marginRight: 40,
+                                    backgroundColor: colorScheme === 'light' ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.08)',
+                                    borderColor: colorScheme === 'light' ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.15)'
+                                }]}
+                            >
+                                <View style={styles.liquidHighlight} />
+                                <View style={[styles.kpiIcon, { backgroundColor: colorScheme === 'light' ? '#FAB00515' : '#FAB00530' }]}>
+                                    <Award size={22} color="#FAB005" />
                                 </View>
-                                <Text style={styles.kpiValue}>{classes.filter(c => c.cycleId === currentCycleId).length}</Text>
-                                <Text style={styles.kpiLabel}>Total Clases</Text>
-                            </View>
+                                <Text style={[styles.kpiValue, { color: colors.text }]}>{classes.filter(c => c.cycleId === currentCycleId).length}</Text>
+                                <Text style={[styles.kpiLabel, { color: colors.icon }]}>Total Clases</Text>
+                            </BlurView>
                         </ScrollView>
-                    </LinearGradient>
+                    </View>
                 </View>
 
                 <View style={[styles.content, isTablet && styles.contentTablet]}>
                     <Text style={[styles.sectionTitle, { color: colors.text, fontSize: isTablet ? 24 : 18 }]}>Salud Financiera (Ciclo Actual)</Text>
 
-                    <View style={[styles.chartCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                        <Text style={{ color: colors.text, fontWeight: 'bold', marginBottom: 20 }}>Ingresos Históricos (S/ Por Mes)</Text>
+                    <BlurView
+                        intensity={90}
+                        tint={colorScheme === 'light' ? 'light' : 'dark'}
+                        style={[styles.chartCard, {
+                            backgroundColor: colorScheme === 'light' ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.08)',
+                            borderColor: colorScheme === 'light' ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.15)'
+                        }]}
+                    >
+                        <View style={styles.liquidHighlight} />
+                        <Text style={{ color: colors.text, fontWeight: '800', marginBottom: 20, alignSelf: 'flex-start', letterSpacing: -0.5 }}>Ingresos Históricos (S/ Por Mes)</Text>
                         <View style={{ width: '100%', alignItems: 'center' }}>
                             <BarChart
                                 data={monthlyData}
@@ -305,67 +369,62 @@ export default function DashboardScreen() {
                                 xAxisThickness={1}
                                 xAxisColor={colors.border}
                                 xAxisLabelTextStyle={{ color: colors.icon, fontSize: 11 }}
-                                frontColor="#6366f1"
+                                frontColor={colors.primary}
                                 isAnimated
                                 showFractionalValues={false}
                             />
                         </View>
-                    </View>
+                    </BlurView>
 
-                    <View style={[styles.chartCard, { backgroundColor: colors.card, borderColor: colors.border, alignItems: 'center' }]}>
-                        <Text style={{ color: colors.text, fontWeight: 'bold', marginBottom: 20, alignSelf: 'flex-start' }}>Balance de Cuotas</Text>
+                    <BlurView
+                        intensity={90}
+                        tint={colorScheme === 'light' ? 'light' : 'dark'}
+                        style={[styles.chartCard, {
+                            backgroundColor: colorScheme === 'light' ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.08)',
+                            borderColor: colorScheme === 'light' ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.15)',
+                            alignItems: 'center'
+                        }]}
+                    >
+                        <View style={styles.liquidHighlight} />
+                        <Text style={{ color: colors.text, fontWeight: '800', marginBottom: 20, alignSelf: 'flex-start', letterSpacing: -0.5 }}>Balance de Cuotas</Text>
                         {totalCollected === 0 && totalDebt === 0 ? (
                             <Text style={{ color: colors.icon, marginVertical: 20 }}>No hay cuotas registradas en este ciclo.</Text>
                         ) : (
                             <View style={{ alignItems: 'center', marginVertical: 10 }}>
-                                <View style={{ position: 'relative', height: 220, justifyContent: 'center', alignItems: 'center', width: '100%' }}>
-                                    {/* Capa Base / Extrusión 3D (Colores Oscuros) */}
-                                    <View style={{ position: 'absolute', top: 15 }}>
-                                        <PieChart
-                                            data={[
-                                                { value: totalCollected, color: '#065f46' }, // Esmeralda muy oscuro
-                                                { value: totalDebt, color: '#9f1239' }       // Rosa/Rojo oscuro
-                                            ]}
-                                            donut={false}
-                                            isThreeD
-                                            shadowWidth={0}
-                                            tiltAngle="50"
-                                            radius={110}
-                                            innerRadius={0}
-                                            strokeWidth={0}
-                                        />
-                                    </View>
-
-                                    {/* Capa Superior Brillante */}
-                                    <View style={{ position: 'absolute', top: 0 }}>
-                                        <PieChart
-                                            data={pieChartData}
-                                            donut={false}
-                                            isThreeD
-                                            shadowWidth={0}
-                                            tiltAngle="50"
-                                            radius={110}
-                                            innerRadius={0}
-                                            showText
-                                            fontWeight="bold"
-                                            strokeWidth={0}
-                                        />
-                                    </View>
+                                <View style={{ alignItems: 'center', justifyContent: 'center', height: 240, width: '100%' }}>
+                                    <PieChart
+                                        data={pieChartData}
+                                        donut
+                                        radius={105}
+                                        innerRadius={78}
+                                        innerCircleColor={colorScheme === 'dark' ? '#2D2621' : '#F5F5F7'}
+                                        centerLabelComponent={() => {
+                                            const total = totalCollected + totalDebt;
+                                            return (
+                                                <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+                                                    <Text style={{ fontSize: 11, color: colors.icon, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1 }}>Total</Text>
+                                                    <Text style={{ fontSize: 22, color: colors.text, fontWeight: '900', marginTop: 1 }}>{formatCurrency(total).split('.')[0]}</Text>
+                                                </View>
+                                            );
+                                        }}
+                                        isAnimated
+                                        animationDuration={1200}
+                                    />
                                 </View>
                                 {/* Custom Legend */}
                                 <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: 30, flexWrap: 'wrap' }}>
-                                    <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: 20 }}>
-                                        <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: '#10b981', marginRight: 8, elevation: 2 }} />
-                                        <Text style={{ color: colors.text, fontWeight: '600' }}>Recaudado</Text>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: 24 }}>
+                                        <View style={{ width: 12, height: 12, borderRadius: 3, backgroundColor: '#22D3EE', marginRight: 8 }} />
+                                        <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14 }}>Recaudado: {formatCurrency(totalCollected).split('.')[0]}</Text>
                                     </View>
                                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                        <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: '#f43f5e', marginRight: 8, elevation: 2 }} />
-                                        <Text style={{ color: colors.text, fontWeight: '600' }}>Por Cobrar</Text>
+                                        <View style={{ width: 12, height: 12, borderRadius: 3, backgroundColor: '#C084FC', marginRight: 8 }} />
+                                        <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14 }}>Por Cobrar: {formatCurrency(totalDebt).split('.')[0]}</Text>
                                     </View>
                                 </View>
                             </View>
                         )}
-                    </View>
+                    </BlurView>
 
                     {/* Top Classes & Alerts */}
                     <View style={{ marginTop: 24, paddingHorizontal: 20 }}>
@@ -373,7 +432,16 @@ export default function DashboardScreen() {
 
                         {topClasses.length === 0 && <Text style={{ color: colors.icon }}>No hay clases con matrículas.</Text>}
                         {topClasses.map((c, i) => (
-                            <View key={c.id} style={[styles.listItem, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                            <BlurView
+                                key={c.id}
+                                intensity={90}
+                                tint={colorScheme === 'light' ? 'light' : 'dark'}
+                                style={[styles.listItem, {
+                                    backgroundColor: colorScheme === 'light' ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.08)',
+                                    borderColor: colorScheme === 'light' ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.15)'
+                                }]}
+                            >
+                                <View style={[styles.liquidHighlight, { opacity: 0.8 }]} />
                                 <View style={[styles.listRank, { backgroundColor: i === 0 ? '#FAB005' : i === 1 ? '#adb5bd' : '#cd7f32' }]}>
                                     <Text style={{ color: '#fff', fontWeight: 'bold' }}>{i + 1}</Text>
                                 </View>
@@ -385,13 +453,22 @@ export default function DashboardScreen() {
                                     <Text style={{ color: colors.primary, fontWeight: 'bold' }}>{c.count} / {c.capacity}</Text>
                                     <Text style={{ color: colors.icon, fontSize: 11 }}>{c.percentage.toFixed(0)}% Ocupado</Text>
                                 </View>
-                            </View>
+                            </BlurView>
                         ))}
 
                         <Text style={[styles.sectionTitle, { color: colors.text, fontSize: isTablet ? 24 : 18, marginLeft: 0, marginTop: 20 }]}>Clases en Riesgo (Baja Ocupación)</Text>
                         {emptyClasses.length === 0 && <Text style={{ color: colors.icon }}>No hay clases con baja ocupación.</Text>}
                         {emptyClasses.map(c => (
-                            <View key={c.id} style={[styles.listItem, { backgroundColor: colors.card, borderColor: '#FA525250' }]}>
+                            <BlurView
+                                key={c.id}
+                                intensity={90}
+                                tint={colorScheme === 'light' ? 'light' : 'dark'}
+                                style={[styles.listItem, {
+                                    backgroundColor: colorScheme === 'light' ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.08)',
+                                    borderColor: colorScheme === 'light' ? 'rgba(255,255,255,1)' : 'rgba(255,255,255,0.15)'
+                                }]}
+                            >
+                                <View style={[styles.liquidHighlight, { opacity: 0.8 }]} />
                                 <View style={[styles.listRank, { backgroundColor: '#FA5252' }]}>
                                     <AlertCircle size={16} color="#fff" />
                                 </View>
@@ -402,13 +479,13 @@ export default function DashboardScreen() {
                                 <View style={{ alignItems: 'flex-end' }}>
                                     <Text style={{ color: '#FA5252', fontWeight: 'bold' }}>{c.count} / {c.capacity}</Text>
                                 </View>
-                            </View>
+                            </BlurView>
                         ))}
                     </View>
 
                 </View>
-            </ScrollView>
-        </View>
+            </ScrollView >
+        </View >
     );
 }
 
@@ -417,40 +494,61 @@ const styles = StyleSheet.create({
     scrollContent: { flexGrow: 1 },
     header: {
         paddingHorizontal: 20, paddingTop: 10, paddingBottom: 30,
-        borderBottomLeftRadius: 32, borderBottomRightRadius: 32,
     },
     headerTablet: { paddingHorizontal: 40, paddingTop: 20, paddingBottom: 40 },
     headerTop: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
     backButton: {
         width: 40, height: 40, borderRadius: 20,
-        backgroundColor: 'rgba(255, 255, 255, 0.2)',
         justifyContent: 'center', alignItems: 'center'
     },
-    greeting: { fontWeight: 'bold', color: '#fff' },
+    greeting: { fontWeight: '800', letterSpacing: -0.5 },
     cycleBadge: {
         flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start',
         paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12, marginTop: 10,
     },
-    cycleBadgeText: { color: '#fff', fontSize: 13, fontWeight: '600', marginLeft: 6 },
-    kpiCard: {
-        backgroundColor: '#fff', borderRadius: 20, padding: 15, marginRight: 15,
-        width: 140, shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1, shadowRadius: 10, elevation: 5, alignItems: 'flex-start'
+    cycleBadgeText: { fontSize: 13, fontWeight: '700', marginLeft: 6 },
+    kpiScrollView: {
+        marginHorizontal: -20,
     },
-    kpiIcon: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center', marginBottom: 10 },
-    kpiValue: { fontSize: 20, fontWeight: 'bold', color: '#1e293b' },
-    kpiLabel: { fontSize: 12, color: '#64748b', marginTop: 4 },
+    kpiScrollContent: {
+        paddingHorizontal: 20,
+        paddingVertical: 12, // Espacio para que no se corten las sombras
+    },
+    kpiCard: {
+        borderRadius: 24, padding: 20, marginRight: 16,
+        width: 160, overflow: 'hidden',
+        borderWidth: 1.5,
+        alignItems: 'flex-start',
+        shadowColor: '#000', shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.08, shadowRadius: 15, elevation: 5
+    },
+    liquidHighlight: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: '50%',
+        backgroundColor: 'rgba(255, 255, 255, 0.4)',
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
+    },
+    kpiIcon: { width: 42, height: 42, borderRadius: 14, justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
+    kpiValue: { fontSize: 22, fontWeight: '800', letterSpacing: -0.6, marginBottom: 4 },
+    kpiLabel: { fontSize: 13, fontWeight: '600', letterSpacing: -0.2 },
     content: { paddingTop: 24, paddingBottom: 40 },
     contentTablet: { maxWidth: 1000, alignSelf: 'center', width: '100%' },
-    sectionTitle: { fontWeight: 'bold', marginHorizontal: 20, marginBottom: 16 },
+    sectionTitle: { fontWeight: '800', marginHorizontal: 20, marginBottom: 16, letterSpacing: -0.5 },
     chartCard: {
-        marginHorizontal: 20, borderRadius: 20, borderWidth: 1, padding: 15, marginBottom: 15,
-        alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05, shadowRadius: 5, elevation: 2
+        marginHorizontal: 20, borderRadius: 24, borderWidth: 1.5, padding: 20, marginBottom: 15,
+        alignItems: 'center', overflow: 'hidden',
+        shadowColor: '#000', shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.08, shadowRadius: 15, elevation: 5
     },
     listItem: {
-        flexDirection: 'row', alignItems: 'center', padding: 15, borderRadius: 16,
-        borderWidth: 1, marginBottom: 10
+        flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 24,
+        borderWidth: 1.5, marginBottom: 14, overflow: 'hidden',
+        shadowColor: '#000', shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.08, shadowRadius: 12, elevation: 5
     },
     listRank: {
         width: 30, height: 30, borderRadius: 15, justifyContent: 'center',

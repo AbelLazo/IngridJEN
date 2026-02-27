@@ -1,11 +1,14 @@
+import { FontAwesome } from '@expo/vector-icons';
 import * as Google from 'expo-auth-session/providers/google';
+import { BlurView } from 'expo-blur';
 import { useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { createUserWithEmailAndPassword, GoogleAuthProvider, signInWithCredential, signInWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
-import { Lock, Mail } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Eye, EyeOff, Lock, Mail } from 'lucide-react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Colors } from '../constants/theme';
 import { useColorScheme } from '../hooks/use-color-scheme';
 import { auth, db } from '../lib/firebaseConfig';
 
@@ -14,9 +17,11 @@ WebBrowser.maybeCompleteAuthSession();
 export default function LoginScreen() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const router = useRouter();
     const isDark = useColorScheme() === 'dark';
+    const passwordInputRef = useRef<TextInput>(null);
 
     // Set up Expo Google Auth Session
     const [request, response, promptAsync] = Google.useAuthRequest({
@@ -51,24 +56,30 @@ export default function LoginScreen() {
     }, [response]);
 
     const handleLogin = async () => {
-        if (!email || !password) {
-            Alert.alert('Error', 'Por favor, ingresa tu correo y contraseña.');
-            return;
-        }
-
         setIsLoading(true);
+        const cleanEmail = email.trim().toLowerCase();
+        console.log("LOGIN_DEBUG: Attempting login for email:", cleanEmail);
+        console.log("LOGIN_DEBUG: Password length:", password.length);
+
         try {
-            await signInWithEmailAndPassword(auth, email, password);
-            // Let the _layout.tsx effect handle the redirect
+            await signInWithEmailAndPassword(auth, cleanEmail, password);
+            console.log("LOGIN_DEBUG: Auth success, waiting for _layout redirection");
+            // Redirection is handled by _layout.tsx based on AuthContext state
         } catch (error: any) {
-            console.error('Login error:', error);
+            console.error('Login error detail:', {
+                code: error.code,
+                message: error.message,
+                email: cleanEmail
+            });
             let errorMessage = 'Error al iniciar sesión. Inténtalo de nuevo.';
             if (error.code === 'auth/invalid-credential') {
-                errorMessage = 'Credenciales incorrectas.';
+                errorMessage = 'Credenciales incorrectas. Verifica que el correo y la contraseña no tengan espacios adicionales y que las mayúsculas sean correctas.';
             } else if (error.code === 'auth/invalid-email') {
-                errorMessage = 'Formato de correo inválido.';
+                errorMessage = 'El formato del correo electrónico no es válido.';
+            } else if (error.code === 'auth/user-disabled') {
+                errorMessage = 'Esta cuenta ha sido deshabilitada por el administrador.';
             }
-            Alert.alert('Error', errorMessage);
+            Alert.alert('Error de Autenticación', errorMessage);
         } finally {
             setIsLoading(false);
         }
@@ -79,7 +90,7 @@ export default function LoginScreen() {
         // In production, users will be created via a dedicated dashboard.
         setIsLoading(true);
         try {
-            const userCredential = await createUserWithEmailAndPassword(auth, 'abelazo16052001@gmail.com', 'PUDGEward16//*//*');
+            const userCredential = await createUserWithEmailAndPassword(auth, 'abelazo6969@gmail.com', 'PUDGEward16//*//*');
             await setDoc(doc(db, 'users', userCredential.user.uid), {
                 email: userCredential.user.email,
                 role: 'admin',
@@ -89,7 +100,7 @@ export default function LoginScreen() {
         } catch (error: any) {
             if (error.code === 'auth/email-already-in-use') {
                 // If already exists, just login
-                await signInWithEmailAndPassword(auth, 'abelazo16052001@gmail.com', 'PUDGEward16//*//*');
+                await signInWithEmailAndPassword(auth, 'abelazo6969@gmail.com', 'PUDGEward16//*//*');
             } else {
                 console.error('Error creating admin:', error);
                 Alert.alert('Error', 'No se pudo crear el admin raíz.');
@@ -99,101 +110,132 @@ export default function LoginScreen() {
         }
     };
 
-    const colors = {
-        background: isDark ? '#111827' : '#F3F4F6',
-        card: isDark ? '#1F2937' : '#FFFFFF',
-        text: isDark ? '#F9FAFB' : '#111827',
-        textMuted: isDark ? '#9CA3AF' : '#6B7280',
-        primary: '#3B82F6',
-        border: isDark ? '#374151' : '#E5E7EB',
-        inputBg: isDark ? '#374151' : '#F9FAFB',
-    };
+    const colorScheme = useColorScheme() ?? 'light';
+    const colors = Colors[colorScheme as keyof typeof Colors];
 
     return (
-        <KeyboardAvoidingView
-            style={[{ flex: 1, backgroundColor: colors.background }]}
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        >
-            <ScrollView contentContainerStyle={styles.scrollContent}>
-                <View style={styles.container}>
+        <View style={[styles.backgroundImage, { backgroundColor: colors.background }]}>
+            <KeyboardAvoidingView
+                style={{ flex: 1 }}
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            >
+                <ScrollView contentContainerStyle={styles.scrollContent}>
+                    <View style={styles.container}>
 
-                    <View style={styles.header}>
-                        <View style={[styles.logoPlaceholder, { backgroundColor: colors.primary }]}>
-                            <Text style={styles.logoText}>IJ</Text>
-                        </View>
-                        <Text style={[styles.title, { color: colors.text }]}>IngridJEN</Text>
-                        <Text style={[styles.subtitle, { color: colors.textMuted }]}>
-                            Sistema de Gestión Académica
-                        </Text>
-                    </View>
-
-                    <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                        <View style={styles.inputContainer}>
-                            <Text style={[styles.label, { color: colors.text }]}>Correo Electrónico</Text>
-                            <View style={[styles.inputWrapper, { backgroundColor: colors.inputBg, borderColor: colors.border }]}>
-                                <Mail color={colors.textMuted} size={20} style={styles.inputIcon} />
-                                <TextInput
-                                    style={[styles.input, { color: colors.text }]}
-                                    placeholder="admin@ingridjen.edu"
-                                    placeholderTextColor={colors.textMuted}
-                                    value={email}
-                                    onChangeText={setEmail}
-                                    keyboardType="email-address"
-                                    autoCapitalize="none"
-                                    autoCorrect={false}
+                        <View style={styles.header}>
+                            <TouchableOpacity activeOpacity={1} onPress={handleCreateRootAdmin}>
+                                <Image
+                                    source={require('../assets/images/ballet_logo.png')}
+                                    style={styles.mainLogo}
+                                    resizeMode="contain"
                                 />
-                            </View>
+                            </TouchableOpacity>
                         </View>
 
-                        <View style={styles.inputContainer}>
-                            <Text style={[styles.label, { color: colors.text }]}>Contraseña</Text>
-                            <View style={[styles.inputWrapper, { backgroundColor: colors.inputBg, borderColor: colors.border }]}>
-                                <Lock color={colors.textMuted} size={20} style={styles.inputIcon} />
-                                <TextInput
-                                    style={[styles.input, { color: colors.text }]}
-                                    placeholder="••••••••"
-                                    placeholderTextColor={colors.textMuted}
-                                    value={password}
-                                    onChangeText={setPassword}
-                                    secureTextEntry
-                                />
-                            </View>
-                        </View>
-
-                        <TouchableOpacity
-                            style={[styles.button, { backgroundColor: colors.primary, opacity: isLoading ? 0.7 : 1 }]}
-                            onPress={handleLogin}
-                            disabled={isLoading}
+                        <BlurView
+                            intensity={90}
+                            tint={colorScheme === 'light' ? 'light' : 'dark'}
+                            style={[
+                                styles.card,
+                                {
+                                    backgroundColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.08)',
+                                    borderColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 1)' : 'rgba(255, 255, 255, 0.15)'
+                                }
+                            ]}
                         >
-                            {isLoading ? (
-                                <ActivityIndicator color="#fff" />
-                            ) : (
-                                <Text style={styles.buttonText}>Iniciar Sesión</Text>
-                            )}
-                        </TouchableOpacity>
+                            <View style={[styles.liquidHighlight, { height: '50%', opacity: 0.8 }]} />
 
-                        <View style={styles.dividerContainer}>
-                            <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
-                            <Text style={[styles.dividerText, { color: colors.textMuted }]}>O</Text>
-                            <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
-                        </View>
+                            <View style={styles.inputContainer}>
+                                <Text style={[styles.label, { color: colors.text }]}>Correo Electrónico</Text>
+                                <View style={[styles.inputWrapper, { backgroundColor: colorScheme === 'light' ? 'rgba(0,0,0,0.03)' : 'rgba(255,255,255,0.05)', borderColor: colorScheme === 'light' ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.1)' }]}>
+                                    <Mail color={colors.text} size={20} style={styles.inputIcon} />
+                                    <TextInput
+                                        style={[styles.input, { color: colors.text }]}
+                                        placeholder="admin@ingridjen.edu"
+                                        placeholderTextColor={colors.text + '60'}
+                                        value={email}
+                                        onChangeText={setEmail}
+                                        keyboardType="email-address"
+                                        autoCapitalize="none"
+                                        autoCorrect={false}
+                                        returnKeyType="next"
+                                        onSubmitEditing={() => passwordInputRef.current?.focus()}
+                                        blurOnSubmit={false}
+                                    />
+                                </View>
+                            </View>
 
-                        <TouchableOpacity
-                            style={[styles.googleButton, { borderColor: colors.border }]}
-                            onPress={() => promptAsync()}
-                            disabled={!request}
-                        >
-                            <Text style={[styles.googleButtonText, { color: colors.text }]}>Continuar con Google</Text>
-                        </TouchableOpacity>
+                            <View style={styles.inputContainer}>
+                                <Text style={[styles.label, { color: colors.text }]}>Contraseña</Text>
+                                <View style={[styles.inputWrapper, { backgroundColor: colorScheme === 'light' ? 'rgba(0,0,0,0.03)' : 'rgba(255,255,255,0.05)', borderColor: colorScheme === 'light' ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.1)' }]}>
+                                    <Lock color={colors.text} size={20} style={styles.inputIcon} />
+                                    <TextInput
+                                        ref={passwordInputRef}
+                                        style={[styles.input, { color: colors.text }]}
+                                        placeholder="••••••••"
+                                        placeholderTextColor={colors.text + '60'}
+                                        value={password}
+                                        onChangeText={setPassword}
+                                        secureTextEntry={!showPassword}
+                                        returnKeyType="go"
+                                        onSubmitEditing={handleLogin}
+                                    />
+                                    <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={{ padding: 8 }}>
+                                        {showPassword ? <EyeOff size={20} color={colors.text + '80'} /> : <Eye size={20} color={colors.text + '80'} />}
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+
+                            <TouchableOpacity
+                                style={[
+                                    styles.button,
+                                    {
+                                        backgroundColor: colors.primary,
+                                        opacity: isLoading ? 0.7 : 1,
+                                        shadowColor: colors.primary,
+                                    }
+                                ]}
+                                onPress={handleLogin}
+                                disabled={isLoading}
+                            >
+                                {isLoading ? (
+                                    <ActivityIndicator color={colorScheme === 'dark' ? '#2D2621' : '#FFFFFF'} />
+                                ) : (
+                                    <Text style={[styles.buttonText, { color: colorScheme === 'dark' ? '#2D2621' : '#FFFFFF' }]}>Entrar al Estudio</Text>
+                                )}
+                            </TouchableOpacity>
+
+                            <View style={styles.dividerContainer}>
+                                <View style={[styles.dividerLine, { backgroundColor: colors.text, opacity: 0.1 }]} />
+                                <Text style={[styles.dividerText, { color: colors.text, opacity: 0.6 }]}>O</Text>
+                                <View style={[styles.dividerLine, { backgroundColor: colors.text, opacity: 0.1 }]} />
+                            </View>
+
+                            <TouchableOpacity
+                                style={[styles.googleButton, { borderColor: colors.text + '20', backgroundColor: 'transparent' }]}
+                                onPress={() => promptAsync()}
+                                disabled={!request}
+                            >
+                                <View style={styles.googleButtonContent}>
+                                    <FontAwesome name="google" size={20} color={colors.text} style={styles.googleIcon} />
+                                    <Text style={[styles.googleButtonText, { color: colors.text }]}>Acceder con Google</Text>
+                                </View>
+                            </TouchableOpacity>
+                        </BlurView>
+
                     </View>
-
-                </View>
-            </ScrollView>
-        </KeyboardAvoidingView>
+                </ScrollView>
+            </KeyboardAvoidingView>
+        </View>
     );
 }
 
 const styles = StyleSheet.create({
+    backgroundImage: {
+        flex: 1,
+        width: '100%',
+        height: '100%',
+    },
     scrollContent: {
         flexGrow: 1,
         justifyContent: 'center',
@@ -206,51 +248,40 @@ const styles = StyleSheet.create({
     },
     header: {
         alignItems: 'center',
-        marginBottom: 40,
+        marginBottom: 36,
+        marginTop: 40,
     },
-    logoPlaceholder: {
-        width: 64,
-        height: 64,
-        borderRadius: 16,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginBottom: 16,
-        shadowColor: '#3B82F6',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 8,
-    },
-    logoText: {
-        color: '#FFF',
-        fontSize: 28,
-        fontWeight: 'bold',
-    },
-    title: {
-        fontSize: 28,
-        fontWeight: 'bold',
-        marginBottom: 8,
-    },
-    subtitle: {
-        fontSize: 16,
-        textAlign: 'center',
+    mainLogo: {
+        width: 280,
+        height: 120,
     },
     card: {
-        borderRadius: 24,
-        padding: 24,
-        borderWidth: 1,
+        borderRadius: 32,
+        padding: 28,
+        borderWidth: 1.5,
+        overflow: 'hidden',
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 15,
-        elevation: 2,
+        shadowOffset: { width: 0, height: 12 },
+        shadowOpacity: 0.15,
+        shadowRadius: 20,
+        elevation: 8,
+    },
+    liquidHighlight: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        backgroundColor: 'rgba(255, 255, 255, 0.25)',
+        borderTopLeftRadius: 32,
+        borderTopRightRadius: 32,
+        zIndex: 0,
     },
     inputContainer: {
         marginBottom: 20,
     },
     label: {
-        fontSize: 14,
-        fontWeight: '500',
+        fontSize: 15,
+        fontWeight: '600',
         marginBottom: 8,
         marginLeft: 4,
     },
@@ -258,33 +289,33 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         borderWidth: 1,
-        borderRadius: 12,
+        borderRadius: 20,
         paddingHorizontal: 16,
+        height: 58,
     },
     inputIcon: {
         marginRight: 12,
     },
     input: {
         flex: 1,
-        height: 50,
+        height: 54,
         fontSize: 16,
     },
     button: {
-        height: 50,
-        borderRadius: 12,
+        height: 58,
+        borderRadius: 20,
         justifyContent: 'center',
         alignItems: 'center',
-        marginTop: 8,
-        shadowColor: '#3B82F6',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 4,
-        elevation: 3,
+        marginTop: 12,
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.4,
+        shadowRadius: 12,
+        elevation: 6,
     },
     buttonText: {
-        color: '#FFFFFF',
         fontSize: 16,
         fontWeight: '600',
+        letterSpacing: 0.5,
     },
     dividerContainer: {
         flexDirection: 'row',
@@ -298,18 +329,25 @@ const styles = StyleSheet.create({
     dividerText: {
         marginHorizontal: 16,
         fontSize: 14,
-        fontWeight: '500',
+        fontWeight: '600',
     },
     googleButton: {
-        height: 50,
-        borderRadius: 12,
+        height: 58,
+        borderRadius: 20,
         justifyContent: 'center',
         alignItems: 'center',
-        borderWidth: 1,
-        backgroundColor: 'transparent',
+        borderWidth: 1.5,
     },
     googleButtonText: {
         fontSize: 16,
         fontWeight: '600',
+    },
+    googleButtonContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+    },
+    googleIcon: {
+        opacity: 0.9,
     }
 });

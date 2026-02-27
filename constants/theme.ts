@@ -4,37 +4,39 @@
 
 import { Platform } from 'react-native';
 
-const tintColorLight = '#6366f1';
-const tintColorDark = '#818cf8';
+const tintColorLight = '#D4AF37'; // Ballet Gold
+const tintColorDark = '#F8C8DC'; // Rose Pink
 
 export const Colors = {
   light: {
-    text: '#1e293b',
-    background: '#f8fafc',
-    tint: tintColorLight,
-    icon: '#64748b',
-    tabIconDefault: '#94a3b8',
-    tabIconSelected: tintColorLight,
-    card: '#ffffff',
-    border: '#e2e8f0',
-    notification: '#f43f5e',
-    primary: '#6366f1',
-    secondary: '#10b981',
+    text: '#2D2621', // Bark Brown
+    background: '#F5F5F7', // Apple Gallery Gray for better Blur contrast
+    tint: '#AF4328', // Oxide Red
+    icon: '#5D5043', // Earth Brown
+    tabIconDefault: '#C5A88F', // Taupe
+    tabIconSelected: '#AF4328',
+    card: 'rgba(255, 255, 255, 0.5)', // High transparency for prominent Blur effect
+    border: '#C5A88F',
+    notification: '#AF4328',
+    primary: '#000000',
+    secondary: '#C5A88F',
     surface: '#ffffff',
+    overlay: 'rgba(245, 241, 233, 0.4)',
   },
   dark: {
-    text: '#f8fafc',
-    background: '#0f172a',
-    tint: tintColorDark,
-    icon: '#94a3b8',
-    tabIconDefault: '#475569',
-    tabIconSelected: tintColorDark,
-    card: '#1e293b',
-    border: '#334155',
-    notification: '#fb7185',
-    primary: '#818cf8',
-    secondary: '#34d399',
-    surface: '#1e293b',
+    text: '#F5F1E9', // Linen Cream
+    background: '#2D2621', // Bark Brown
+    tint: '#CD855F', // terracotta
+    icon: '#C5A88F',
+    tabIconDefault: '#5D5043',
+    tabIconSelected: '#CD855F',
+    card: '#261F1A',
+    border: '#5D5043',
+    notification: '#CD855F',
+    primary: '#EBDCCB', // Sand/Cream contrast for dark mode buttons
+    secondary: '#5D5043',
+    surface: '#261F1A',
+    overlay: 'rgba(45, 38, 33, 0.6)',
   },
 };
 

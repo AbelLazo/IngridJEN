@@ -3,6 +3,7 @@ import PeriodHeader from '@/components/PeriodHeader';
 import { Colors } from '@/constants/theme';
 import { ClassItem, useInstitution } from '@/context/InstitutionContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { BlurView } from 'expo-blur';
 import { useRouter } from 'expo-router';
 import { Calendar as CalendarIcon, Clock, Users } from 'lucide-react-native';
 import React, { useMemo, useState } from 'react';
@@ -157,58 +158,68 @@ export default function ScheduleScreen() {
                         const isFull = enrolledCount >= parseInt(cls.capacity);
 
                         return (
-                            <TouchableOpacity
-                                key={cls.id}
-                                activeOpacity={0.8}
-                                // TODO: Navigate to Attendance Modal here
-                                style={[styles.classCard, { backgroundColor: colors.card, borderColor: cls.color || colors.primary }]}
-                            >
-                                <View style={styles.classHeaderRow}>
-                                    <View style={[styles.timeBadge, { backgroundColor: (cls.color || colors.primary) + '20' }]}>
-                                        <Clock size={14} color={cls.color || colors.primary} />
-                                        <Text style={[styles.timeText, { color: cls.color || colors.primary }]}>
-                                            {cls.startTime} - {cls.duration}
-                                        </Text>
-                                    </View>
-                                    <View style={[
-                                        styles.occupancyBadge,
-                                        { backgroundColor: isFull ? '#ef444420' : colors.background }
-                                    ]}>
-                                        <Users size={12} color={isFull ? '#ef4444' : colors.icon} />
-                                        <Text style={[
-                                            styles.occupancyText,
-                                            { color: isFull ? '#ef4444' : colors.text }
-                                        ]}>
-                                            {enrolledCount}/{cls.capacity}
-                                        </Text>
-                                    </View>
-                                </View>
+                            <View key={cls.id} style={styles.cardContainer}>
+                                <BlurView
+                                    intensity={90}
+                                    tint={colorScheme === 'light' ? 'light' : 'dark'}
+                                    style={[
+                                        styles.classCard,
+                                        {
+                                            backgroundColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.4)' : 'rgba(255, 255, 255, 0.08)',
+                                            borderLeftColor: cls.color || colors.primary,
+                                            borderColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.15)',
+                                        }
+                                    ]}
+                                >
+                                    <View style={styles.liquidHighlight} />
 
-                                <Text style={[styles.classTitle, { color: colors.text }]}>
-                                    {cls.courseName}
-                                </Text>
-
-                                <View style={styles.classFooterRow}>
-                                    <View style={styles.teacherInfo}>
-                                        <View style={styles.avatarPlaceholder}>
-                                            <Text style={styles.avatarText}>
-                                                {cls.teacherName.charAt(0)}
+                                    <View style={styles.classHeaderRow}>
+                                        <View style={[styles.timeBadge, { backgroundColor: (cls.color || colors.primary) + '20' }]}>
+                                            <Clock size={14} color={cls.color || colors.primary} />
+                                            <Text style={[styles.timeText, { color: cls.color || colors.primary }]}>
+                                                {cls.startTime} - {cls.duration}
                                             </Text>
                                         </View>
-                                        <Text style={[styles.teacherName, { color: colors.text }]}>
-                                            Prof. {cls.teacherName}
-                                        </Text>
+                                        <View style={[
+                                            styles.occupancyBadge,
+                                            { backgroundColor: colorScheme === 'light' ? 'rgba(0,0,0,0.03)' : 'rgba(255,255,255,0.05)' }
+                                        ]}>
+                                            <Users size={12} color={isFull ? '#ef4444' : colors.icon} />
+                                            <Text style={[
+                                                styles.occupancyText,
+                                                { color: isFull ? '#ef4444' : colors.text }
+                                            ]}>
+                                                {enrolledCount}/{cls.capacity}
+                                            </Text>
+                                        </View>
                                     </View>
 
-                                    <TouchableOpacity
-                                        style={[styles.attendanceButton, { backgroundColor: colors.primary }]}
-                                        onPress={() => openAttendanceModal(cls)}
-                                        activeOpacity={0.8}
-                                    >
-                                        <Text style={styles.attendanceButtonText}>Tomar Asistencia</Text>
-                                    </TouchableOpacity>
-                                </View>
-                            </TouchableOpacity>
+                                    <Text style={[styles.classTitle, { color: colors.text }]}>
+                                        {cls.courseName}
+                                    </Text>
+
+                                    <View style={styles.classFooterRow}>
+                                        <View style={styles.teacherInfo}>
+                                            <View style={styles.avatarPlaceholder}>
+                                                <Text style={styles.avatarText}>
+                                                    {cls.teacherName.charAt(0)}
+                                                </Text>
+                                            </View>
+                                            <Text style={[styles.teacherName, { color: colors.text }]}>
+                                                Prof. {cls.teacherName}
+                                            </Text>
+                                        </View>
+
+                                        <TouchableOpacity
+                                            style={[styles.attendanceButton, { backgroundColor: colors.primary }]}
+                                            onPress={() => openAttendanceModal(cls)}
+                                            activeOpacity={0.8}
+                                        >
+                                            <Text style={styles.attendanceButtonText}>Asistencia</Text>
+                                        </TouchableOpacity>
+                                    </View>
+                                </BlurView>
+                            </View>
                         );
                     })
                 )}
@@ -295,16 +306,31 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         paddingHorizontal: 40,
     },
-    classCard: {
-        borderRadius: 20,
-        padding: 16,
+    cardContainer: {
         marginBottom: 16,
-        borderLeftWidth: 5,
+    },
+    classCard: {
+        borderRadius: 24, // Consistent with liquid glass
+        padding: 16,
+        borderLeftWidth: 6,
+        borderWidth: 1,
+        overflow: 'hidden',
+        // Layered shadows for depth
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.05,
         shadowRadius: 10,
-        elevation: 3,
+        elevation: 5,
+    },
+    liquidHighlight: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: '50%',
+        backgroundColor: 'rgba(255, 255, 255, 0.25)', // Specular reflection
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
     },
     classHeaderRow: {
         flexDirection: 'row',

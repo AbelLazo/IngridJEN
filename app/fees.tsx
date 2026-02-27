@@ -2,6 +2,7 @@ import PeriodHeader from '@/components/PeriodHeader';
 import { Colors } from '@/constants/theme';
 import { useInstitution } from '@/context/InstitutionContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { BlurView } from 'expo-blur';
 import { Stack, useRouter } from 'expo-router';
 import {
     Calendar,
@@ -139,48 +140,63 @@ interface StudentCardProps {
 
 const StudentCard = ({ item, colors, onPay, onShowDetail }: StudentCardProps) => {
     const [isExpanded, setIsExpanded] = useState(false);
+    const colorScheme = useColorScheme() ?? 'light';
 
     return (
-        <View style={[styles.card, { backgroundColor: colors.card, borderColor: item.totalDebt > 0 ? '#ff4d4d' + '40' : colors.border }]}>
-            <TouchableOpacity
-                style={styles.cardHeader}
-                onPress={() => setIsExpanded(!isExpanded)}
-                activeOpacity={0.7}
+        <View style={styles.cardContainer}>
+            <BlurView
+                intensity={90}
+                tint={colorScheme === 'light' ? 'light' : 'dark'}
+                style={[
+                    styles.card,
+                    {
+                        backgroundColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.4)' : 'rgba(255, 255, 255, 0.08)',
+                        borderColor: item.totalDebt > 0 ? '#ff4d4d40' : (colorScheme === 'light' ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.15)'),
+                    }
+                ]}
             >
-                <View style={[styles.avatarBox, { backgroundColor: colors.primary + '15' }]}>
-                    <User size={24} color={colors.primary} />
-                </View>
-                <View style={styles.headerInfo}>
-                    <Text style={[styles.studentName, { color: colors.text }]}>
-                        {item.firstName} {item.lastName}
-                    </Text>
-                    <Text style={[styles.classCount, { color: item.totalDebt > 0 ? '#ff4d4d' : colors.icon }]}>
-                        {item.totalDebt > 0 ? `Deuda Total: S/ ${item.totalDebt}` : 'Todo pagado'}
-                    </Text>
-                </View>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    {item.totalDebt > 0 && !isExpanded && (
-                        <View style={[styles.amountBadge, { backgroundColor: '#ff4d4d15', marginRight: 8 }]}>
-                            <Text style={[styles.totalAmount, { color: '#ff4d4d', fontSize: 14 }]}>
-                                S/ {item.totalDebt}
-                            </Text>
-                        </View>
-                    )}
-                    {isExpanded ? <ChevronUp size={24} color={colors.icon} /> : <ChevronDown size={24} color={colors.icon} />}
-                </View>
-            </TouchableOpacity>
+                <View style={styles.liquidHighlight} />
 
-            {isExpanded && (
-                <>
-                    <View style={[styles.divider, { backgroundColor: colors.border }]} />
-                    <View style={styles.detailsList}>
-                        <Text style={[styles.sectionTitle, { color: colors.icon }]}>Cursos Matriculados:</Text>
-                        {item.enrollmentDetails.map((detail: any) => (
-                            <EnrollmentItem key={detail.id} student={item} detail={detail} colors={colors} onPay={onPay} onShowDetail={onShowDetail} />
-                        ))}
+                <TouchableOpacity
+                    style={styles.cardHeader}
+                    onPress={() => setIsExpanded(!isExpanded)}
+                    activeOpacity={0.7}
+                >
+                    <View style={[styles.avatarBox, { backgroundColor: colors.primary + '15' }]}>
+                        <User size={24} color={colors.primary} />
                     </View>
-                </>
-            )}
+                    <View style={styles.headerInfo}>
+                        <Text style={[styles.studentName, { color: colors.text }]}>
+                            {item.firstName} {item.lastName}
+                        </Text>
+                        <Text style={[styles.classCount, { color: item.totalDebt > 0 ? '#ff4d4d' : colors.icon }]}>
+                            {item.totalDebt > 0 ? `Deuda Total: S/ ${item.totalDebt}` : 'Todo pagado'}
+                        </Text>
+                    </View>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        {item.totalDebt > 0 && !isExpanded && (
+                            <View style={[styles.amountBadge, { backgroundColor: '#ff4d4d15', marginRight: 8 }]}>
+                                <Text style={[styles.totalAmount, { color: '#ff4d4d', fontSize: 14 }]}>
+                                    S/ {item.totalDebt}
+                                </Text>
+                            </View>
+                        )}
+                        {isExpanded ? <ChevronUp size={24} color={colors.icon} /> : <ChevronDown size={24} color={colors.icon} />}
+                    </View>
+                </TouchableOpacity>
+
+                {isExpanded && (
+                    <>
+                        <View style={[styles.divider, { backgroundColor: colors.border }]} />
+                        <View style={styles.detailsList}>
+                            <Text style={[styles.sectionTitle, { color: colors.icon }]}>Cursos Matriculados:</Text>
+                            {item.enrollmentDetails.map((detail: any) => (
+                                <EnrollmentItem key={detail.id} student={item} detail={detail} colors={colors} onPay={onPay} onShowDetail={onShowDetail} />
+                            ))}
+                        </View>
+                    </>
+                )}
+            </BlurView>
         </View>
     );
 };
@@ -454,16 +470,26 @@ export default function FeesScreen() {
                     </View>
 
 
-                    <View style={[styles.searchContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                        <Search color={colors.icon} size={20} />
+                    <BlurView
+                        intensity={40}
+                        tint={colorScheme === 'light' ? 'light' : 'dark'}
+                        style={[
+                            styles.searchContainer,
+                            {
+                                backgroundColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.5)' : 'rgba(255, 255, 255, 0.05)',
+                                borderColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.8)' : 'rgba(255, 255, 255, 0.1)',
+                            }
+                        ]}
+                    >
+                        <Search color={colorScheme === 'light' ? '#666' : '#AAA'} size={20} />
                         <TextInput
                             style={[styles.searchInput, { color: colors.text }]}
                             placeholder="Buscar estudiante..."
-                            placeholderTextColor={colors.icon}
+                            placeholderTextColor={colorScheme === 'light' ? '#999' : '#777'}
                             value={searchQuery}
                             onChangeText={setSearchQuery}
                         />
-                    </View>
+                    </BlurView>
 
                     <FlatList
                         data={filteredFees}
@@ -480,16 +506,27 @@ export default function FeesScreen() {
                 </>
             ) : (
                 <>
-                    <View style={[styles.searchContainer, { backgroundColor: colors.card, borderColor: colors.border, marginTop: 10 }]}>
-                        <Search color={colors.icon} size={20} />
+                    <BlurView
+                        intensity={40}
+                        tint={colorScheme === 'light' ? 'light' : 'dark'}
+                        style={[
+                            styles.searchContainer,
+                            {
+                                backgroundColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.5)' : 'rgba(255, 255, 255, 0.05)',
+                                borderColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.8)' : 'rgba(255, 255, 255, 0.1)',
+                                marginTop: 10
+                            }
+                        ]}
+                    >
+                        <Search color={colorScheme === 'light' ? '#666' : '#AAA'} size={20} />
                         <TextInput
                             style={[styles.searchInput, { color: colors.text }]}
-                            placeholder="Buscar en el historial..."
-                            placeholderTextColor={colors.icon}
+                            placeholder="Buscar en historial..."
+                            placeholderTextColor={colorScheme === 'light' ? '#999' : '#777'}
                             value={searchQuery}
                             onChangeText={setSearchQuery}
                         />
-                    </View>
+                    </BlurView>
                     <FlatList
                         data={payments.filter(p => {
                             const student = students.find(s => s.id === p.studentId);
@@ -530,7 +567,7 @@ export default function FeesScreen() {
                     />
                 </>
             )}
-        </View>
+        </View >
     );
 }
 
@@ -557,10 +594,49 @@ const styles = StyleSheet.create({
         marginRight: 8
     },
     cycleChipLabel: { marginLeft: 6, fontWeight: '700', fontSize: 13 },
-    searchContainer: { flexDirection: 'row', alignItems: 'center', marginHorizontal: 20, marginBottom: 15, paddingHorizontal: 15, height: 50, borderRadius: 15, borderWidth: 1 },
-    searchInput: { flex: 1, marginLeft: 10, fontSize: 16 },
+    searchContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginHorizontal: 20,
+        paddingHorizontal: 15,
+        height: 52,
+        borderRadius: 24,
+        borderWidth: 1,
+        marginBottom: 15,
+        overflow: 'hidden',
+    },
+    searchInput: {
+        flex: 1,
+        marginLeft: 10,
+        fontSize: 16,
+        fontWeight: '500',
+    },
     listContent: { paddingHorizontal: 20 },
-    card: { borderRadius: 28, padding: 20, marginBottom: 18, borderWidth: 1, elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10 },
+    cardContainer: {
+        marginBottom: 18,
+    },
+    card: {
+        borderRadius: 24, // Consistent with liquid glass
+        padding: 20,
+        borderWidth: 1,
+        overflow: 'hidden',
+        // Layered shadows for depth
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.05,
+        shadowRadius: 10,
+        elevation: 5,
+    },
+    liquidHighlight: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: '50%',
+        backgroundColor: 'rgba(255, 255, 255, 0.25)', // Specular reflection
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
+    },
     cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 15 },
     avatarBox: { width: 48, height: 48, borderRadius: 14, justifyContent: 'center', alignItems: 'center' },
     headerInfo: { flex: 1, marginLeft: 15 },

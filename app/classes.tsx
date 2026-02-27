@@ -3,6 +3,7 @@ import { Colors } from '@/constants/theme';
 import { Student, useInstitution } from '@/context/InstitutionContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Picker } from '@react-native-picker/picker';
+import { BlurView } from 'expo-blur';
 import { Stack, useRouter } from 'expo-router';
 import {
     ArrowRight,
@@ -782,73 +783,87 @@ export default function ClassesScreen() {
 
         return (
             <GestureDetector gesture={panGesture}>
-                <Animated.View style={[styles.card, { backgroundColor: colors.card, borderColor: item.color + '40' }, animatedStyle]}>
-                    <View style={styles.cardMain}>
-                        <View style={[styles.courseIcon, { backgroundColor: item.color + '15' }]}>
-                            <BookOpen size={24} color={item.color} />
-                        </View>
-                        <View style={styles.cardContent}>
-                            <Text style={[styles.courseTitle, { color: colors.text }]}>{item.courseName}</Text>
-                            <View style={styles.infoRow}>
-                                <User size={14} color={colors.icon} />
-                                <Text style={[styles.infoText, { color: colors.icon }]}>{item.teacherName}</Text>
-                            </View>
+                <Animated.View style={[styles.cardContainer, animatedStyle]}>
+                    <BlurView
+                        intensity={80}
+                        tint={colorScheme === 'light' ? 'light' : 'dark'}
+                        style={[
+                            styles.card,
+                            {
+                                backgroundColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.4)' : 'rgba(255, 255, 255, 0.1)',
+                                borderColor: item.color + '40',
+                            }
+                        ]}
+                    >
+                        <View style={styles.liquidHighlight} />
 
-                            {item.schedules.map((schedule: ClassSchedule, idx: number) => (
-                                <View key={idx} style={styles.infoRow}>
-                                    <Clock size={14} color={colors.icon} />
-                                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                        <Text style={[styles.infoText, { color: colors.icon }]}>{schedule.day}: </Text>
-                                        <Text style={[styles.timeText, { color: item.color }]}>
-                                            {schedule.startTime} - {calculateEndTime(schedule.startTime, item.duration)}
-                                        </Text>
-                                    </View>
+                        <View style={styles.cardMain}>
+                            <View style={[styles.courseIcon, { backgroundColor: item.color + '15' }]}>
+                                <BookOpen size={24} color={item.color} />
+                            </View>
+                            <View style={styles.cardContent}>
+                                <Text style={[styles.courseTitle, { color: colors.text }]}>{item.courseName}</Text>
+                                <View style={styles.infoRow}>
+                                    <User size={14} color={colors.icon} />
+                                    <Text style={[styles.infoText, { color: colors.icon }]}>{item.teacherName}</Text>
                                 </View>
-                            ))}
 
-                            <View style={styles.infoRow}>
-                                <Users size={14} color={isOverflow ? '#ff4d4d' : colors.icon} />
-                                <Text style={[styles.infoText, { color: isOverflow ? '#ff4d4d' : colors.icon, fontWeight: isOverflow ? 'bold' : 'normal' }]}>
-                                    Capacidad: {enrolledCount}/{item.capacity} {isOverflow ? '(Sobrecupo)' : ''}
-                                </Text>
+                                {item.schedules.map((schedule: ClassSchedule, idx: number) => (
+                                    <View key={idx} style={styles.infoRow}>
+                                        <Clock size={14} color={colors.icon} />
+                                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                            <Text style={[styles.infoText, { color: colors.icon }]}>{schedule.day}: </Text>
+                                            <Text style={[styles.timeText, { color: item.color }]}>
+                                                {schedule.startTime} - {calculateEndTime(schedule.startTime, item.duration)}
+                                            </Text>
+                                        </View>
+                                    </View>
+                                ))}
+
+                                <View style={styles.infoRow}>
+                                    <Users size={14} color={isOverflow ? '#ff4d4d' : colors.icon} />
+                                    <Text style={[styles.infoText, { color: isOverflow ? '#ff4d4d' : colors.icon, fontWeight: isOverflow ? 'bold' : 'normal' }]}>
+                                        Capacidad: {enrolledCount}/{item.capacity} {isOverflow ? '(Sobrecupo)' : ''}
+                                    </Text>
+                                </View>
                             </View>
                         </View>
-                    </View>
 
-                    <View style={styles.cardActions}>
-                        {classes.some(c => c.mergedToClassId === item.id) && (
-                            <>
-                                <TouchableOpacity
-                                    style={[styles.editCircle, { backgroundColor: '#4CAF5020', marginRight: 8 }]}
-                                    onPress={() => handleConfirmImportState(item)}
-                                >
-                                    <Check size={18} color="#4CAF50" />
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                    style={[styles.editCircle, { backgroundColor: '#ff4d4d20', marginRight: 8 }]}
-                                    onPress={() => handleRevertMerge(item)}
-                                >
-                                    <RefreshCcw size={18} color="#ff4d4d" />
-                                </TouchableOpacity>
-                            </>
-                        )}
-                        {!item.mergedToClassId && !classes.some(c => c.mergedToClassId === item.id) &&
-                            getValidActiveEnrollments(item.id).length === 0 &&
-                            academicCycles.find(ac => ac.id === item.cycleId)?.name.toLowerCase().includes('anual') && (
-                                <TouchableOpacity
-                                    style={[styles.editCircle, { backgroundColor: colors.primary + '20', marginRight: 8 }]}
-                                    onPress={() => { setSelectedClassId(item.id); setSelectedSourceClassIds([]); setMergeModalVisible(true); }}
-                                >
-                                    <Download size={18} color={colors.primary} />
-                                </TouchableOpacity>
+                        <View style={styles.cardActions}>
+                            {classes.some(c => c.mergedToClassId === item.id) && (
+                                <>
+                                    <TouchableOpacity
+                                        style={[styles.editCircle, { backgroundColor: '#4CAF5020', marginRight: 8 }]}
+                                        onPress={() => handleConfirmImportState(item)}
+                                    >
+                                        <Check size={18} color="#4CAF50" />
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                        style={[styles.editCircle, { backgroundColor: '#ff4d4d20', marginRight: 8 }]}
+                                        onPress={() => handleRevertMerge(item)}
+                                    >
+                                        <RefreshCcw size={18} color="#ff4d4d" />
+                                    </TouchableOpacity>
+                                </>
                             )}
-                        <TouchableOpacity
-                            style={[styles.editCircle, { backgroundColor: colors.primary + '10' }]}
-                            onPress={() => onEdit(item)}
-                        >
-                            <Edit3 size={18} color={colors.primary} />
-                        </TouchableOpacity>
-                    </View>
+                            {!item.mergedToClassId && !classes.some(c => c.mergedToClassId === item.id) &&
+                                getValidActiveEnrollments(item.id).length === 0 &&
+                                academicCycles.find(ac => ac.id === item.cycleId)?.name.toLowerCase().includes('anual') && (
+                                    <TouchableOpacity
+                                        style={[styles.editCircle, { backgroundColor: colors.primary + '20', marginRight: 8 }]}
+                                        onPress={() => { setSelectedClassId(item.id); setSelectedSourceClassIds([]); setMergeModalVisible(true); }}
+                                    >
+                                        <Download size={18} color={colors.primary} />
+                                    </TouchableOpacity>
+                                )}
+                            <TouchableOpacity
+                                style={[styles.editCircle, { backgroundColor: colors.primary + '10' }]}
+                                onPress={() => onEdit(item)}
+                            >
+                                <Edit3 size={18} color={colors.primary} />
+                            </TouchableOpacity>
+                        </View>
+                    </BlurView>
                 </Animated.View>
             </GestureDetector>
         );
@@ -1018,16 +1033,26 @@ export default function ClassesScreen() {
 
             {viewMode === 'list' ? (
                 <>
-                    <View style={[styles.searchBar, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                        <Search color={colors.icon} size={20} />
+                    <BlurView
+                        intensity={40}
+                        tint={colorScheme === 'light' ? 'light' : 'dark'}
+                        style={[
+                            styles.searchBar,
+                            {
+                                backgroundColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.5)' : 'rgba(255, 255, 255, 0.05)',
+                                borderColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.8)' : 'rgba(255, 255, 255, 0.1)',
+                            }
+                        ]}
+                    >
+                        <Search color={colorScheme === 'light' ? '#666' : '#AAA'} size={20} />
                         <TextInput
                             style={[styles.searchInput, { color: colors.text }]}
                             placeholder="Buscar clase o profesor..."
-                            placeholderTextColor={colors.icon}
+                            placeholderTextColor={colorScheme === 'light' ? '#999' : '#777'}
                             value={searchQuery}
                             onChangeText={setSearchQuery}
                         />
-                    </View>
+                    </BlurView>
                     <FlatList
                         data={filteredClasses}
                         renderItem={renderClassCard}
@@ -1499,10 +1524,46 @@ const styles = StyleSheet.create({
     toggleContainer: { flexDirection: 'row', marginHorizontal: 20, borderRadius: 12, padding: 4, marginBottom: 15 },
     toggleButton: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 8, borderRadius: 10 },
     toggleLabel: { marginLeft: 8, fontWeight: '600', fontSize: 14 },
-    searchBar: { flexDirection: 'row', alignItems: 'center', marginHorizontal: 20, paddingHorizontal: 15, height: 48, borderRadius: 12, borderWidth: 1, marginBottom: 15 },
-    searchInput: { flex: 1, marginLeft: 10, fontSize: 15 },
+    searchBar: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginHorizontal: 20,
+        paddingHorizontal: 15,
+        height: 52,
+        borderRadius: 24, // Consistent 24px
+        borderWidth: 1,
+        marginBottom: 15,
+        overflow: 'hidden',
+    },
+    searchInput: { flex: 1, marginLeft: 10, fontSize: 16, fontWeight: '500' },
     listContent: { paddingHorizontal: 20 },
-    card: { flexDirection: 'row', padding: 15, borderRadius: 18, marginBottom: 15, borderWidth: 1, alignItems: 'center' },
+    cardContainer: {
+        marginBottom: 15,
+    },
+    card: {
+        flexDirection: 'row',
+        padding: 15,
+        borderRadius: 24, // Consistent with liquid glass
+        borderWidth: 1,
+        alignItems: 'center',
+        overflow: 'hidden',
+        // Layered shadows for depth
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.05,
+        shadowRadius: 10,
+        elevation: 2,
+    },
+    liquidHighlight: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: '40%',
+        backgroundColor: 'rgba(255, 255, 255, 0.25)', // Specular reflection
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
+    },
     cardMain: { flex: 1, flexDirection: 'row', alignItems: 'center' },
     courseIcon: { width: 48, height: 48, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
     iconBox: { width: 48, height: 48, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },

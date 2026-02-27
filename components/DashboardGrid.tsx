@@ -1,6 +1,7 @@
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { BlurView } from 'expo-blur';
 import { useRouter } from 'expo-router';
 import {
     BookOpen,
@@ -14,18 +15,18 @@ import {
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 
-const GAP = 16;
+const GAP = 12;
 
 const MENU_ITEMS = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, color: '#6366f1', route: '/dashboard' },
-    { id: 'students', label: 'Estudiantes', icon: Users, color: '#f59e0b', route: '/students' },
-    { id: 'teachers', label: 'Profesores', icon: GraduationCap, color: '#10b981', route: '/teachers' },
-    { id: 'courses', label: 'Cursos', icon: BookOpen, color: '#3b82f6', route: '/courses' },
-    { id: 'classes', label: 'Clases', icon: Presentation, color: '#ec4899', route: '/classes' },
-    { id: 'schedule', label: 'Horario', icon: Calendar, color: '#8b5cf6', route: '/schedule' },
-    { id: 'tuition', label: 'Mensualidad', icon: Wallet, color: '#ef4444', route: '/fees' },
-    { id: 'cycles', label: 'Ciclos', icon: Calendar, color: '#14b8a6', route: '/cycles' },
-    { id: 'admin-users', label: 'Usuarios', icon: Users, color: '#4f46e5', route: '/users' },
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, color: '#000000', route: '/dashboard' },
+    { id: 'students', label: 'Estudiantes', icon: Users, color: '#000000', route: '/students' },
+    { id: 'teachers', label: 'Profesores', icon: GraduationCap, color: '#000000', route: '/teachers' },
+    { id: 'courses', label: 'Cursos', icon: BookOpen, color: '#000000', route: '/courses' },
+    { id: 'classes', label: 'Clases', icon: Presentation, color: '#000000', route: '/classes' },
+    { id: 'schedule', label: 'Horario', icon: Calendar, color: '#000000', route: '/schedule' },
+    { id: 'tuition', label: 'Mensualidad', icon: Wallet, color: '#000000', route: '/fees' },
+    { id: 'cycles', label: 'Ciclos', icon: Calendar, color: '#000000', route: '/cycles' },
+    { id: 'admin-users', label: 'Usuarios', icon: Users, color: '#000000', route: '/users' },
 ];
 
 export default function DashboardGrid() {
@@ -37,12 +38,12 @@ export default function DashboardGrid() {
 
     const filteredMenuItems = MENU_ITEMS.filter(item => {
         if (userRole === 'professor') {
-            return ['dashboard', 'classes', 'schedule'].includes(item.id);
+            return ['students', 'classes', 'schedule'].includes(item.id);
         }
         return true;
     });
 
-    // Responsive logic: 2 columns on phones, 3 or more on tablets
+    // Horizontal Bento Style Logic: 2 columns, but shorter height
     const columnCount = width > 600 ? 3 : 2;
     const cardWidth = (width - (GAP * (columnCount + 1))) / columnCount;
 
@@ -51,34 +52,41 @@ export default function DashboardGrid() {
             {filteredMenuItems.map((item) => (
                 <TouchableOpacity
                     key={item.id}
-                    style={[
-                        styles.card,
-                        {
-                            width: cardWidth,
-                            height: cardWidth * 0.95,
-                            backgroundColor: colors.card,
-                            borderColor: colors.border
-                        }
-                    ]}
                     onPress={() => router.push(item.route as any)}
-                    activeOpacity={0.7}
+                    activeOpacity={0.8}
                 >
-                    <View style={[styles.iconContainer, { backgroundColor: item.color + '20' }]}>
-                        <item.icon size={width > 600 ? 32 : 28} color={item.color} />
-                    </View>
-                    <Text
+                    <BlurView
+                        intensity={90} // Matching Elite intensity
+                        tint={colorScheme === 'light' ? 'light' : 'dark'}
                         style={[
-                            styles.label,
+                            styles.card,
                             {
-                                color: colors.text,
-                                fontSize: width > 600 ? 16 : 14
+                                width: cardWidth,
+                                backgroundColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.08)',
+                                borderColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 1)' : 'rgba(255, 255, 255, 0.15)',
                             }
                         ]}
-                        numberOfLines={1}
-                        adjustsFontSizeToFit
                     >
-                        {item.label}
-                    </Text>
+                        {/* Liquid Highlight - Specular reflection */}
+                        <View style={styles.liquidHighlight} />
+
+                        <View style={styles.iconContainer}>
+                            <item.icon size={width > 600 ? 28 : 24} color={colorScheme === 'dark' ? colors.text : '#000000'} />
+                        </View>
+                        <Text
+                            style={[
+                                styles.label,
+                                {
+                                    color: colors.text,
+                                    fontSize: width > 600 ? 15 : 13
+                                }
+                            ]}
+                            numberOfLines={1}
+                            adjustsFontSizeToFit
+                        >
+                            {item.label}
+                        </Text>
+                    </BlurView>
                 </TouchableOpacity>
             ))}
         </View>
@@ -94,28 +102,45 @@ const styles = StyleSheet.create({
         gap: GAP,
     },
     card: {
-        borderRadius: 20,
-        padding: 12,
-        borderWidth: 1,
-        justifyContent: 'center',
+        borderRadius: 24,
+        paddingVertical: 18,
+        paddingHorizontal: 14,
+        borderWidth: 1.5, // Thicker glass edge
+        flexDirection: 'row',
         alignItems: 'center',
-        // Shadow for iOS
+        justifyContent: 'flex-start',
+        gap: 12,
+        overflow: 'hidden',
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
+        shadowOffset: { width: 0, height: 8 },
         shadowOpacity: 0.1,
-        shadowRadius: 8,
-        // Elevation for Android
-        elevation: 4,
+        shadowRadius: 15,
+        elevation: 5, // Higher elevation for depth
+    },
+    liquidHighlight: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: '50%', // Taller specular reflection
+        backgroundColor: 'rgba(255, 255, 255, 0.25)',
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
     },
     iconContainer: {
-        padding: 12,
-        borderRadius: 16,
-        marginBottom: 8,
+        width: 44,
+        height: 44,
+        borderRadius: 14,
+        backgroundColor: 'rgba(0,0,0,0.04)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 1,
     },
     label: {
         fontWeight: '600',
-        textAlign: 'center',
-        width: '100%',
+        textAlign: 'left',
+        flex: 1,
+        zIndex: 1,
     },
 });
 

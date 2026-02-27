@@ -1,9 +1,10 @@
 import { Colors } from '@/constants/theme';
 import { useInstitution } from '@/context/InstitutionContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { BlurView } from 'expo-blur';
 import { Calendar, Check, ChevronDown, ChevronLeft, X } from 'lucide-react-native';
 import React, { useState } from 'react';
-import { Modal, StyleSheet, Text, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
+import { Modal, Platform, StyleSheet, Text, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface PeriodHeaderProps {
@@ -41,13 +42,28 @@ export default function PeriodHeader({ title, onBack, rightAction }: PeriodHeade
                     activeOpacity={0.7}
                 >
                     <Text style={[styles.headerTitle, { color: colors.text }]}>{title}</Text>
-                    <View style={[styles.periodBadge, { backgroundColor: colors.primary + '15' }]}>
-                        <Calendar size={12} color={colors.primary} />
-                        <Text style={[styles.periodText, { color: colors.primary }]}>
-                            {currentCycle?.name || 'Periodo'}
-                        </Text>
-                        <ChevronDown size={14} color={colors.primary} />
-                    </View>
+
+                    <BlurView
+                        intensity={60}
+                        tint={colorScheme === 'light' ? 'light' : 'dark'}
+                        style={[
+                            styles.glassChip,
+                            {
+                                backgroundColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.4)' : 'rgba(255, 255, 255, 0.05)',
+                                borderColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.8)' : 'rgba(255, 255, 255, 0.2)',
+                            }
+                        ]}
+                    >
+                        <View style={styles.glassChipContent}>
+                            <Calendar size={14} color={colors.text} />
+                            <Text style={[styles.periodText, { color: colors.text }]}>
+                                {currentCycle?.name || 'Seleccionar Período'}
+                            </Text>
+                            <View style={[styles.badgeArrow, { backgroundColor: colors.text + '15' }]}>
+                                <ChevronDown size={14} color={colors.text} />
+                            </View>
+                        </View>
+                    </BlurView>
                 </TouchableOpacity>
 
                 <View style={styles.rightActionContainer}>
@@ -64,40 +80,73 @@ export default function PeriodHeader({ title, onBack, rightAction }: PeriodHeade
             >
                 <TouchableWithoutFeedback onPress={() => setIsMenuVisible(false)}>
                     <View style={styles.modalOverlay}>
-                        <View style={[styles.menuContainer, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
+                        <BlurView
+                            intensity={95}
+                            tint={colorScheme === 'light' ? 'light' : 'dark'}
+                            style={[
+                                styles.menuContainer,
+                                {
+                                    backgroundColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.8)' : 'rgba(15, 15, 15, 0.85)',
+                                    borderColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.9)' : 'rgba(255, 255, 255, 0.15)',
+                                }
+                            ]}
+                        >
+                            <View style={styles.liquidHighlight} />
                             <View style={styles.menuHeader}>
                                 <Text style={[styles.menuTitle, { color: colors.text }]}>Seleccionar Período</Text>
-                                <TouchableOpacity onPress={() => setIsMenuVisible(false)}>
-                                    <X size={20} color={colors.icon} />
+                                <TouchableOpacity onPress={() => setIsMenuVisible(false)} style={styles.closeButton}>
+                                    <X size={20} color={colors.text} />
                                 </TouchableOpacity>
                             </View>
 
-                            {academicCycles.map((cycle) => {
-                                const isSelected = cycle.id === currentCycleId;
-                                return (
-                                    <TouchableOpacity
-                                        key={cycle.id}
-                                        style={[
-                                            styles.menuItem,
-                                            isSelected && { backgroundColor: colors.primary + '10' }
-                                        ]}
-                                        onPress={() => handleSelectCycle(cycle.id)}
-                                    >
-                                        <View style={styles.menuItemContent}>
-                                            <Calendar size={18} color={isSelected ? colors.primary : colors.icon} />
-                                            <Text style={[
-                                                styles.cycleName,
-                                                { color: isSelected ? colors.primary : colors.text },
-                                                isSelected && { fontWeight: 'bold' }
-                                            ]}>
-                                                {cycle.name}
-                                            </Text>
-                                        </View>
-                                        {isSelected && <Check size={18} color={colors.primary} />}
-                                    </TouchableOpacity>
-                                );
-                            })}
-                        </View>
+                            <View style={styles.menuList}>
+                                {academicCycles.map((cycle) => {
+                                    const isSelected = cycle.id === currentCycleId;
+                                    return (
+                                        <TouchableOpacity
+                                            key={cycle.id}
+                                            style={[
+                                                styles.menuItem,
+                                                isSelected && {
+                                                    backgroundColor: colors.primary,
+                                                    shadowColor: colors.primary,
+                                                    shadowOffset: { width: 0, height: 4 },
+                                                    shadowOpacity: 0.3,
+                                                    shadowRadius: 8,
+                                                    elevation: 4
+                                                }
+                                            ]}
+                                            onPress={() => handleSelectCycle(cycle.id)}
+                                            activeOpacity={0.8}
+                                        >
+                                            <View style={styles.menuItemContent}>
+                                                <View style={[
+                                                    styles.iconBg,
+                                                    { backgroundColor: isSelected ? 'rgba(255,255,255,0.2)' : colors.border + '40' }
+                                                ]}>
+                                                    <Calendar
+                                                        size={16}
+                                                        color={isSelected ? '#fff' : colors.text}
+                                                    />
+                                                </View>
+                                                <Text style={[
+                                                    styles.cycleName,
+                                                    { color: isSelected ? '#fff' : colors.text },
+                                                    isSelected && { fontWeight: '700' }
+                                                ]}>
+                                                    {cycle.name}
+                                                </Text>
+                                            </View>
+                                            {isSelected ? (
+                                                <Check size={18} color="#fff" />
+                                            ) : (
+                                                <View style={[styles.radioEmpty, { borderColor: colors.border }]} />
+                                            )}
+                                        </TouchableOpacity>
+                                    );
+                                })}
+                            </View>
+                        </BlurView>
                     </View>
                 </TouchableWithoutFeedback>
             </Modal>
@@ -134,16 +183,26 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         marginBottom: 2,
     },
-    periodBadge: {
+    glassChip: {
+        borderRadius: 20,
+        borderWidth: 0.5,
+        marginTop: 4,
+        overflow: 'hidden',
+    },
+    glassChipContent: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: 10,
-        paddingVertical: 4,
-        borderRadius: 20,
-        gap: 6,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        gap: 8,
+    },
+    badgeArrow: {
+        padding: 3,
+        borderRadius: 6,
+        marginLeft: 4,
     },
     periodText: {
-        fontSize: 12,
+        fontSize: 13,
         fontWeight: '700',
     },
     rightActionContainer: {
@@ -152,39 +211,73 @@ const styles = StyleSheet.create({
     },
     modalOverlay: {
         flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.3)',
-        justifyContent: 'flex-start',
+        backgroundColor: 'rgba(0,0,0,0.6)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingHorizontal: 30,
     },
     menuContainer: {
-        marginTop: 100, // Adjust based on header height
-        marginHorizontal: 20,
-        borderRadius: 20,
-        padding: 10,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 10,
-        elevation: 5,
+        width: '100%',
+        maxWidth: 400,
+        borderRadius: 24,
+        padding: 8,
+        borderWidth: 1,
+        overflow: 'hidden',
+        ...Platform.select({
+            ios: {
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 10 },
+                shadowOpacity: 0.15,
+                shadowRadius: 20,
+            },
+            android: {
+                elevation: 10,
+            },
+        }),
     },
     menuHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        padding: 15,
-        borderBottomWidth: 0.5,
-        borderBottomColor: 'rgba(0,0,0,0.05)',
+        padding: 20,
+        paddingBottom: 15,
+    },
+    closeButton: {
+        padding: 6,
+        borderRadius: 12,
     },
     menuTitle: {
-        fontSize: 16,
-        fontWeight: 'bold',
+        fontSize: 18,
+        fontWeight: '800',
+        letterSpacing: -0.5,
+    },
+    menuList: {
+        paddingHorizontal: 8,
+        paddingBottom: 16,
+        gap: 10,
     },
     menuItem: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: 15,
+        padding: 14,
+        borderRadius: 20,
+        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        marginHorizontal: 4,
+    },
+    iconBg: {
+        width: 36,
+        height: 36,
         borderRadius: 12,
-        marginVertical: 2,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    radioEmpty: {
+        width: 20,
+        height: 20,
+        borderRadius: 10,
+        borderWidth: 2,
+        opacity: 0.3,
     },
     menuItemContent: {
         flexDirection: 'row',
@@ -192,6 +285,16 @@ const styles = StyleSheet.create({
         gap: 12,
     },
     cycleName: {
-        fontSize: 15,
+        fontSize: 16,
+    },
+    liquidHighlight: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: '30%',
+        backgroundColor: 'rgba(255, 255, 255, 0.25)',
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
     },
 });

@@ -4,6 +4,7 @@ import { AcademicCycle, EventDiscount, useInstitution } from '@/context/Institut
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { Picker } from '@react-native-picker/picker';
+import { BlurView } from 'expo-blur';
 import { Stack, useRouter } from 'expo-router';
 import {
     CalendarDays,
@@ -310,58 +311,71 @@ export default function CyclesScreen() {
 
         return (
             <GestureDetector gesture={panGesture}>
-                <Animated.View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }, animatedStyle]}>
-                    <View style={styles.cardInfo}>
-                        <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, paddingRight: 10 }}>
-                                <View style={[styles.iconBox, { backgroundColor: colors.primary + '20' }]}>
-                                    <CalendarDays size={20} color={colors.primary} />
+                <Animated.View style={[styles.cardContainer, animatedStyle]}>
+                    <BlurView
+                        intensity={90}
+                        tint={colorScheme === 'light' ? 'light' : 'dark'}
+                        style={[
+                            styles.card,
+                            {
+                                backgroundColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.4)' : 'rgba(255, 255, 255, 0.08)',
+                                borderColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.15)',
+                            }
+                        ]}
+                    >
+                        <View style={styles.liquidHighlight} />
+                        <View style={styles.cardInfo}>
+                            <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, paddingRight: 10 }}>
+                                    <View style={[styles.iconBox, { backgroundColor: colors.primary + '20' }]}>
+                                        <CalendarDays size={20} color={colors.primary} />
+                                    </View>
+                                    <Text style={[styles.cycleName, { color: colors.text }]} numberOfLines={2}>
+                                        {item.name}
+                                    </Text>
                                 </View>
-                                <Text style={[styles.cycleName, { color: colors.text }]} numberOfLines={2}>
-                                    {item.name}
-                                </Text>
+                                <TouchableOpacity
+                                    style={[styles.actionBtn, { backgroundColor: colors.primary + '15' }]}
+                                    onPress={() => onEdit(item)}
+                                >
+                                    <Edit3 size={18} color={colors.primary} />
+                                </TouchableOpacity>
                             </View>
-                            <TouchableOpacity
-                                style={[styles.actionBtn, { backgroundColor: colors.primary + '15' }]}
-                                onPress={() => onEdit(item)}
-                            >
-                                <Edit3 size={18} color={colors.primary} />
-                            </TouchableOpacity>
-                        </View>
 
-                        <View style={styles.dateContainer}>
-                            <View style={styles.dateItem}>
-                                <Text style={{ fontSize: 12, color: colors.icon, marginBottom: 4 }}>Inicio</Text>
-                                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                    <Clock size={12} color={colors.text} style={{ marginRight: 4 }} />
-                                    <Text style={[styles.dateText, { color: colors.text }]} numberOfLines={1}>
-                                        {item.startDate || '—'}
+                            <View style={styles.dateContainer}>
+                                <View style={styles.dateItem}>
+                                    <Text style={{ fontSize: 12, color: colors.icon, marginBottom: 4 }}>Inicio</Text>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                        <Clock size={12} color={colors.text} style={{ marginRight: 4 }} />
+                                        <Text style={[styles.dateText, { color: colors.text }]} numberOfLines={1}>
+                                            {item.startDate || '—'}
+                                        </Text>
+                                    </View>
+                                </View>
+
+                                <View style={[styles.dateDivider, { backgroundColor: colors.border }]} />
+
+                                <View style={styles.dateItem}>
+                                    <Text style={{ fontSize: 12, color: colors.icon, marginBottom: 4 }}>Fin</Text>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                        <Clock size={12} color={colors.text} style={{ marginRight: 4 }} />
+                                        <Text style={[styles.dateText, { color: colors.text }]} numberOfLines={1}>
+                                            {item.endDate || '—'}
+                                        </Text>
+                                    </View>
+                                </View>
+
+                                <View style={[styles.dateDivider, { backgroundColor: colors.border }]} />
+
+                                <View style={[styles.dateItem, { flex: 0.8 }]}>
+                                    <Text style={{ fontSize: 12, color: colors.icon, marginBottom: 4 }}>Duración</Text>
+                                    <Text style={[styles.dateText, { color: colors.text, fontWeight: '600' }]} numberOfLines={1}>
+                                        {item.months.length} mes(es)
                                     </Text>
                                 </View>
                             </View>
-
-                            <View style={[styles.dateDivider, { backgroundColor: colors.border }]} />
-
-                            <View style={styles.dateItem}>
-                                <Text style={{ fontSize: 12, color: colors.icon, marginBottom: 4 }}>Fin</Text>
-                                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                    <Clock size={12} color={colors.text} style={{ marginRight: 4 }} />
-                                    <Text style={[styles.dateText, { color: colors.text }]} numberOfLines={1}>
-                                        {item.endDate || '—'}
-                                    </Text>
-                                </View>
-                            </View>
-
-                            <View style={[styles.dateDivider, { backgroundColor: colors.border }]} />
-
-                            <View style={[styles.dateItem, { flex: 0.8 }]}>
-                                <Text style={{ fontSize: 12, color: colors.icon, marginBottom: 4 }}>Duración</Text>
-                                <Text style={[styles.dateText, { color: colors.text, fontWeight: '600' }]} numberOfLines={1}>
-                                    {item.months.length} mes(es)
-                                </Text>
-                            </View>
                         </View>
-                    </View>
+                    </BlurView>
                 </Animated.View>
             </GestureDetector>
         );
@@ -402,7 +416,7 @@ export default function CyclesScreen() {
                             setModalVisible(true);
                         }}
                     >
-                        <Plus color="#fff" size={20} />
+                        <Plus color="#fff" size={24} />
                     </TouchableOpacity>
                 }
             />
@@ -646,27 +660,45 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     addButtonHeader: {
-        width: 36,
-        height: 36,
-        borderRadius: 18,
+        width: 44,
+        height: 44,
+        borderRadius: 12,
         justifyContent: 'center',
         alignItems: 'center',
+        elevation: 4,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
     },
     listContent: {
         padding: 15,
     },
+    cardContainer: {
+        marginBottom: 14,
+    },
     card: {
         flexDirection: 'row',
-        padding: 15,
-        borderRadius: 16,
-        marginBottom: 12,
+        padding: 18,
+        borderRadius: 24,
         borderWidth: 1,
         alignItems: 'center',
-        elevation: 1,
+        overflow: 'hidden',
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
+        shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.05,
-        shadowRadius: 2,
+        shadowRadius: 10,
+        elevation: 5,
+    },
+    liquidHighlight: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: '50%',
+        backgroundColor: 'rgba(255, 255, 255, 0.25)', // Specular reflection
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
     },
     iconBox: {
         width: 36,

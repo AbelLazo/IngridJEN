@@ -1,6 +1,7 @@
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Picker } from '@react-native-picker/picker';
+import { BlurView } from 'expo-blur';
 import { Stack, useRouter } from 'expo-router';
 import { ChevronLeft, Edit3, Phone, Plus, Search, Trash2, UserPlus, X } from 'lucide-react-native';
 import React, { useState } from 'react';
@@ -246,43 +247,57 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
 
         return (
             <GestureDetector gesture={panGesture}>
-                <Animated.View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }, animatedStyle]}>
-                    <View style={[styles.avatar, { backgroundColor: colors.primary + '20' }]}>
-                        <Text style={[styles.avatarText, { color: colors.primary }]}>{item.firstName.charAt(0)}</Text>
-                    </View>
-                    <View style={styles.cardContent}>
-                        <Text style={[
-                            styles.cardName,
-                            { color: colors.text },
-                            computedStatus === 'inactive' && { color: colors.icon, textDecorationLine: 'line-through' as any }
-                        ]}>
-                            {item.firstName} {item.lastName}
-                        </Text>
-                        <View style={styles.cardInfoRow}>
-                            <Phone size={14} color={colors.icon} />
-                            <Text style={[styles.cardSub, { color: colors.icon, marginLeft: 4 }]}>{item.phone}</Text>
-                            {computedStatus === 'inactive' && (
-                                <Text style={{ fontSize: 10, color: '#FF4444', marginLeft: 10, fontWeight: 'bold' }}>
-                                    (Inactivo{type === 'student' && item.activeYears && !item.activeYears.includes(currentCycleYear) ? ` - Sin registro en este periodo` : ''})
-                                </Text>
+                <Animated.View style={[styles.cardContainer, animatedStyle]}>
+                    <BlurView
+                        intensity={90}
+                        tint={colorScheme === 'light' ? 'light' : 'dark'}
+                        style={[
+                            styles.card,
+                            {
+                                backgroundColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.4)' : 'rgba(255, 255, 255, 0.08)',
+                                borderColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.15)',
+                            }
+                        ]}
+                    >
+                        <View style={styles.liquidHighlight} />
+
+                        <View style={[styles.avatar, { backgroundColor: colors.primary + '20' }]}>
+                            <Text style={[styles.avatarText, { color: colors.primary }]}>{item.firstName.charAt(0)}</Text>
+                        </View>
+                        <View style={styles.cardContent}>
+                            <Text style={[
+                                styles.cardName,
+                                { color: colors.text },
+                                computedStatus === 'inactive' && { color: colors.icon, textDecorationLine: 'line-through' as any }
+                            ]}>
+                                {item.firstName} {item.lastName}
+                            </Text>
+                            <View style={styles.cardInfoRow}>
+                                <Phone size={14} color={colors.icon} />
+                                <Text style={[styles.cardSub, { color: colors.icon, marginLeft: 4 }]}>{item.phone}</Text>
+                                {computedStatus === 'inactive' && (
+                                    <Text style={{ fontSize: 10, color: '#FF4444', marginLeft: 10, fontWeight: 'bold' }}>
+                                        (Inactivo{type === 'student' && item.activeYears && !item.activeYears.includes(currentCycleYear) ? ` - Sin registro en este periodo` : ''})
+                                    </Text>
+                                )}
+                            </View>
+                            {item.extra && item.extra.length > 0 && (
+                                <View style={styles.specialtyTags}>
+                                    {item.extra.split(', ').map((s: string, idx: number) => (
+                                        <View key={idx} style={[styles.miniBadge, { backgroundColor: colors.primary + '10' }]}>
+                                            <Text style={[styles.miniBadgeText, { color: colors.primary }]}>{s}</Text>
+                                        </View>
+                                    ))}
+                                </View>
                             )}
                         </View>
-                        {item.extra && item.extra.length > 0 && (
-                            <View style={styles.specialtyTags}>
-                                {item.extra.split(', ').map((s: string, idx: number) => (
-                                    <View key={idx} style={[styles.miniBadge, { backgroundColor: colors.primary + '10' }]}>
-                                        <Text style={[styles.miniBadgeText, { color: colors.primary }]}>{s}</Text>
-                                    </View>
-                                ))}
-                            </View>
-                        )}
-                    </View>
-                    <TouchableOpacity
-                        style={[styles.editCircle, { backgroundColor: colors.primary + '10' }]}
-                        onPress={() => onEdit(item)}
-                    >
-                        <Edit3 size={18} color={colors.primary} />
-                    </TouchableOpacity>
+                        <TouchableOpacity
+                            style={[styles.editCircle, { backgroundColor: colors.primary + '20' }]}
+                            onPress={() => onEdit(item)}
+                        >
+                            <Edit3 size={18} color={colors.primary} />
+                        </TouchableOpacity>
+                    </BlurView>
                 </Animated.View>
             </GestureDetector>
         );
@@ -392,8 +407,8 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
 
             {/* Header */}
             <View style={styles.header} >
-                <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-                    <ChevronLeft color={colors.text} size={28} />
+                <TouchableOpacity onPress={() => router.back()} style={[styles.backButton, { backgroundColor: colorScheme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]}>
+                    <ChevronLeft color={colors.text} size={24} />
                 </TouchableOpacity>
                 <Text style={[styles.headerTitle, { color: colors.text }]}>{title}</Text>
                 <TouchableOpacity
@@ -405,16 +420,27 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
             </View >
 
             {/* Search Bar - Principal focus for simple management */}
-            < View style={[styles.searchContainer, { backgroundColor: colors.card, borderColor: colors.border, marginTop: 10 }]} >
-                <Search color={colors.icon} size={20} />
+            <BlurView
+                intensity={90}
+                tint={colorScheme === 'light' ? 'light' : 'dark'}
+                style={[
+                    styles.searchContainer,
+                    {
+                        backgroundColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.4)' : 'rgba(255, 255, 255, 0.08)',
+                        borderColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.15)',
+                        marginTop: 10
+                    }
+                ]}
+            >
+                <Search color={colorScheme === 'light' ? '#666' : '#AAA'} size={20} />
                 <TextInput
                     style={[styles.searchInput, { color: colors.text }]}
                     placeholder={`Buscar ${title.toLowerCase()}...`}
-                    placeholderTextColor={colors.icon}
+                    placeholderTextColor={colorScheme === 'light' ? '#999' : '#777'}
                     value={searchQuery}
                     onChangeText={setSearchQuery}
                 />
-            </View >
+            </BlurView>
 
             {/* List */}
             < FlatList
@@ -658,7 +684,11 @@ const styles = StyleSheet.create({
         paddingVertical: 15,
     },
     backButton: {
-        padding: 5,
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     headerTitle: {
         fontSize: 22,
@@ -680,33 +710,48 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         marginHorizontal: 20,
-        marginTop: 10,
-        marginBottom: 20,
         paddingHorizontal: 15,
-        height: 50,
-        borderRadius: 15,
+        height: 52,
+        borderRadius: 24, // Consistent 24px premium
         borderWidth: 1,
+        marginBottom: 20,
+        overflow: 'hidden',
     },
     searchInput: {
         flex: 1,
         marginLeft: 10,
         fontSize: 16,
+        fontWeight: '500',
     },
     listContent: {
         paddingHorizontal: 20,
     },
+    cardContainer: {
+        marginBottom: 12,
+    },
     card: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 15,
-        borderRadius: 20,
-        marginBottom: 12,
+        padding: 16,
+        borderRadius: 24, // Consistent with liquid glass
         borderWidth: 1,
-        elevation: 2,
+        overflow: 'hidden',
+        // Layered shadows for depth
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
+        shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.05,
-        shadowRadius: 5,
+        shadowRadius: 10,
+        elevation: 5,
+    },
+    liquidHighlight: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: '50%',
+        backgroundColor: 'rgba(255, 255, 255, 0.25)', // Specular reflection
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
     },
     avatar: {
         width: 50,

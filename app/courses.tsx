@@ -2,6 +2,7 @@ import { Colors } from '@/constants/theme';
 import { Course, useInstitution } from '@/context/InstitutionContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Picker } from '@react-native-picker/picker';
+import { BlurView } from 'expo-blur';
 import { Stack, useRouter } from 'expo-router';
 import { BookOpen, ChevronLeft, Clock, Coins, Edit3, Plus, Search, Trash2, X } from 'lucide-react-native';
 import React, { useState } from 'react';
@@ -164,33 +165,47 @@ export default function CoursesScreen() {
 
         return (
             <GestureDetector gesture={panGesture}>
-                <Animated.View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }, animatedStyle]}>
-                    <View style={[styles.iconContainer, { backgroundColor: colors.primary + '15' }]}>
-                        <BookOpen size={24} color={colors.primary} />
-                    </View>
-                    <View style={styles.cardContent}>
-                        <Text style={[styles.cardName, { color: colors.text }]}>{item.name}</Text>
-                        <View style={styles.detailsRow}>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: 15 }}>
-                                <Clock size={14} color={colors.icon} />
-                                <Text style={[styles.detailText, { color: colors.icon }]}>
-                                    {item.hours}h {item.minutes}m
-                                </Text>
-                            </View>
-                            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                <Coins size={14} color={colors.primary} />
-                                <Text style={[styles.detailText, { color: colors.primary, fontWeight: 'bold' }]}>
-                                    S/ {item.price}
-                                </Text>
+                <Animated.View style={[styles.cardContainer, animatedStyle]}>
+                    <BlurView
+                        intensity={90}
+                        tint={colorScheme === 'light' ? 'light' : 'dark'}
+                        style={[
+                            styles.card,
+                            {
+                                backgroundColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.4)' : 'rgba(255, 255, 255, 0.08)',
+                                borderColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.15)',
+                            }
+                        ]}
+                    >
+                        <View style={styles.liquidHighlight} />
+
+                        <View style={[styles.iconContainer, { backgroundColor: colors.primary + '15' }]}>
+                            <BookOpen size={24} color={colors.primary} />
+                        </View>
+                        <View style={styles.cardContent}>
+                            <Text style={[styles.cardName, { color: colors.text }]}>{item.name}</Text>
+                            <View style={styles.detailsRow}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: 15 }}>
+                                    <Clock size={14} color={colors.icon} />
+                                    <Text style={[styles.detailText, { color: colors.icon }]}>
+                                        {item.hours}h {item.minutes}m
+                                    </Text>
+                                </View>
+                                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                    <Coins size={14} color={colors.primary} />
+                                    <Text style={[styles.detailText, { color: colors.primary, fontWeight: 'bold' }]}>
+                                        S/ {item.price}
+                                    </Text>
+                                </View>
                             </View>
                         </View>
-                    </View>
-                    <TouchableOpacity
-                        style={[styles.editCircle, { backgroundColor: colors.primary + '10' }]}
-                        onPress={() => onEdit(item)}
-                    >
-                        <Edit3 size={18} color={colors.primary} />
-                    </TouchableOpacity>
+                        <TouchableOpacity
+                            style={[styles.editCircle, { backgroundColor: colors.primary + '20' }]}
+                            onPress={() => onEdit(item)}
+                        >
+                            <Edit3 size={18} color={colors.primary} />
+                        </TouchableOpacity>
+                    </BlurView>
                 </Animated.View>
             </GestureDetector>
         );
@@ -236,16 +251,26 @@ export default function CoursesScreen() {
             </View>
 
             {/* Search Bar */}
-            <View style={[styles.searchContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                <Search color={colors.icon} size={20} />
+            <BlurView
+                intensity={40}
+                tint={colorScheme === 'light' ? 'light' : 'dark'}
+                style={[
+                    styles.searchContainer,
+                    {
+                        backgroundColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.5)' : 'rgba(255, 255, 255, 0.05)',
+                        borderColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.8)' : 'rgba(255, 255, 255, 0.1)',
+                    }
+                ]}
+            >
+                <Search color={colorScheme === 'light' ? '#666' : '#AAA'} size={20} />
                 <TextInput
                     style={[styles.searchInput, { color: colors.text }]}
                     placeholder="Buscar materia..."
-                    placeholderTextColor={colors.icon}
+                    placeholderTextColor={colorScheme === 'light' ? '#999' : '#777'}
                     value={searchQuery}
                     onChangeText={setSearchQuery}
                 />
-            </View>
+            </BlurView>
 
             {/* List */}
             <FlatList
@@ -415,33 +440,48 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         marginHorizontal: 20,
-        marginTop: 10,
-        marginBottom: 20,
         paddingHorizontal: 15,
-        height: 50,
-        borderRadius: 15,
+        height: 52,
+        borderRadius: 24,
         borderWidth: 1,
+        marginBottom: 15,
+        overflow: 'hidden',
     },
     searchInput: {
         flex: 1,
         marginLeft: 10,
         fontSize: 16,
+        fontWeight: '500',
     },
     listContent: {
         paddingHorizontal: 20,
+    },
+    cardContainer: {
+        marginBottom: 14,
     },
     card: {
         flexDirection: 'row',
         alignItems: 'center',
         padding: 18,
-        borderRadius: 22,
-        marginBottom: 14,
+        borderRadius: 24, // Consistent with liquid glass
         borderWidth: 1,
-        elevation: 3,
+        overflow: 'hidden',
+        // Layered shadows for depth
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
+        shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.05,
-        shadowRadius: 8,
+        shadowRadius: 10,
+        elevation: 5,
+    },
+    liquidHighlight: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: '50%',
+        backgroundColor: 'rgba(255, 255, 255, 0.25)', // Specular reflection
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
     },
     iconContainer: {
         width: 54,
