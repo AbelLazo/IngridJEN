@@ -6,7 +6,7 @@ import { useRouter } from 'expo-router';
 import { getApps, initializeApp } from 'firebase/app';
 import { createUserWithEmailAndPassword, getAuth, sendPasswordResetEmail, signOut } from 'firebase/auth';
 import { collection, doc, onSnapshot, query, setDoc, updateDoc } from 'firebase/firestore';
-import { Check, ChevronDown, ChevronLeft, Clock, Eye, EyeOff, Mail, Plus, ShieldAlert, ShieldCheck, User as UserIcon, X } from 'lucide-react-native';
+import { AlertCircle, Check, ChevronDown, ChevronLeft, Clock, Eye, EyeOff, Mail, Plus, ShieldAlert, ShieldCheck, User as UserIcon, X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { Alert, FlatList, Modal, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -20,14 +20,29 @@ interface AppUser {
 }
 
 export default function UsersScreen() {
+    const { userRole } = useAuth();
     const router = useRouter();
     const { user: currentUser } = useAuth();
     const { width } = useWindowDimensions();
     const colorScheme = useColorScheme() ?? 'light';
-    const isDark = colorScheme === 'dark';
+    const colors = Colors[colorScheme as keyof typeof Colors];
     const insets = useSafeAreaInsets();
 
-    const colors = Colors[colorScheme as keyof typeof Colors];
+    if (userRole !== 'admin') {
+        return (
+            <View style={[styles.container, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center', paddingTop: insets.top }]}>
+                <AlertCircle size={48} color={colors.secondary} />
+                <Text style={{ color: colors.text, fontSize: 18, fontWeight: 'bold', marginTop: 16 }}>Acceso Denegado</Text>
+                <Text style={{ color: colors.icon, marginTop: 8 }}>Solo los administradores pueden gestionar usuarios.</Text>
+                <TouchableOpacity
+                    onPress={() => router.back()}
+                    style={{ marginTop: 24, paddingHorizontal: 20, paddingVertical: 10, backgroundColor: colors.primary, borderRadius: 12 }}
+                >
+                    <Text style={{ color: '#FFF', fontWeight: 'bold' }}>Volver</Text>
+                </TouchableOpacity>
+            </View>
+        );
+    }
 
     const [users, setUsers] = useState<AppUser[]>([]);
     const [isLoading, setIsLoading] = useState(true);

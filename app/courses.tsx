@@ -1,11 +1,12 @@
 import { Colors } from '@/constants/theme';
+import { useAuth } from '@/context/AuthContext';
 import { Course, useInstitution } from '@/context/InstitutionContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Picker } from '@react-native-picker/picker';
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { Stack, useRouter } from 'expo-router';
-import { BookOpen, ChevronLeft, Clock, Coins, Edit3, Plus, Search, Trash2, X } from 'lucide-react-native';
+import { AlertCircle, BookOpen, ChevronLeft, Clock, Coins, Edit3, Plus, Search, Trash2, X } from 'lucide-react-native';
 import React, { useState } from 'react';
 import {
     Alert,
@@ -36,10 +37,27 @@ const triggerHaptic = () => {
 };
 
 export default function CoursesScreen() {
+    const { userRole } = useAuth();
     const insets = useSafeAreaInsets();
     const router = useRouter();
     const colorScheme = useColorScheme() ?? 'light';
     const colors = Colors[colorScheme as keyof typeof Colors];
+
+    if (userRole !== 'admin') {
+        return (
+            <View style={[styles.container, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center', paddingTop: insets.top }]}>
+                <AlertCircle size={48} color={colors.secondary} />
+                <Text style={{ color: colors.text, fontSize: 18, fontWeight: 'bold', marginTop: 16 }}>Acceso Denegado</Text>
+                <Text style={{ color: colors.icon, marginTop: 8 }}>Solo los administradores pueden gestionar los cursos.</Text>
+                <TouchableOpacity
+                    onPress={() => router.back()}
+                    style={{ marginTop: 24, paddingHorizontal: 20, paddingVertical: 10, backgroundColor: colors.primary, borderRadius: 12 }}
+                >
+                    <Text style={{ color: '#FFF', fontWeight: 'bold' }}>Volver</Text>
+                </TouchableOpacity>
+            </View>
+        );
+    }
     const { courses, addCourse, updateCourse, removeCourse } = useInstitution();
     const isDraggingGlobal = useSharedValue(0);
 

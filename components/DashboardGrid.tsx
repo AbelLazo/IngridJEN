@@ -38,7 +38,7 @@ export default function DashboardGrid() {
 
     const filteredMenuItems = MENU_ITEMS.filter(item => {
         if (userRole === 'professor') {
-            return ['students', 'classes', 'schedule'].includes(item.id);
+            return item.id === 'schedule';
         }
         return true;
     });

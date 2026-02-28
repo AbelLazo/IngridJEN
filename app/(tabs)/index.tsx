@@ -151,11 +151,15 @@ export default function DashboardScreen() {
                 ]}
               >
 
-                <View style={styles.summaryItem}>
-                  <Text style={[styles.summaryLabel, { fontSize: isTablet ? 14 : 12, color: colors.text, opacity: 0.7 }]}>Estudiantes</Text>
-                  <Text style={[styles.summaryValue, { fontSize: isTablet ? 28 : 24, color: colors.text }]}>{activeStudentsCount}</Text>
-                </View>
-                <View style={[styles.summaryDivider, { backgroundColor: colors.text, opacity: 0.1 }]} />
+                {userRole !== 'professor' && (
+                  <>
+                    <View style={styles.summaryItem}>
+                      <Text style={[styles.summaryLabel, { fontSize: isTablet ? 14 : 12, color: colors.text, opacity: 0.7 }]}>Estudiantes</Text>
+                      <Text style={[styles.summaryValue, { fontSize: isTablet ? 28 : 24, color: colors.text }]}>{activeStudentsCount}</Text>
+                    </View>
+                    <View style={[styles.summaryDivider, { backgroundColor: colors.text, opacity: 0.1 }]} />
+                  </>
+                )}
                 <View style={styles.summaryItem}>
                   <Text style={[styles.summaryLabel, { fontSize: isTablet ? 14 : 12, color: colors.text, opacity: 0.7 }]}>Cursos Hoy</Text>
                   <Text style={[styles.summaryValue, { fontSize: isTablet ? 28 : 24, color: colors.text }]}>{classesTodayCount}</Text>

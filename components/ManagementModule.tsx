@@ -1,9 +1,10 @@
 import { Colors } from '@/constants/theme';
+import { useAuth } from '@/context/AuthContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Picker } from '@react-native-picker/picker';
 import { BlurView } from 'expo-blur';
 import { Stack, useRouter } from 'expo-router';
-import { ChevronLeft, Edit3, Mail, Phone, Plus, Search, Trash2, UserPlus, X } from 'lucide-react-native';
+import { AlertCircle, ChevronLeft, Edit3, Mail, Phone, Plus, Search, Trash2, UserPlus, X } from 'lucide-react-native';
 import React, { useState } from 'react';
 import {
     Alert,
@@ -58,10 +59,27 @@ const triggerHaptic = () => {
 };
 
 export default function ManagementModule({ title, type, placeholderExtra, iconExtra: IconExtra }: ManagementModuleProps) {
+    const { userRole } = useAuth();
     const insets = useSafeAreaInsets();
     const router = useRouter();
     const colorScheme = useColorScheme() ?? 'light';
     const colors = Colors[colorScheme as keyof typeof Colors];
+
+    if (userRole !== 'admin') {
+        return (
+            <View style={[styles.container, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center', paddingTop: insets.top }]}>
+                <AlertCircle size={48} color={colors.secondary} />
+                <Text style={{ color: colors.text, fontSize: 18, fontWeight: 'bold', marginTop: 16 }}>Acceso Denegado</Text>
+                <Text style={{ color: colors.icon, marginTop: 8 }}>Solo los administradores pueden gestionar {title.toLowerCase()}.</Text>
+                <TouchableOpacity
+                    onPress={() => router.back()}
+                    style={{ marginTop: 24, paddingHorizontal: 20, paddingVertical: 10, backgroundColor: colors.primary, borderRadius: 12 }}
+                >
+                    <Text style={{ color: '#FFF', fontWeight: 'bold' }}>Volver</Text>
+                </TouchableOpacity>
+            </View>
+        );
+    }
     const { courses, students, teachers, addStudent, addTeacher, updateStudent, updateTeacher, removeStudent, removeTeacher, academicCycles, currentCycleId, enrollments, classes } = useInstitution();
     const isDraggingGlobal = useSharedValue(0); // 0 = not dragging, 1 = dragging
 

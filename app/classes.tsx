@@ -1,5 +1,6 @@
 import PeriodHeader from '@/components/PeriodHeader';
 import { Colors } from '@/constants/theme';
+import { useAuth } from '@/context/AuthContext';
 import { Student } from '@/context/InstitutionContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -7,6 +8,7 @@ import { Picker } from '@react-native-picker/picker';
 import { BlurView } from 'expo-blur';
 import { Stack, useRouter } from 'expo-router';
 import {
+    AlertCircle,
     ArrowRight,
     BookOpen,
     CalendarDays,
@@ -76,10 +78,27 @@ const triggerHaptic = () => {
 };
 
 export default function ClassesScreen() {
+    const { userRole } = useAuth();
     const insets = useSafeAreaInsets();
     const router = useRouter();
     const colorScheme = useColorScheme() ?? 'light';
     const colors = Colors[colorScheme as keyof typeof Colors];
+
+    if (userRole !== 'admin') {
+        return (
+            <View style={[styles.container, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center', paddingTop: insets.top }]}>
+                <AlertCircle size={48} color={colors.secondary} />
+                <Text style={{ color: colors.text, fontSize: 18, fontWeight: 'bold', marginTop: 16 }}>Acceso Denegado</Text>
+                <Text style={{ color: colors.icon, marginTop: 8 }}>Solo los administradores pueden gestionar las clases.</Text>
+                <TouchableOpacity
+                    onPress={() => router.back()}
+                    style={{ marginTop: 24, paddingHorizontal: 20, paddingVertical: 10, backgroundColor: colors.primary, borderRadius: 12 }}
+                >
+                    <Text style={{ color: '#FFF', fontWeight: 'bold' }}>Volver</Text>
+                </TouchableOpacity>
+            </View>
+        );
+    }
     const {
         courses, students, teachers, classes, addClass, updateClass, removeClass,
         enrollments, addEnrollment, updateEnrollment, removeEnrollment, currentCycleId, academicCycles, updateEnrollmentDate
