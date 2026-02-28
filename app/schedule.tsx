@@ -26,7 +26,7 @@ export default function ScheduleScreen() {
     const colors = Colors[colorScheme as keyof typeof Colors];
 
     const { user, userRole } = useAuth();
-    const { classes, currentCycleId, enrollments, teachers } = useInstitution();
+    const { classes, currentCycleId, academicCycles, enrollments, teachers } = useInstitution();
 
     // Day Selection State
     const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -66,6 +66,15 @@ export default function ScheduleScreen() {
     // Filter classes for the selected day AND current cycle
     const classesForSelectedDay = useMemo(() => {
         const selectedDayName = getDayName(selectedDate.getDay());
+        const activeCycle = academicCycles.find(c => c.id === currentCycleId);
+
+        // If selected date is outside cycle range, show nothing
+        if (activeCycle) {
+            const dateStr = selectedDateString; // YYYY-MM-DD
+            if (dateStr < activeCycle.startDate || dateStr > activeCycle.endDate) {
+                return [];
+            }
+        }
 
         // Encuentra el nombre del profesor basado en su email en los profesores registrados
         let allowedTeacherName: string | null = null;
@@ -81,15 +90,17 @@ export default function ScheduleScreen() {
 
         return classes.filter(c => {
             // Must belong to current cycle
-            if (c.cycleId !== currentCycleId) return false;
+            if (!currentCycleId || c.cycleId !== currentCycleId) return false;
 
             // Si es profesor, limitar solo a sus clases
-            if (userRole === 'professor' && allowedTeacherName && c.teacherName.trim() !== allowedTeacherName.trim()) {
-                return false;
+            if (userRole === 'professor' && allowedTeacherName) {
+                if (c.teacherName.trim().toLowerCase() !== allowedTeacherName.trim().toLowerCase()) {
+                    return false;
+                }
             }
 
             // Must have a schedule on the selected day
-            return c.schedules.some(s => s.day === selectedDayName);
+            return c.schedules && c.schedules.some(s => s.day === selectedDayName);
         }).map(c => {
             // Find specific schedule time for sorting
             const schedule = c.schedules.find(s => s.day === selectedDayName);
@@ -98,7 +109,7 @@ export default function ScheduleScreen() {
                 startTime: schedule?.startTime || '00:00'
             };
         }).sort((a, b) => a.startTime.localeCompare(b.startTime)); // Sort chronologically
-    }, [classes, currentCycleId, selectedDate, userRole, user, teachers]);
+    }, [classes, currentCycleId, academicCycles, selectedDate, selectedDateString, userRole, user, teachers]);
 
     // Helper: Calculate Enrolled Students count
     const getEnrolledCount = (classId: string) => {

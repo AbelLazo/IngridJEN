@@ -15,7 +15,7 @@ export const Colors = {
     icon: '#5D5043', // Earth Brown
     tabIconDefault: '#C5A88F', // Taupe
     tabIconSelected: '#AF4328',
-    card: 'rgba(255, 255, 255, 0.6)', // Standard Elite Glassmorphism opacity
+    card: '#ffffff', // Solid white to remove transparency
     border: '#C5A88F',
     notification: '#AF4328',
     primary: '#000000',

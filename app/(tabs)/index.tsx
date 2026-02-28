@@ -55,11 +55,21 @@ export default function DashboardScreen() {
     const days = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
     const today = days[new Date().getDay()];
 
+    // Check if today is within active cycle dates
+    if (activeCycle) {
+      const now = new Date();
+      const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+      if (todayStr < activeCycle.startDate || todayStr > activeCycle.endDate) {
+        return 0;
+      }
+    }
+
     return classes.filter(c =>
       c.cycleId === currentCycleId &&
       c.schedules.some(s => s.day === today)
     ).length;
-  }, [classes, currentCycleId]);
+  }, [classes, currentCycleId, activeCycle]);
 
   const handleLogout = async () => {
     try {
