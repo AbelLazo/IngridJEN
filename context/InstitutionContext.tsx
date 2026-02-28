@@ -39,6 +39,7 @@ export interface Teacher {
     extra: string;
     status: 'active' | 'inactive';
     type: 'teacher';
+    email?: string;
 }
 
 export interface ClassSchedule {
@@ -149,6 +150,7 @@ interface InstitutionContextType {
     enrollments: Enrollment[];
     addEnrollment: (enrollment: Enrollment) => void;
     updateEnrollment: (enrollment: Enrollment) => void;
+    updateEnrollmentDate: (enrollmentId: string, newDate: string) => Promise<void>;
     removeEnrollment: (id: string) => void;
     payments: Payment[];
     addPayment: (payment: Payment, installmentId?: string) => void;
@@ -587,6 +589,108 @@ export function InstitutionProvider({ children }: { children: ReactNode }) {
         }
     };
 
+    const updateEnrollmentDate = async (enrollmentId: string, newDate: string) => {
+        try {
+            const enrollment = enrollments.find(e => e.id === enrollmentId);
+            if (!enrollment) throw new Error('Enrollment not found');
+
+            const cls = classes.find(c => c.id === enrollment.classId);
+            const course = courses.find(co => co.id === cls?.courseId);
+            const cycle = academicCycles.find(cy => cy.id === cls?.cycleId);
+
+            if (!cycle || !course || !cycle.startDate || !cycle.endDate) {
+                throw new Error('Información incompleta del Ciclo o Curso para regenerar cuotas.');
+            }
+
+            // 1. Delete unpaid installments for this enrollment
+            const relatedInsts = installments.filter(inst => inst.enrollmentId === enrollmentId);
+            for (const inst of relatedInsts) {
+                if (!inst.isPaid) {
+                    await deleteDoc(doc(db, 'installments', inst.id));
+                }
+            }
+
+            // 2. Update the enrollment date document
+            await updateDoc(doc(db, 'enrollments', enrollmentId), { date: newDate });
+
+            // 3. Recalculate payment day based on new reality
+            const studentEnrolDates = enrollments
+                .filter(e => e.studentId === enrollment.studentId && e.id !== enrollmentId)
+                .map(e => new Date(`${e.date}T12:00:00`).getTime());
+
+            studentEnrolDates.push(new Date(`${newDate}T12:00:00`).getTime()); // Include the new manual date
+            const earliestTime = Math.min(...studentEnrolDates);
+            const paymentDay = new Date(earliestTime).getDate();
+
+            // 4. Generate new installments from the newDate
+            const cycleStart = new Date(`${cycle.startDate}T12:00:00`);
+            const enrolDateObj = new Date(`${newDate}T12:00:00`);
+
+            let current = enrolDateObj > cycleStart ? new Date(enrolDateObj) : new Date(cycleStart);
+            current.setDate(1);
+
+            const end = new Date(`${cycle.endDate}T12:00:00`);
+            const endMonthObj = new Date(end);
+            endMonthObj.setDate(1);
+
+            while (current <= endMonthObj) {
+                const year = current.getFullYear();
+                const month = current.getMonth();
+                const monthYear = `${year}-${(month + 1).toString().padStart(2, '0')}`;
+
+                // Check if an installment already exists for this exact month and is Paid!
+                const alreadyPaid = relatedInsts.find(inst => inst.monthYear === monthYear && inst.isPaid);
+
+                if (!alreadyPaid) {
+                    // 5. Calculate safe Due Date for this specific month
+                    const lastDayOfMonth = new Date(year, month + 1, 0).getDate();
+                    const safePaymentDay = Math.min(paymentDay, lastDayOfMonth);
+                    const calculatedDueDate = `${year}-${(month + 1).toString().padStart(2, '0')}-${safePaymentDay.toString().padStart(2, '0')}`;
+
+                    let finalAmount = parseFloat(course.price);
+                    let finalNotes = '';
+
+                    if (cycle.events && cycle.events.length > 0) {
+                        const monthEvents = cycle.events.filter(e => {
+                            let evtTarget = e.targetMonthYear;
+                            const parts = evtTarget.split('-');
+                            if (parts.length === 2) evtTarget = `${parts[0]}-${parts[1].padStart(2, '0')}`;
+                            return evtTarget === monthYear;
+                        });
+                        if (monthEvents.length > 0) {
+                            let totalDiscountPercentage = 0;
+                            const eventNames: string[] = [];
+                            monthEvents.forEach(e => {
+                                totalDiscountPercentage += e.discountPercentage;
+                                eventNames.push(`${e.name} (${e.discountPercentage}%)`);
+                            });
+                            if (totalDiscountPercentage > 100) totalDiscountPercentage = 100;
+                            const discountAmount = finalAmount * (totalDiscountPercentage / 100);
+                            finalAmount = finalAmount - discountAmount;
+                            finalNotes = `Descuento automático: ${eventNames.join(', ')}`;
+                        }
+                    }
+
+                    const instData = {
+                        enrollmentId: enrollmentId,
+                        studentId: enrollment.studentId,
+                        monthYear: monthYear,
+                        amount: finalAmount.toFixed(2).toString(),
+                        originalAmount: course.price,
+                        isPaid: false,
+                        dueDate: calculatedDueDate,
+                        ...(finalNotes ? { notes: finalNotes } : {})
+                    };
+                    await addDoc(collection(db, 'installments'), instData);
+                }
+                // Move to next month
+                current.setMonth(current.getMonth() + 1);
+            }
+        } catch (error: any) {
+            Alert.alert('Error', 'No se pudo actualizar la fecha ni recalcular cuotas: ' + error.message);
+        }
+    };
+
     return (
         <InstitutionContext.Provider value={{
             courses, addCourse, updateCourse,
@@ -598,7 +702,8 @@ export function InstitutionProvider({ children }: { children: ReactNode }) {
             payments, addPayment,
             academicCycles, currentCycleId, setCurrentCycleId, addCycle, updateCycle, deleteCycle,
             installments,
-            attendances, saveAttendance
+            attendances, saveAttendance,
+            updateEnrollmentDate
         }}>
             {children}
         </InstitutionContext.Provider>

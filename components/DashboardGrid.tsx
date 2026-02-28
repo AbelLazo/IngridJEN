@@ -62,13 +62,13 @@ export default function DashboardGrid() {
                             styles.card,
                             {
                                 width: cardWidth,
-                                backgroundColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.08)',
+                                backgroundColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.9)' : 'rgba(255, 255, 255, 0.08)',
                                 borderColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 1)' : 'rgba(255, 255, 255, 0.15)',
                             }
                         ]}
                     >
                         {/* Liquid Highlight - Specular reflection */}
-                        <View style={styles.liquidHighlight} />
+
 
                         <View style={styles.iconContainer}>
                             <item.icon size={width > 600 ? 28 : 24} color={colorScheme === 'dark' ? colors.text : '#000000'} />

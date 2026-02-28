@@ -11,14 +11,18 @@ import {
     Coins,
     CreditCard,
     History,
+    LayoutList,
     Receipt,
     Search,
-    User
+    User,
+    X
 } from 'lucide-react-native';
 import React, { useMemo, useState } from 'react';
 import {
     Alert,
     FlatList,
+    Modal,
+    Platform,
     StyleSheet,
     Text,
     TextInput,
@@ -150,12 +154,13 @@ const StudentCard = ({ item, colors, onPay, onShowDetail }: StudentCardProps) =>
                 style={[
                     styles.card,
                     {
-                        backgroundColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.4)' : 'rgba(255, 255, 255, 0.08)',
-                        borderColor: item.totalDebt > 0 ? '#ff4d4d40' : (colorScheme === 'light' ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.15)'),
+                        backgroundColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.1)',
+                        borderColor: item.totalDebt > 0 ? '#ff4d4d80' : (colorScheme === 'light' ? 'rgba(0, 0, 0, 0.15)' : 'rgba(255, 255, 255, 0.15)'),
                     }
                 ]}
             >
                 <View style={styles.liquidHighlight} />
+
 
                 <TouchableOpacity
                     style={styles.cardHeader}
@@ -211,6 +216,22 @@ export default function FeesScreen() {
     const [searchQuery, setSearchQuery] = useState('');
     const [viewMode, setViewMode] = useState<'pendientes' | 'historial'>('pendientes');
     const [networkTime, setNetworkTime] = useState<Date | null>(null);
+
+    const [isPayConfirmVisible, setIsPayConfirmVisible] = useState(false);
+    const [payData, setPayData] = useState<any>(null);
+    const [isDetailVisible, setIsDetailVisible] = useState(false);
+    const [detailData, setDetailData] = useState<any>(null);
+
+    const selectedMonthYear = useMemo(() => {
+        const today = networkTime || new Date();
+        return today.toISOString().substring(0, 7); // YYYY-MM
+    }, [networkTime]);
+
+    const totalPaid = useMemo(() => {
+        return payments
+            .filter(p => p.monthYear === selectedMonthYear)
+            .reduce((acc, p) => acc + parseFloat(p.amount), 0);
+    }, [payments, selectedMonthYear]);
 
     React.useEffect(() => {
         const fetchTime = async () => {
@@ -348,31 +369,8 @@ export default function FeesScreen() {
     }, [students, enrollments, classes, courses, payments, installments, networkTime, currentCycleId]);
 
     const handleRegisterPayment = (student: any, enrollment: any, month: any) => {
-        const today = networkTime || new Date();
-        const monthYear = month.monthYearSearch;
-        const discountText = month.notes ? `\n\n(${month.notes})` : '';
-
-        Alert.alert(
-            "Registrar Pago",
-            `¿Confirmas el pago de S/ ${month.amount} por "${enrollment.courseName}" correspondiente a ${month.monthName} para ${student.firstName}?${discountText}`,
-            [
-                { text: "Cancelar", style: "cancel" },
-                {
-                    text: "Confirmar Pago",
-                    onPress: () => {
-                        addPayment({
-                            id: Date.now().toString(),
-                            studentId: student.id,
-                            enrollmentId: enrollment.id,
-                            installmentId: month.id,
-                            amount: month.amount.toString(),
-                            date: today.toISOString().split('T')[0],
-                            monthYear: monthYear
-                        }, month.id);
-                    }
-                }
-            ]
-        );
+        setPayData({ student, enrollment, month });
+        setIsPayConfirmVisible(true);
     };
 
     const handleShowPaymentDetail = (payment: any, monthName: string, studentName: string, courseName: string) => {
@@ -380,16 +378,8 @@ export default function FeesScreen() {
             Alert.alert("Información", "No se encontró el registro de este pago.");
             return;
         }
-
-        Alert.alert(
-            "Detalles del Pago",
-            `Estudiante: ${studentName}\n` +
-            `Curso: ${courseName}\n` +
-            `Mes: ${monthName}\n\n` +
-            `Monto procesado: S/ ${payment.amount}\n` +
-            `Fecha del pago: ${new Date(payment.date + 'T12:00:00').toLocaleDateString('es-PE')}`,
-            [{ text: "Cerrar", style: "default" }]
-        );
+        setDetailData({ payment, monthName, studentName, courseName });
+        setIsDetailVisible(true);
     };
 
     const filteredFees = useMemo(() => {
@@ -430,27 +420,33 @@ export default function FeesScreen() {
     );
 
     return (
-        <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}>
+        <View style={[styles.container, { backgroundColor: colors.background }]}>
             <Stack.Screen options={{ headerShown: false }} />
 
             <PeriodHeader
                 title="Mensualidades"
                 onBack={() => router.back()}
             />
-
-            <View style={[styles.toggleContainer, { backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 }]}>
+            {/* Toggles */}
+            <View style={[styles.toggleContainer, { backgroundColor: colors.card }]}>
                 <TouchableOpacity
+                    style={[
+                        styles.toggleButton,
+                        viewMode === 'pendientes' && { backgroundColor: colors.primary }
+                    ]}
                     onPress={() => setViewMode('pendientes')}
-                    style={[styles.toggleButton, viewMode === 'pendientes' && { backgroundColor: colors.primary }]}
                 >
-                    <Receipt size={18} color={viewMode === 'pendientes' ? '#fff' : colors.icon} />
+                    <LayoutList size={20} color={viewMode === 'pendientes' ? '#fff' : colors.icon} />
                     <Text style={[styles.toggleLabel, { color: viewMode === 'pendientes' ? '#fff' : colors.icon }]}>Próximos Cobros</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
+                    style={[
+                        styles.toggleButton,
+                        viewMode === 'historial' && { backgroundColor: colors.primary }
+                    ]}
                     onPress={() => setViewMode('historial')}
-                    style={[styles.toggleButton, viewMode === 'historial' && { backgroundColor: colors.primary }]}
                 >
-                    <History size={18} color={viewMode === 'historial' ? '#fff' : colors.icon} />
+                    <History size={20} color={viewMode === 'historial' ? '#fff' : colors.icon} />
                     <Text style={[styles.toggleLabel, { color: viewMode === 'historial' ? '#fff' : colors.icon }]}>Historial de Caja</Text>
                 </TouchableOpacity>
             </View>
@@ -458,29 +454,66 @@ export default function FeesScreen() {
             {viewMode === 'pendientes' ? (
                 <>
                     <View style={styles.summaryContainer}>
-                        <View style={[styles.summaryItem, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                            <Receipt size={20} color={colors.primary} />
+                        <BlurView
+                            intensity={90}
+                            tint={colorScheme === 'light' ? 'light' : 'dark'}
+                            style={[
+                                styles.summaryItem,
+                                {
+                                    backgroundColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.1)',
+                                    borderColor: colorScheme === 'light' ? 'rgba(0, 0, 0, 0.15)' : 'rgba(255, 255, 255, 0.15)',
+                                }
+                            ]}
+                        >
+                            <View style={styles.liquidHighlight} />
+
+                            <View style={[styles.avatarBox, { backgroundColor: '#40C05715' }]}>
+                                <Receipt size={24} color="#40C057" />
+                            </View>
+                            <View style={styles.summaryInfo}>
+                                <Text style={[styles.summaryLabel, { color: colors.icon }]}>Total Recaudado ({selectedMonthYear})</Text>
+                                <Text style={[styles.summaryValue, { color: '#40C057' }]}>S/ {totalPaid}</Text>
+                            </View>
+                        </BlurView>
+                    </View>
+
+                    <View style={styles.summaryContainer}>
+                        <BlurView
+                            intensity={90}
+                            tint={colorScheme === 'light' ? 'light' : 'dark'}
+                            style={[
+                                styles.summaryItem,
+                                {
+                                    backgroundColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.1)',
+                                    borderColor: cycleTotalDebt > 0 ? '#ff4d4d80' : (colorScheme === 'light' ? 'rgba(0, 0, 0, 0.15)' : 'rgba(255, 255, 255, 0.15)'),
+                                }
+                            ]}
+                        >
+                            <View style={styles.liquidHighlight} />
+
+                            <View style={[styles.avatarBox, { backgroundColor: '#ff4d4d15' }]}>
+                                <Coins size={24} color="#ff4d4d" />
+                            </View>
                             <View style={styles.summaryInfo}>
                                 <Text style={[styles.summaryLabel, { color: colors.icon }]}>Deuda Ciclo Seleccionado</Text>
-                                <Text style={[styles.summaryValue, { color: '#ff4d4d' }]}>
-                                    S/ {cycleTotalDebt}
-                                </Text>
+                                <Text style={[styles.summaryValue, { color: '#ff4d4d' }]}>S/ {cycleTotalDebt}</Text>
                             </View>
-                        </View>
+                        </BlurView>
                     </View>
 
 
                     <BlurView
-                        intensity={40}
+                        intensity={90}
                         tint={colorScheme === 'light' ? 'light' : 'dark'}
                         style={[
                             styles.searchContainer,
                             {
-                                backgroundColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.5)' : 'rgba(255, 255, 255, 0.05)',
-                                borderColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.8)' : 'rgba(255, 255, 255, 0.1)',
+                                backgroundColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.1)',
+                                borderColor: colorScheme === 'light' ? 'rgba(0, 0, 0, 0.15)' : 'rgba(255, 255, 255, 0.15)',
                             }
                         ]}
                     >
+                        <View style={styles.liquidHighlight} />
                         <Search color={colorScheme === 'light' ? '#666' : '#AAA'} size={20} />
                         <TextInput
                             style={[styles.searchInput, { color: colors.text }]}
@@ -507,17 +540,18 @@ export default function FeesScreen() {
             ) : (
                 <>
                     <BlurView
-                        intensity={40}
+                        intensity={90}
                         tint={colorScheme === 'light' ? 'light' : 'dark'}
                         style={[
                             styles.searchContainer,
                             {
-                                backgroundColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.5)' : 'rgba(255, 255, 255, 0.05)',
-                                borderColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.8)' : 'rgba(255, 255, 255, 0.1)',
+                                backgroundColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.1)',
+                                borderColor: colorScheme === 'light' ? 'rgba(0, 0, 0, 0.15)' : 'rgba(255, 255, 255, 0.15)',
                                 marginTop: 10
                             }
                         ]}
                     >
+                        <View style={styles.liquidHighlight} />
                         <Search color={colorScheme === 'light' ? '#666' : '#AAA'} size={20} />
                         <TextInput
                             style={[styles.searchInput, { color: colors.text }]}
@@ -538,22 +572,39 @@ export default function FeesScreen() {
                             const enrollment = enrollments.find(e => e.id === item.enrollmentId);
                             const cls = classes.find(c => c.id === enrollment?.classId);
                             return (
-                                <TouchableOpacity
-                                    style={[styles.historyCard, { backgroundColor: colors.card, borderColor: colors.border }]}
-                                    onPress={() => handleShowPaymentDetail(item, item.monthYear, `${student?.firstName} ${student?.lastName}`, cls?.courseName || 'Desconocido')}
-                                >
-                                    <View style={[styles.avatarBox, { backgroundColor: colors.primary + '10', width: 40, height: 40 }]}>
-                                        <Calendar size={18} color={colors.primary} />
-                                    </View>
-                                    <View style={{ flex: 1, marginLeft: 12 }}>
-                                        <Text style={[styles.historyName, { color: colors.text }]}>{student?.firstName} {student?.lastName}</Text>
-                                        <Text style={{ fontSize: 12, color: colors.icon }}>{cls?.courseName} • Período: {item.monthYear}</Text>
-                                    </View>
-                                    <View style={{ alignItems: 'flex-end' }}>
-                                        <Text style={[styles.historyAmount, { color: '#40C057' }]}>+ S/ {item.amount}</Text>
-                                        <Text style={{ fontSize: 10, color: colors.icon }}>{item.date}</Text>
-                                    </View>
-                                </TouchableOpacity>
+                                <View style={styles.cardContainer}>
+                                    <BlurView
+                                        intensity={90}
+                                        tint={colorScheme === 'light' ? 'light' : 'dark'}
+                                        style={[
+                                            styles.historyCard,
+                                            {
+                                                backgroundColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.1)',
+                                                borderColor: colorScheme === 'light' ? 'rgba(0, 0, 0, 0.15)' : 'rgba(255, 255, 255, 0.15)',
+                                            }
+                                        ]}
+                                    >
+                                        <View style={styles.liquidHighlight} />
+
+                                        <TouchableOpacity
+                                            style={{ flexDirection: 'row', alignItems: 'center' }}
+                                            onPress={() => handleShowPaymentDetail(item, item.monthYear, `${student?.firstName} ${student?.lastName}`, cls?.courseName || 'Desconocido')}
+                                            activeOpacity={0.7}
+                                        >
+                                            <View style={[styles.avatarBox, { backgroundColor: colors.primary + '10', width: 40, height: 40 }]}>
+                                                <Calendar size={18} color={colors.primary} />
+                                            </View>
+                                            <View style={{ flex: 1, marginLeft: 12 }}>
+                                                <Text style={[styles.historyName, { color: colors.text }]}>{student?.firstName} {student?.lastName}</Text>
+                                                <Text style={{ fontSize: 12, color: colors.icon }}>{cls?.courseName} • Período: {item.monthYear}</Text>
+                                            </View>
+                                            <View style={{ alignItems: 'flex-end' }}>
+                                                <Text style={[styles.historyAmount, { color: '#40C057' }]}>+ S/ {item.amount}</Text>
+                                                <Text style={{ fontSize: 10, color: colors.icon }}>{item.date}</Text>
+                                            </View>
+                                        </TouchableOpacity>
+                                    </BlurView>
+                                </View>
                             );
                         }}
                         keyExtractor={item => item.id}
@@ -567,18 +618,102 @@ export default function FeesScreen() {
                     />
                 </>
             )}
+
+            {/* Modal Confirmar Pago */}
+            <Modal visible={isPayConfirmVisible} transparent animationType="slide">
+                <View style={styles.modalOverlay}>
+                    <View style={[styles.modalContent, { backgroundColor: colors.modal, borderColor: colors.border }]}>
+                        <View style={styles.modalHeader}>
+                            <Text style={[styles.modalTitle, { color: colors.text }]}>Confirmar Pago</Text>
+                            <TouchableOpacity onPress={() => setIsPayConfirmVisible(false)}>
+                                <X color={colors.text} size={24} />
+                            </TouchableOpacity>
+                        </View>
+                        {payData && (
+                            <Text style={{ color: colors.text, marginBottom: 20, fontSize: 16, lineHeight: 24 }}>
+                                ¿Confirmas el pago de <Text style={{ fontWeight: 'bold' }}>S/ {payData.month.amount}</Text> por "{payData.enrollment.courseName}" correspondiente a {payData.month.monthName} para {payData.student.firstName}?
+                                {payData.month.notes ? `\n\n(${payData.month.notes})` : ''}
+                            </Text>
+                        )}
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 }}>
+                            <TouchableOpacity
+                                style={[styles.saveButton, { backgroundColor: colors.border, flex: 1, marginRight: 10 }]}
+                                onPress={() => setIsPayConfirmVisible(false)}
+                            >
+                                <Text style={[styles.saveText, { color: colors.text }]}>Cancelar</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[styles.saveButton, { backgroundColor: colors.primary, flex: 1, marginLeft: 10 }]}
+                                onPress={() => {
+                                    if (payData) {
+                                        const today = networkTime || new Date();
+                                        addPayment({
+                                            id: Date.now().toString(),
+                                            studentId: payData.student.id,
+                                            enrollmentId: payData.enrollment.id,
+                                            installmentId: payData.month.id,
+                                            amount: payData.month.amount.toString(),
+                                            date: today.toISOString().split('T')[0],
+                                            monthYear: payData.month.monthYearSearch
+                                        }, payData.month.id);
+                                        setIsPayConfirmVisible(false);
+                                        setPayData(null);
+                                    }
+                                }}
+                            >
+                                <Text style={styles.saveText}>Confirmar Pago</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+
+            {/* Modal Detalles de Pago */}
+            <Modal visible={isDetailVisible} transparent animationType="slide">
+                <View style={styles.modalOverlay}>
+                    <View style={[styles.modalContent, { backgroundColor: colors.modal }]}>
+                        <View style={styles.modalHeader}>
+                            <Text style={[styles.modalTitle, { color: colors.text }]}>Detalles del Pago</Text>
+                            <TouchableOpacity onPress={() => setIsDetailVisible(false)}>
+                                <X color={colors.text} size={24} />
+                            </TouchableOpacity>
+                        </View>
+                        {detailData && (
+                            <View style={{ marginBottom: 20 }}>
+                                <Text style={{ color: colors.text, fontSize: 16, marginBottom: 8 }}><Text style={{ fontWeight: 'bold' }}>Estudiante:</Text> {detailData.studentName}</Text>
+                                <Text style={{ color: colors.text, fontSize: 16, marginBottom: 8 }}><Text style={{ fontWeight: 'bold' }}>Curso:</Text> {detailData.courseName}</Text>
+                                <Text style={{ color: colors.text, fontSize: 16, marginBottom: 8 }}><Text style={{ fontWeight: 'bold' }}>Mes:</Text> {detailData.monthName}</Text>
+                                <Text style={{ color: colors.text, fontSize: 16, marginBottom: 8 }}><Text style={{ fontWeight: 'bold' }}>Monto procesado:</Text> S/ {detailData.payment.amount}</Text>
+                                <Text style={{ color: colors.text, fontSize: 16, marginBottom: 8 }}><Text style={{ fontWeight: 'bold' }}>Fecha del pago:</Text> {new Date(detailData.payment.date + 'T12:00:00').toLocaleDateString('es-PE')}</Text>
+                            </View>
+                        )}
+                        <TouchableOpacity
+                            style={[styles.saveButton, { backgroundColor: colors.primary, width: '100%', marginTop: 10 }]}
+                            onPress={() => setIsDetailVisible(false)}
+                        >
+                            <Text style={styles.saveText}>Cerrar</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
         </View >
     );
 }
 
 const styles = StyleSheet.create({
+    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20 },
+    modalContent: { borderRadius: 24, padding: 24, shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.1, shadowRadius: 20, elevation: Platform.OS === 'android' ? 0 : 10 },
+    modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+    modalTitle: { fontSize: 20, fontWeight: '800' },
+    saveButton: { height: 50, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
+    saveText: { color: '#FFF', fontSize: 16, fontWeight: 'bold' },
     container: { flex: 1 },
     header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 15 },
     backButton: { padding: 5 },
     headerTitle: { fontSize: 22, fontWeight: 'bold' },
     placeholder: { width: 38 },
     summaryContainer: { paddingHorizontal: 20, marginBottom: 15 },
-    summaryItem: { flexDirection: 'row', alignItems: 'center', padding: 15, borderRadius: 20, borderWidth: 1 },
+    summaryItem: { flexDirection: 'row', alignItems: 'center', padding: 15, borderRadius: 32, borderWidth: 1.5, overflow: 'hidden' },
     summaryInfo: { marginLeft: 15 },
     summaryLabel: { fontSize: 13, marginBottom: 2 },
     summaryValue: { fontSize: 20, fontWeight: '800' },
@@ -589,7 +724,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingHorizontal: 16,
         paddingVertical: 8,
-        borderRadius: 20,
+        borderRadius: 32,
         borderWidth: 1,
         marginRight: 8
     },
@@ -600,7 +735,7 @@ const styles = StyleSheet.create({
         marginHorizontal: 20,
         paddingHorizontal: 15,
         height: 52,
-        borderRadius: 24,
+        borderRadius: 32,
         borderWidth: 1,
         marginBottom: 15,
         overflow: 'hidden',
@@ -616,33 +751,24 @@ const styles = StyleSheet.create({
         marginBottom: 18,
     },
     card: {
-        borderRadius: 24, // Consistent with liquid glass
+        borderRadius: 32, // Upgraded to Elite 32px
         padding: 20,
-        borderWidth: 1,
+        borderWidth: 1.5,
         overflow: 'hidden',
         // Layered shadows for depth
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.05,
         shadowRadius: 10,
-        elevation: 5,
+        elevation: Platform.OS === 'android' ? 0 : 8,
     },
-    liquidHighlight: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        height: '50%',
-        backgroundColor: 'rgba(255, 255, 255, 0.25)', // Specular reflection
-        borderTopLeftRadius: 24,
-        borderTopRightRadius: 24,
-    },
+
     cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 15 },
-    avatarBox: { width: 48, height: 48, borderRadius: 14, justifyContent: 'center', alignItems: 'center' },
+    avatarBox: { width: 48, height: 48, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
     headerInfo: { flex: 1, marginLeft: 15 },
     studentName: { fontSize: 17, fontWeight: 'bold', marginBottom: 2 },
     classCount: { fontSize: 13 },
-    amountBadge: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12, backgroundColor: 'rgba(99, 102, 241, 0.1)' },
+    amountBadge: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, backgroundColor: 'rgba(99, 102, 241, 0.1)' },
     totalAmount: { fontSize: 18, fontWeight: '800' },
     divider: { height: 1, marginVertical: 12 },
     sectionTitle: {
@@ -687,7 +813,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingHorizontal: 12,
         paddingVertical: 8,
-        borderRadius: 10,
+        borderRadius: 12,
     },
     payMonthText: {
         color: '#fff',
@@ -695,13 +821,23 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         marginLeft: 6,
     },
-    payButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', height: 48, borderRadius: 14, marginTop: 10 },
+    payButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', height: 48, borderRadius: 16, marginTop: 10 },
     payButtonText: { color: '#fff', fontSize: 15, fontWeight: 'bold', marginLeft: 8 },
     emptyContainer: { alignItems: 'center', justifyContent: 'center', marginTop: 100 },
-    toggleContainer: { flexDirection: 'row', marginHorizontal: 20, borderRadius: 15, padding: 4, marginBottom: 20 },
-    toggleButton: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 10, borderRadius: 12 },
-    toggleLabel: { marginLeft: 8, fontWeight: '700', fontSize: 14 },
-    historyCard: { flexDirection: 'row', alignItems: 'center', padding: 15, borderRadius: 18, marginBottom: 12, borderWidth: 1 },
+    toggleContainer: { flexDirection: 'row', marginHorizontal: 20, borderRadius: 12, padding: 4, marginBottom: 20 },
+    toggleButton: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 8, borderRadius: 10 },
+    toggleLabel: { marginLeft: 8, fontWeight: '600', fontSize: 14 },
+    historyCard: { flexDirection: 'row', alignItems: 'center', padding: 15, borderRadius: 32, marginBottom: 12, borderWidth: 1 },
     historyName: { fontSize: 15, fontWeight: 'bold', marginBottom: 2 },
-    historyAmount: { fontSize: 16, fontWeight: '800' }
+    historyAmount: { fontSize: 16, fontWeight: '800' },
+    liquidHighlight: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: '50%',
+        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        borderTopLeftRadius: 32,
+        borderTopRightRadius: 32,
+    },
 });

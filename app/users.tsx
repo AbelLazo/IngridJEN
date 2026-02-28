@@ -93,8 +93,6 @@ export default function UsersScreen() {
         }
     };
 
-
-
     const handlePasswordReset = async () => {
         if (!selectedUser) return;
 
@@ -217,12 +215,12 @@ export default function UsersScreen() {
                     style={[
                         styles.userCard,
                         {
-                            backgroundColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.4)' : 'rgba(255, 255, 255, 0.08)',
-                            borderColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.15)',
+                            backgroundColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.1)',
+                            borderColor: colorScheme === 'light' ? 'rgba(0, 0, 0, 0.15)' : 'rgba(255, 255, 255, 0.15)',
                         }
                     ]}
                 >
-                    <View style={styles.liquidHighlight} />
+
                     <View style={styles.userInfo}>
                         <View style={[styles.avatarBox, { backgroundColor: colors.primary + '15' }]}>
                             <Text style={[styles.avatarText, { color: colors.primary }]}>
@@ -289,13 +287,11 @@ export default function UsersScreen() {
                 onRequestClose={() => setModalVisible(false)}
             >
                 <View style={styles.modalOverlay}>
-                    <BlurView
-                        intensity={90}
-                        tint={colorScheme === 'light' ? 'light' : 'dark'}
+                    <View
                         style={[
                             styles.modalContent,
                             {
-                                backgroundColor: colors.background,
+                                backgroundColor: colors.modal,
                                 borderColor: colors.border,
                                 paddingBottom: Math.max(insets.bottom, 24),
                                 width: '100%',
@@ -330,10 +326,10 @@ export default function UsersScreen() {
                                         shadowOffset: { width: 0, height: 4 },
                                         shadowOpacity: 0.3,
                                         shadowRadius: 8,
-                                        elevation: 4,
+                                        elevation: Platform.OS === 'android' ? 0 : 4,
                                         borderColor: 'transparent'
                                     } : {
-                                        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                                        backgroundColor: 'rgba(255, 255, 255, 0.45)',
                                         borderColor: colorScheme === 'light' ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.1)',
                                     },
                                     currentUser?.email === selectedUser?.email && { opacity: 0.5 }
@@ -369,10 +365,10 @@ export default function UsersScreen() {
                                         shadowOffset: { width: 0, height: 4 },
                                         shadowOpacity: 0.3,
                                         shadowRadius: 8,
-                                        elevation: 4,
+                                        elevation: Platform.OS === 'android' ? 0 : 4,
                                         borderColor: 'transparent'
                                     } : {
-                                        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                                        backgroundColor: 'rgba(255, 255, 255, 0.45)',
                                         borderColor: colorScheme === 'light' ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.1)',
                                     },
                                     currentUser?.email === selectedUser?.email && { opacity: 0.5 }
@@ -408,10 +404,10 @@ export default function UsersScreen() {
                                         shadowOffset: { width: 0, height: 4 },
                                         shadowOpacity: 0.3,
                                         shadowRadius: 8,
-                                        elevation: 4,
+                                        elevation: Platform.OS === 'android' ? 0 : 4,
                                         borderColor: 'transparent'
                                     } : {
-                                        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                                        backgroundColor: 'rgba(255, 255, 255, 0.45)',
                                         borderColor: colorScheme === 'light' ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.1)',
                                     },
                                     currentUser?.email === selectedUser?.email && { opacity: 0.5 }
@@ -453,7 +449,7 @@ export default function UsersScreen() {
                                         shadowOffset: { width: 0, height: 4 },
                                         shadowOpacity: 0.3,
                                         shadowRadius: 8,
-                                        elevation: 4,
+                                        elevation: Platform.OS === 'android' ? 0 : 4,
                                     }
                                 ]}
                                 onPress={handlePasswordReset}
@@ -463,8 +459,7 @@ export default function UsersScreen() {
                                 <Text style={{ color: '#fff', fontWeight: '700', marginLeft: 10 }}>Enviar Correo de Restablecimiento</Text>
                             </TouchableOpacity>
                         </View>
-
-                    </BlurView>
+                    </View>
                 </View>
             </Modal>
 
@@ -476,13 +471,11 @@ export default function UsersScreen() {
                 onRequestClose={() => setAddModalVisible(false)}
             >
                 <View style={styles.modalOverlay}>
-                    <BlurView
-                        intensity={90}
-                        tint={colorScheme === 'light' ? 'light' : 'dark'}
+                    <View
                         style={[
                             styles.modalContent,
                             {
-                                backgroundColor: colors.background,
+                                backgroundColor: colors.modal,
                                 borderColor: colors.border,
                                 paddingBottom: Math.max(insets.bottom, 24),
                                 width: '100%',
@@ -503,7 +496,7 @@ export default function UsersScreen() {
                         </View>
 
                         {addModalError && (
-                            <View style={[styles.errorContainer, { backgroundColor: '#ef4444' + '15', borderColor: '#ef4444' + '40' }]}>
+                            <View style={[styles.errorContainer, { backgroundColor: '#ef444415', borderColor: '#ef444440' }]}>
                                 <Text style={[styles.errorText, { color: '#ef4444' }]}>{addModalError}</Text>
                             </View>
                         )}
@@ -582,7 +575,7 @@ export default function UsersScreen() {
                                         shadowOffset: { width: 0, height: 8 },
                                         shadowOpacity: 0.4,
                                         shadowRadius: 16,
-                                        elevation: 8,
+                                        elevation: Platform.OS === 'android' ? 0 : 8,
                                     } : {
                                         backgroundColor: colorScheme === 'light' ? 'rgba(0,0,0,0.02)' : 'rgba(255,255,255,0.05)',
                                         borderColor: colorScheme === 'light' ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.1)'
@@ -618,7 +611,7 @@ export default function UsersScreen() {
                                         shadowOffset: { width: 0, height: 8 },
                                         shadowOpacity: 0.4,
                                         shadowRadius: 16,
-                                        elevation: 8,
+                                        elevation: Platform.OS === 'android' ? 0 : 8,
                                     } : {
                                         backgroundColor: colorScheme === 'light' ? 'rgba(0,0,0,0.02)' : 'rgba(255,255,255,0.05)',
                                         borderColor: colorScheme === 'light' ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.1)'
@@ -685,8 +678,7 @@ export default function UsersScreen() {
                         >
                             <Text style={styles.primaryButtonText}>Pre-registrar Usuario</Text>
                         </TouchableOpacity>
-
-                    </BlurView>
+                    </View>
                 </View>
             </Modal>
         </View>
@@ -728,7 +720,7 @@ const styles = StyleSheet.create({
         borderRadius: 12,
         justifyContent: 'center',
         alignItems: 'center',
-        elevation: 4,
+        elevation: Platform.OS === 'android' ? 0 : 4,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.2,
@@ -743,31 +735,21 @@ const styles = StyleSheet.create({
     },
     cardContainer: {
         marginBottom: 12,
-        borderRadius: 24,
+        borderRadius: 32,
         overflow: 'hidden',
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.05,
-        shadowRadius: 10,
-        elevation: 5,
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.08,
+        shadowRadius: 12,
+        elevation: Platform.OS === 'android' ? 0 : 6,
     },
     userCard: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
         padding: 18,
-        borderRadius: 24,
+        borderRadius: 32,
         borderWidth: 1,
-    },
-    liquidHighlight: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        height: '50%',
-        backgroundColor: 'rgba(255, 255, 255, 0.25)', // Brillo especular físico
-        borderTopLeftRadius: 24,
-        borderTopRightRadius: 24,
     },
     liquidHighlightModal: {
         position: 'absolute',
@@ -776,8 +758,8 @@ const styles = StyleSheet.create({
         right: 0,
         height: '50%',
         backgroundColor: 'rgba(255, 255, 255, 0.25)',
-        borderTopLeftRadius: 24,
-        borderTopRightRadius: 24,
+        borderTopLeftRadius: 32,
+        borderTopRightRadius: 32,
     },
     userInfo: {
         flexDirection: 'row',
@@ -829,8 +811,8 @@ const styles = StyleSheet.create({
     modalContent: {
         width: '100%',
         maxWidth: 600,
-        borderTopLeftRadius: 24,
-        borderTopRightRadius: 24,
+        borderTopLeftRadius: 32,
+        borderTopRightRadius: 32,
         borderWidth: 1,
         padding: 24,
         overflow: 'hidden',
@@ -842,7 +824,7 @@ const styles = StyleSheet.create({
                 shadowRadius: 12,
             },
             android: {
-                elevation: 24,
+                elevation: Platform.OS === 'android' ? 0 : 24,
             },
             web: {
                 boxShadow: '0px -4px 12px rgba(0,0,0,0.1)',
@@ -919,7 +901,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         right: 20,
-        elevation: 8,
+        elevation: Platform.OS === 'android' ? 0 : 8,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,

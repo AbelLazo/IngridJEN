@@ -15,13 +15,14 @@ export const Colors = {
     icon: '#5D5043', // Earth Brown
     tabIconDefault: '#C5A88F', // Taupe
     tabIconSelected: '#AF4328',
-    card: 'rgba(255, 255, 255, 0.5)', // High transparency for prominent Blur effect
+    card: 'rgba(255, 255, 255, 0.6)', // Standard Elite Glassmorphism opacity
     border: '#C5A88F',
     notification: '#AF4328',
     primary: '#000000',
     secondary: '#C5A88F',
     surface: '#ffffff',
     overlay: 'rgba(245, 241, 233, 0.4)',
+    modal: '#FFFFFF',
   },
   dark: {
     text: '#F5F1E9', // Linen Cream
@@ -37,6 +38,7 @@ export const Colors = {
     secondary: '#5D5043',
     surface: '#261F1A',
     overlay: 'rgba(45, 38, 33, 0.6)',
+    modal: '#261F1A',
   },
 };
 

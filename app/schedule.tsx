@@ -1,13 +1,14 @@
 import AttendanceModal from '@/components/AttendanceModal';
 import PeriodHeader from '@/components/PeriodHeader';
 import { Colors } from '@/constants/theme';
+import { useAuth } from '@/context/AuthContext';
 import { ClassItem, useInstitution } from '@/context/InstitutionContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { BlurView } from 'expo-blur';
 import { useRouter } from 'expo-router';
 import { Calendar as CalendarIcon, Clock, Users } from 'lucide-react-native';
 import React, { useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Helper for formatting dates "YYYY-MM-DD" natively respecting Timezones roughly
@@ -24,7 +25,8 @@ export default function ScheduleScreen() {
     const colorScheme = useColorScheme() ?? 'light';
     const colors = Colors[colorScheme as keyof typeof Colors];
 
-    const { classes, currentCycleId, enrollments } = useInstitution();
+    const { user, userRole } = useAuth();
+    const { classes, currentCycleId, enrollments, teachers } = useInstitution();
 
     // Day Selection State
     const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -65,9 +67,27 @@ export default function ScheduleScreen() {
     const classesForSelectedDay = useMemo(() => {
         const selectedDayName = getDayName(selectedDate.getDay());
 
+        // Encuentra el nombre del profesor basado en su email en los profesores registrados
+        let allowedTeacherName: string | null = null;
+        if (userRole === 'professor' && user?.email) {
+            const currentTeacher = teachers.find(t => t.email?.toLowerCase() === user.email?.toLowerCase());
+            if (currentTeacher) {
+                // Las clases guardan el nombre del profe como literal ej "John Doe "
+                allowedTeacherName = `${currentTeacher.firstName} ${currentTeacher.lastName}`;
+            } else {
+                allowedTeacherName = "NO_TEACHER_PROFILE_FOUND";
+            }
+        }
+
         return classes.filter(c => {
             // Must belong to current cycle
             if (c.cycleId !== currentCycleId) return false;
+
+            // Si es profesor, limitar solo a sus clases
+            if (userRole === 'professor' && allowedTeacherName && c.teacherName.trim() !== allowedTeacherName.trim()) {
+                return false;
+            }
+
             // Must have a schedule on the selected day
             return c.schedules.some(s => s.day === selectedDayName);
         }).map(c => {
@@ -78,7 +98,7 @@ export default function ScheduleScreen() {
                 startTime: schedule?.startTime || '00:00'
             };
         }).sort((a, b) => a.startTime.localeCompare(b.startTime)); // Sort chronologically
-    }, [classes, currentCycleId, selectedDate]);
+    }, [classes, currentCycleId, selectedDate, userRole, user, teachers]);
 
     // Helper: Calculate Enrolled Students count
     const getEnrolledCount = (classId: string) => {
@@ -86,7 +106,7 @@ export default function ScheduleScreen() {
     };
 
     return (
-        <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}>
+        <View style={[styles.container, { backgroundColor: colors.background }]}>
             <PeriodHeader title="Horarios y Asistencias" onBack={() => router.back()} />
 
             {/* Date Strip Menu */}
@@ -171,7 +191,7 @@ export default function ScheduleScreen() {
                                         }
                                     ]}
                                 >
-                                    <View style={styles.liquidHighlight} />
+
 
                                     <View style={styles.classHeaderRow}>
                                         <View style={[styles.timeBadge, { backgroundColor: (cls.color || colors.primary) + '20' }]}>
@@ -260,7 +280,7 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.05,
         shadowRadius: 5,
-        elevation: 2,
+        elevation: Platform.OS === 'android' ? 0 : 2,
     },
     dateDayName: {
         fontSize: 11,
@@ -320,17 +340,7 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.05,
         shadowRadius: 10,
-        elevation: 5,
-    },
-    liquidHighlight: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        height: '50%',
-        backgroundColor: 'rgba(255, 255, 255, 0.25)', // Specular reflection
-        borderTopLeftRadius: 24,
-        borderTopRightRadius: 24,
+        elevation: Platform.OS === 'android' ? 0 : 5,
     },
     classHeaderRow: {
         flexDirection: 'row',

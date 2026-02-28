@@ -3,6 +3,7 @@ import { Course, useInstitution } from '@/context/InstitutionContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Picker } from '@react-native-picker/picker';
 import { BlurView } from 'expo-blur';
+import * as Haptics from 'expo-haptics';
 import { Stack, useRouter } from 'expo-router';
 import { BookOpen, ChevronLeft, Clock, Coins, Edit3, Plus, Search, Trash2, X } from 'lucide-react-native';
 import React, { useState } from 'react';
@@ -18,7 +19,6 @@ import {
     Text,
     TextInput,
     TouchableOpacity,
-    Vibration,
     View
 } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -30,6 +30,10 @@ import Animated, {
     withSpring
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+const triggerHaptic = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+};
 
 export default function CoursesScreen() {
     const insets = useSafeAreaInsets();
@@ -113,25 +117,36 @@ export default function CoursesScreen() {
                     style: "destructive",
                     onPress: () => {
                         removeCourse(item.id);
-                        Vibration.vibrate(100);
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
                     }
                 }
             ]
         );
     };
 
-    const DraggableCard = ({ item, colors, onEdit, onDelete }: any) => {
+    const DraggableCard = ({ item, colors, onEdit, onDelete, onDragStart }: any) => {
         const translateX = useSharedValue(0);
         const translateY = useSharedValue(0);
         const isDragging = useSharedValue(false);
 
         const screenHeight = Dimensions.get('window').height;
 
-        const panGesture = Gesture.Pan()
+        const longPressGesture = Gesture.LongPress()
+            .minDuration(1000)
             .onStart(() => {
                 isDragging.value = true;
                 isDraggingGlobal.value = withSpring(1);
-                runOnJS(Vibration.vibrate)(40);
+                if (onDragStart) runOnJS(onDragStart)();
+            });
+
+        const panGesture = Gesture.Pan()
+            .manualActivation(true)
+            .onTouchesMove((event, stateManager) => {
+                if (isDragging.value) {
+                    stateManager.activate();
+                } else {
+                    stateManager.fail();
+                }
             })
             .onUpdate((event) => {
                 translateX.value = event.translationX;
@@ -150,6 +165,8 @@ export default function CoursesScreen() {
                 isDraggingGlobal.value = withSpring(0);
             });
 
+        const composedGesture = Gesture.Simultaneous(longPressGesture, panGesture);
+
         const animatedStyle = useAnimatedStyle(() => {
             return {
                 transform: [
@@ -164,7 +181,7 @@ export default function CoursesScreen() {
         });
 
         return (
-            <GestureDetector gesture={panGesture}>
+            <GestureDetector gesture={composedGesture}>
                 <Animated.View style={[styles.cardContainer, animatedStyle]}>
                     <BlurView
                         intensity={90}
@@ -172,12 +189,12 @@ export default function CoursesScreen() {
                         style={[
                             styles.card,
                             {
-                                backgroundColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.4)' : 'rgba(255, 255, 255, 0.08)',
-                                borderColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.15)',
+                                backgroundColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.1)',
+                                borderColor: colorScheme === 'light' ? 'rgba(0, 0, 0, 0.15)' : 'rgba(255, 255, 255, 0.1)',
                             }
                         ]}
                     >
-                        <View style={styles.liquidHighlight} />
+
 
                         <View style={[styles.iconContainer, { backgroundColor: colors.primary + '15' }]}>
                             <BookOpen size={24} color={colors.primary} />
@@ -257,8 +274,8 @@ export default function CoursesScreen() {
                 style={[
                     styles.searchContainer,
                     {
-                        backgroundColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.5)' : 'rgba(255, 255, 255, 0.05)',
-                        borderColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.8)' : 'rgba(255, 255, 255, 0.1)',
+                        backgroundColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.05)',
+                        borderColor: colorScheme === 'light' ? 'rgba(0, 0, 0, 0.1)' : 'rgba(255, 255, 255, 0.1)',
                     }
                 ]}
             >
@@ -296,7 +313,7 @@ export default function CoursesScreen() {
                     behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                     style={styles.modalOverlay}
                 >
-                    <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
+                    <View style={[styles.modalContent, { backgroundColor: colors.modal }]}>
                         <View style={styles.modalHeader}>
                             <Text style={[styles.modalTitle, { color: colors.text }]}>
                                 {editingCourseId ? 'Editar Materia' : 'Nueva Materia'}
@@ -442,7 +459,7 @@ const styles = StyleSheet.create({
         marginHorizontal: 20,
         paddingHorizontal: 15,
         height: 52,
-        borderRadius: 24,
+        borderRadius: 32,
         borderWidth: 1,
         marginBottom: 15,
         overflow: 'hidden',
@@ -463,7 +480,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         padding: 18,
-        borderRadius: 24, // Consistent with liquid glass
+        borderRadius: 32, // Consistent with liquid glass
         borderWidth: 1,
         overflow: 'hidden',
         // Layered shadows for depth
@@ -471,17 +488,7 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.05,
         shadowRadius: 10,
-        elevation: 5,
-    },
-    liquidHighlight: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        height: '50%',
-        backgroundColor: 'rgba(255, 255, 255, 0.25)', // Specular reflection
-        borderTopLeftRadius: 24,
-        borderTopRightRadius: 24,
+        elevation: Platform.OS === 'android' ? 0 : 5,
     },
     iconContainer: {
         width: 54,
@@ -568,7 +575,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginTop: 15,
         marginBottom: 35,
-        elevation: 4,
+        elevation: Platform.OS === 'android' ? 0 : 4,
     },
     submitButtonText: {
         color: '#fff',
@@ -598,7 +605,7 @@ const styles = StyleSheet.create({
         borderRadius: 40,
         justifyContent: 'center',
         alignItems: 'center',
-        elevation: 10,
+        elevation: Platform.OS === 'android' ? 0 : 10,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 5 },
         shadowOpacity: 0.3,

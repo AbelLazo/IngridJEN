@@ -1,7 +1,8 @@
 import PeriodHeader from '@/components/PeriodHeader';
 import { Colors } from '@/constants/theme';
-import { Student, useInstitution } from '@/context/InstitutionContext';
+import { Student } from '@/context/InstitutionContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { Picker } from '@react-native-picker/picker';
 import { BlurView } from 'expo-blur';
 import { Stack, useRouter } from 'expo-router';
@@ -25,6 +26,7 @@ import {
     X
 } from 'lucide-react-native';
 
+import * as Haptics from 'expo-haptics';
 import React, { useState } from 'react';
 import {
     Alert,
@@ -38,7 +40,6 @@ import {
     Text,
     TextInput,
     TouchableOpacity,
-    Vibration,
     View
 } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -50,6 +51,7 @@ import Animated, {
     withSpring
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useInstitution } from '../context/InstitutionContext';
 
 interface ClassSchedule {
     day: string;
@@ -68,12 +70,20 @@ interface ClassItem {
     cycleId: string;
 }
 
+
+const triggerHaptic = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+};
+
 export default function ClassesScreen() {
     const insets = useSafeAreaInsets();
     const router = useRouter();
     const colorScheme = useColorScheme() ?? 'light';
     const colors = Colors[colorScheme as keyof typeof Colors];
-    const { courses, teachers, students, classes, addClass, updateClass, removeClass, addEnrollment, updateEnrollment, enrollments, removeEnrollment, academicCycles, currentCycleId, setCurrentCycleId } = useInstitution();
+    const {
+        courses, students, teachers, classes, addClass, updateClass, removeClass,
+        enrollments, addEnrollment, updateEnrollment, removeEnrollment, currentCycleId, academicCycles, updateEnrollmentDate
+    } = useInstitution();
     const isDraggingGlobal = useSharedValue(0);
 
     const [viewMode, setViewMode] = useState<'list' | 'schedule'>('list');
@@ -115,17 +125,35 @@ export default function ClassesScreen() {
     const [moveStudentId, setMoveStudentId] = useState<string | null>(null);
     const [targetMoveClassId, setTargetMoveClassId] = useState<string | null>(null);
 
+    // Date Picker Modals State
+    const [isEnrollConfirmVisible, setIsEnrollConfirmVisible] = useState(false);
+    const [studentToEnroll, setStudentToEnroll] = useState<Student | null>(null);
+    const [enrollDate, setEnrollDate] = useState(new Date());
+    const [showEnrollDatePicker, setShowEnrollDatePicker] = useState(false);
+
+    const [isWithdrawConfirmVisible, setIsWithdrawConfirmVisible] = useState(false);
+    const [studentToWithdraw, setStudentToWithdraw] = useState<Student | null>(null);
+
+    const [isMoveConfirmVisible, setIsMoveConfirmVisible] = useState(false);
+    const [moveDate, setMoveDate] = useState(new Date());
+    const [showMoveDatePicker, setShowMoveDatePicker] = useState(false);
+
+    const [isEditDateVisible, setIsEditDateVisible] = useState(false);
+    const [enrollmentToEdit, setEnrollmentToEdit] = useState<any>(null);
+    const [editDate, setEditDate] = useState(new Date());
+    const [showEditDatePicker, setShowEditDatePicker] = useState(false);
+
     const getValidActiveEnrollments = (classId: string) => {
-        return enrollments.filter(e => {
+        return enrollments.filter((e: any) => {
             if (e.classId !== classId || e.status !== 'active') return false;
-            const student = students.find(s => s.id === e.studentId);
+            const student = students.find((s: any) => s.id === e.studentId);
             if (!student || student.status !== 'active') return false;
-            const currentCycle = academicCycles.find(ac => ac.id === currentCycleId);
+            const currentCycle = academicCycles.find((ac: any) => ac.id === currentCycleId);
             const cycleYear = currentCycle?.name.match(/\d{4}/)?.[0];
             return cycleYear ? student.activeYears?.includes(cycleYear) : false;
         });
     };
-    const filteredClasses = classes.filter(item => {
+    const filteredClasses = classes.filter((item: any) => {
         const matchesSearch = item.courseName.toLowerCase().includes(searchQuery.toLowerCase()) ||
             item.teacherName.toLowerCase().includes(searchQuery.toLowerCase());
         const matchesCycle = item.cycleId === currentCycleId;
@@ -148,7 +176,7 @@ export default function ClassesScreen() {
         endMinutes = endMinutes % 60;
         endHours = endHours % 24; // Handle wrap around if class ends next day
 
-        return `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`;
+        return `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')} `;
     };
 
     const checkTimeOverlap = (start1: string, duration1: string, start2: string, duration2: string) => {
@@ -192,7 +220,7 @@ export default function ClassesScreen() {
 
     const handleEditPress = (cls: ClassItem) => {
         const course = courses.find(c => c.id === cls.courseId);
-        const teacher = teachers.find(t => `${t.firstName} ${t.lastName}` === cls.teacherName);
+        const teacher = teachers.find(t => `${t.firstName} ${t.lastName} ` === cls.teacherName);
 
         setFormData({
             courseId: cls.courseId,
@@ -246,7 +274,7 @@ export default function ClassesScreen() {
         if (!currentClass) return;
 
         const className = currentClass.courseName || 'la clase';
-        const studentName = `${student.firstName} ${student.lastName}`;
+        const studentName = `${student.firstName} ${student.lastName} `;
 
         if (!isEnrolled) {
             const withdrawnEnrollment = enrollments.find(e => e.studentId === student.id && e.classId === selectedClassId && e.status === 'withdrawn');
@@ -282,38 +310,10 @@ export default function ClassesScreen() {
                     return;
                 }
 
-                Alert.alert(
-                    "Confirmar Matrícula",
-                    `¿Deseas matricular a "${studentName}" en la clase de "${className}"?`,
-                    [
-                        { text: "Cancelar", style: "cancel" },
-                        {
-                            text: "Matricular",
-                            onPress: () => {
-                                if (selectedClassId) {
-                                    if (withdrawnEnrollment) {
-                                        updateEnrollment({
-                                            ...withdrawnEnrollment,
-                                            status: 'active',
-                                            date: new Date().toISOString().split('T')[0],
-                                            withdrawalDate: undefined
-                                        });
-                                    } else {
-                                        addEnrollment({
-                                            id: `${student.id}-${selectedClassId}-${Date.now()}`,
-                                            studentId: student.id,
-                                            classId: selectedClassId,
-                                            date: new Date().toISOString().split('T')[0],
-                                            status: 'active',
-                                            isImported: false
-                                        });
-                                    }
-                                    setEnrolledInSelected(prev => [...prev, student.id]);
-                                }
-                            }
-                        }
-                    ]
-                );
+                // Show the custom modal instead of Alert
+                setStudentToEnroll(student);
+                setEnrollDate(new Date());
+                setIsEnrollConfirmVisible(true);
             };
 
             const currentCapacity = parseInt(currentClass.capacity) || 20;
@@ -322,36 +322,14 @@ export default function ClassesScreen() {
             if (currentEnrolledCount >= currentCapacity) {
                 Alert.alert(
                     "Aforo Excedido",
-                    `La clase ha alcanzado su límite de ${currentCapacity} alumnos. No se pueden matricular más alumnos de forma individual.`
+                    `La clase ha alcanzado su límite de ${currentCapacity} alumnos.No se pueden matricular más alumnos de forma individual.`
                 );
             } else {
                 proceedEnrollment();
             }
         } else {
-            Alert.alert(
-                "Retirar del Curso",
-                `¿Deseas retirar a "${studentName}" de su curso vigente? Se conservarán sus registros de pagos históricos.`,
-                [
-                    { text: "Cancelar", style: "cancel" },
-                    {
-                        text: "Retirar Alumno",
-                        style: "destructive",
-                        onPress: () => {
-                            const enrollmentToWithdraw = enrollments.find(
-                                e => e.classId === selectedClassId && e.studentId === student.id && e.status !== 'withdrawn'
-                            );
-                            if (enrollmentToWithdraw) {
-                                updateEnrollment({
-                                    ...enrollmentToWithdraw,
-                                    status: 'withdrawn',
-                                    withdrawalDate: new Date().toISOString().split('T')[0]
-                                });
-                                setEnrolledInSelected(prev => prev.filter(id => id !== student.id));
-                            }
-                        }
-                    }
-                ]
-            );
+            setStudentToWithdraw(student);
+            setIsWithdrawConfirmVisible(true);
         }
     };
 
@@ -404,49 +382,16 @@ export default function ClassesScreen() {
                 return;
             }
 
-            // Perform move
-            // 1. Withdraw from current
-            updateEnrollment({
-                ...currentEnrollment,
-                status: 'withdrawn',
-                withdrawalDate: new Date().toISOString().split('T')[0]
-            });
-
-            // 2. Enroll in target
-            const withdrawnTarget = enrollments.find(e => e.studentId === moveStudentId && e.classId === targetMoveClassId && e.status === 'withdrawn');
-            const isImportedFlag = currentEnrollment.isImported;
-            const originalImportId = currentEnrollment.originalImportedClassId || (isImportedFlag ? selectedClassId : undefined);
-
-            if (withdrawnTarget) {
-                updateEnrollment({
-                    ...withdrawnTarget,
-                    status: 'active',
-                    date: new Date().toISOString().split('T')[0],
-                    withdrawalDate: undefined,
-                    isImported: isImportedFlag,
-                    originalImportedClassId: originalImportId
-                });
-            } else {
-                addEnrollment({
-                    id: `${moveStudentId}-${targetMoveClassId}-${Date.now()}`,
-                    studentId: moveStudentId,
-                    classId: targetMoveClassId,
-                    date: new Date().toISOString().split('T')[0],
-                    status: 'active',
-                    isImported: isImportedFlag,
-                    originalImportedClassId: originalImportId
-                });
-            }
-
-            setEnrolledInSelected(prev => prev.filter(id => id !== moveStudentId));
-            setMoveStudentId(null);
-            setTargetMoveClassId(null);
+            // Muestra Modal de Confirmación de Fecha de Traslado
+            setMoveDate(new Date());
+            setIsMoveConfirmVisible(true);
+            setMergeModalVisible(false); // Cierra el modal de selección de origen
         };
 
         if (targetEnrolledCount >= targetCapacity) {
             Alert.alert(
                 "Aforo Excedido en Destino",
-                `La clase destino ha alcanzado su límite de ${targetCapacity} alumnos. No puedes añadir más alumnos manualmente.`
+                `La clase destino ha alcanzado su límite de ${targetCapacity} alumnos.No puedes añadir más alumnos manualmente.`
             );
         } else {
             executeMove();
@@ -463,7 +408,7 @@ export default function ClassesScreen() {
 
         Alert.alert(
             "Deshacer Importación",
-            `¿Estás seguro que deseas deshacer la importación masiva? Esta acción retirará a todos los alumnos importados de la clase actual ("${targetClass.courseName}") y de cualquier otra a la que hayan sido movidos posteriormente, además eliminará el vínculo de fusión de las clases de origen.`,
+            `¿Estás seguro que deseas deshacer la importación masiva ? Esta acción retirará a todos los alumnos importados de la clase actual("${targetClass.courseName}") y de cualquier otra a la que hayan sido movidos posteriormente, además eliminará el vínculo de fusión de las clases de origen.`,
             [
                 { text: "Cancelar", style: "cancel" },
                 {
@@ -504,7 +449,7 @@ export default function ClassesScreen() {
 
         Alert.alert(
             "Confirmar Importación",
-            `¿Estás seguro que deseas confirmar la importación masiva? Esta acción consolidará permanentemente a los alumnos importados en la clase actual ("${targetClass.courseName}") y no se podrá deshacer masivamente.`,
+            `¿Estás seguro que deseas confirmar la importación masiva ? Esta acción consolidará permanentemente a los alumnos importados en la clase actual("${targetClass.courseName}") y no se podrá deshacer masivamente.`,
             [
                 { text: "Cancelar", style: "cancel" },
                 {
@@ -573,7 +518,7 @@ export default function ClassesScreen() {
                                 if (checkTimeOverlap(targetSchedule.startTime, targetClass.duration, existingSchedule.startTime, existingClass.duration)) {
                                     conflictFound = true;
                                     const student = students.find(s => s.id === studentId);
-                                    conflictMsg = `El alumno ${student?.firstName} ya tiene la clase "${existingClass.courseName}" en este horario. Importación cancelada.`;
+                                    conflictMsg = `El alumno ${student?.firstName} ya tiene la clase "${existingClass.courseName}" en este horario.Importación cancelada.`;
                                     break;
                                 }
                             }
@@ -592,7 +537,7 @@ export default function ClassesScreen() {
 
             studentsToImport.forEach(studentId => {
                 addEnrollment({
-                    id: `${studentId}-${selectedClassId}-${Date.now()}-${Math.random()}`,
+                    id: `${studentId} -${selectedClassId} -${Date.now()} -${Math.random()} `,
                     studentId: studentId,
                     classId: selectedClassId,
                     date: new Date().toISOString().split('T')[0],
@@ -646,7 +591,7 @@ export default function ClassesScreen() {
         const allDaysSelected = formData.schedules.every(s => s.day !== '');
 
         if (selectedCourse && selectedTeacher && allDaysSelected) {
-            const newDuration = `${formData.hours || '0'}h ${formData.minutes || '0'}m`;
+            const newDuration = `${formData.hours || '0'}h ${formData.minutes || '0'} m`;
 
             // Validate General Schedule Overlap (Single Environment)
             const cycleClasses = classes.filter(
@@ -660,7 +605,7 @@ export default function ClassesScreen() {
                 for (const existingSchedule of existingClass.schedules) {
                     for (const targetSchedule of formData.schedules) {
                         if (existingSchedule.day === targetSchedule.day) {
-                            const newStart = `${targetSchedule.startHours}:${targetSchedule.startMinutes}`;
+                            const newStart = `${targetSchedule.startHours}:${targetSchedule.startMinutes} `;
                             if (checkTimeOverlap(existingSchedule.startTime, existingClass.duration, newStart, newDuration)) {
                                 conflictFound = true;
                                 conflictMsg = `Ya existe la clase "${existingClass.courseName}" dictada por ${existingClass.teacherName} el ${existingSchedule.day} a las ${existingSchedule.startTime}. Todo opera en el mismo ambiente.`;
@@ -682,12 +627,12 @@ export default function ClassesScreen() {
                 id: editingClassId || Date.now().toString(),
                 courseId: selectedCourse.id,
                 courseName: selectedCourse.name,
-                teacherName: `${selectedTeacher.firstName} ${selectedTeacher.lastName}`,
+                teacherName: `${selectedTeacher.firstName} ${selectedTeacher.lastName} `,
                 schedules: formData.schedules.map(s => ({
                     day: s.day,
-                    startTime: `${s.startHours}:${s.startMinutes}`
+                    startTime: `${s.startHours}:${s.startMinutes} `
                 })),
-                duration: `${formData.hours || '0'}h ${formData.minutes || '0'}m`,
+                duration: `${formData.hours || '0'}h ${formData.minutes || '0'} m`,
                 capacity: formData.capacity || '20',
                 color: formData.color,
                 cycleId: currentCycleId || formData.cycleId // Forzar ciclo abierto en el Header
@@ -727,14 +672,14 @@ export default function ClassesScreen() {
                     style: "destructive",
                     onPress: () => {
                         removeClass(item.id);
-                        Vibration.vibrate(100);
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
                     }
                 }
             ]
         );
     };
 
-    const DraggableClassCard = ({ item, colors, onEdit, onDelete, onEnroll }: any) => {
+    const DraggableClassCard = ({ item, colors, onEdit, onDelete, onEnroll, onDragStart }: any) => {
         const translateX = useSharedValue(0);
         const translateY = useSharedValue(0);
         const isDragging = useSharedValue(false);
@@ -745,11 +690,22 @@ export default function ClassesScreen() {
         const capacityInt = parseInt(item.capacity || '20');
         const isOverflow = enrolledCount > capacityInt;
 
-        const panGesture = Gesture.Pan()
+        const longPressGesture = Gesture.LongPress()
+            .minDuration(1000)
             .onStart(() => {
                 isDragging.value = true;
                 isDraggingGlobal.value = withSpring(1);
-                runOnJS(Vibration.vibrate)(40);
+                if (onDragStart) runOnJS(onDragStart)();
+            });
+
+        const panGesture = Gesture.Pan()
+            .manualActivation(true)
+            .onTouchesMove((event, stateManager) => {
+                if (isDragging.value) {
+                    stateManager.activate();
+                } else {
+                    stateManager.fail();
+                }
             })
             .onUpdate((event) => {
                 translateX.value = event.translationX;
@@ -768,6 +724,8 @@ export default function ClassesScreen() {
                 isDraggingGlobal.value = withSpring(0);
             });
 
+        const composedGesture = Gesture.Simultaneous(longPressGesture, panGesture);
+
         const animatedStyle = useAnimatedStyle(() => {
             return {
                 transform: [
@@ -782,20 +740,21 @@ export default function ClassesScreen() {
         });
 
         return (
-            <GestureDetector gesture={panGesture}>
+            <GestureDetector gesture={composedGesture}>
                 <Animated.View style={[styles.cardContainer, animatedStyle]}>
                     <BlurView
-                        intensity={80}
+                        intensity={90}
                         tint={colorScheme === 'light' ? 'light' : 'dark'}
                         style={[
                             styles.card,
                             {
-                                backgroundColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.4)' : 'rgba(255, 255, 255, 0.1)',
-                                borderColor: item.color + '40',
+                                backgroundColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.1)',
+                                borderColor: item.color || (colorScheme === 'light' ? 'rgba(0, 0, 0, 0.1)' : 'rgba(255, 255, 255, 0.1)'),
                             }
                         ]}
                     >
                         <View style={styles.liquidHighlight} />
+
 
                         <View style={styles.cardMain}>
                             <View style={[styles.courseIcon, { backgroundColor: item.color + '15' }]}>
@@ -829,17 +788,17 @@ export default function ClassesScreen() {
                             </View>
                         </View>
 
-                        <View style={styles.cardActions}>
+                        <View style={[styles.cardActions, { borderLeftWidth: 1, borderLeftColor: colorScheme === 'light' ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.05)', paddingLeft: 12 }]}>
                             {classes.some(c => c.mergedToClassId === item.id) && (
                                 <>
                                     <TouchableOpacity
-                                        style={[styles.editCircle, { backgroundColor: '#4CAF5020', marginRight: 8 }]}
+                                        style={[styles.editCircle, { backgroundColor: '#4CAF5020' }]}
                                         onPress={() => handleConfirmImportState(item)}
                                     >
                                         <Check size={18} color="#4CAF50" />
                                     </TouchableOpacity>
                                     <TouchableOpacity
-                                        style={[styles.editCircle, { backgroundColor: '#ff4d4d20', marginRight: 8 }]}
+                                        style={[styles.editCircle, { backgroundColor: '#ff4d4d20' }]}
                                         onPress={() => handleRevertMerge(item)}
                                     >
                                         <RefreshCcw size={18} color="#ff4d4d" />
@@ -850,7 +809,7 @@ export default function ClassesScreen() {
                                 getValidActiveEnrollments(item.id).length === 0 &&
                                 academicCycles.find(ac => ac.id === item.cycleId)?.name.toLowerCase().includes('anual') && (
                                     <TouchableOpacity
-                                        style={[styles.editCircle, { backgroundColor: colors.primary + '20', marginRight: 8 }]}
+                                        style={[styles.editCircle, { backgroundColor: colors.primary + '20' }]}
                                         onPress={() => { setSelectedClassId(item.id); setSelectedSourceClassIds([]); setMergeModalVisible(true); }}
                                     >
                                         <Download size={18} color={colors.primary} />
@@ -876,6 +835,7 @@ export default function ClassesScreen() {
             onEdit={handleEditPress}
             onDelete={handleDeleteClass}
             onEnroll={openEnrollment}
+            onDragStart={triggerHaptic}
         />
     );
 
@@ -937,7 +897,7 @@ export default function ClassesScreen() {
                                     const studentCount = getValidActiveEnrollments(c.id).length;
                                     return (
                                         <View
-                                            key={`${c.id}-${c.currentStartTime}`}
+                                            key={`${c.id} -${c.currentStartTime} `}
                                             style={[
                                                 styles.scheduleItem,
                                                 {
@@ -989,7 +949,7 @@ export default function ClassesScreen() {
     };
 
     return (
-        <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}>
+        <View style={[styles.container, { backgroundColor: colors.background }]}>
             <Stack.Screen options={{ headerShown: false }} />
 
             <PeriodHeader
@@ -1039,8 +999,8 @@ export default function ClassesScreen() {
                         style={[
                             styles.searchBar,
                             {
-                                backgroundColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.5)' : 'rgba(255, 255, 255, 0.05)',
-                                borderColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.8)' : 'rgba(255, 255, 255, 0.1)',
+                                backgroundColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.1)',
+                                borderColor: colorScheme === 'light' ? 'rgba(0, 0, 0, 0.1)' : 'rgba(255, 255, 255, 0.1)',
                             }
                         ]}
                     >
@@ -1067,7 +1027,7 @@ export default function ClassesScreen() {
             {/* Registration Modal */}
             <Modal visible={modalVisible} transparent animationType="slide">
                 <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalOverlay}>
-                    <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
+                    <View style={[styles.modalContent, { backgroundColor: colors.modal }]}>
                         <View style={styles.modalHeader}>
                             <Text style={[styles.modalTitle, { color: colors.text }]}>
                                 {editingClassId ? 'Editar Clase' : 'Nueva Clase'}
@@ -1109,7 +1069,7 @@ export default function ClassesScreen() {
                                         {teachers.map(teacher => (
                                             <Picker.Item
                                                 key={teacher.id}
-                                                label={`${teacher.firstName} ${teacher.lastName}`}
+                                                label={`${teacher.firstName} ${teacher.lastName} `}
                                                 value={teacher.id}
                                                 color="#000000"
                                             />
@@ -1213,7 +1173,7 @@ export default function ClassesScreen() {
                                         placeholderTextColor={colors.icon}
                                         keyboardType="numeric"
                                         value={formData.capacity}
-                                        onChangeText={(v) => setFormData({ ...formData, capacity: v })}
+                                        onChangeText={(v: string) => setFormData({ ...formData, capacity: v })}
                                     />
                                 </View>
                             </View>
@@ -1313,11 +1273,11 @@ export default function ClassesScreen() {
                                                     }
                                                 ]}
                                             >
-                                                <View style={styles.studentInfo}>
+                                                <View style={[styles.studentInfo, { flex: 1, marginRight: 10 }]}>
                                                     <View style={[styles.avatarMini, { backgroundColor: colors.primary + '20' }]}>
                                                         <User size={16} color={colors.primary} />
                                                     </View>
-                                                    <Text style={[styles.studentName, { color: colors.text }]}>
+                                                    <Text style={[styles.studentName, { color: colors.text, flex: 1 }]} numberOfLines={1} ellipsizeMode="tail">
                                                         {student.firstName} {student.lastName}
                                                     </Text>
                                                 </View>
@@ -1349,6 +1309,24 @@ export default function ClassesScreen() {
                                                             <Plus size={18} color={colors.primary} />
                                                         )}
                                                     </TouchableOpacity>
+                                                    {isSelected && (
+                                                        <TouchableOpacity
+                                                            style={[
+                                                                styles.actionCircle,
+                                                                { backgroundColor: colors.icon + '20', marginLeft: 10 }
+                                                            ]}
+                                                            onPress={() => {
+                                                                const activeEnrollment = enrollments.find((e: any) => e.classId === selectedClassId && e.studentId === student.id && e.status === 'active');
+                                                                if (activeEnrollment) {
+                                                                    setEnrollmentToEdit(activeEnrollment);
+                                                                    setEditDate(new Date(`${activeEnrollment.date}T12:00:00`));
+                                                                    setIsEditDateVisible(true);
+                                                                }
+                                                            }}
+                                                        >
+                                                            <CalendarDays size={18} color={colors.text} />
+                                                        </TouchableOpacity>
+                                                    )}
                                                 </View>
                                             </View>
 
@@ -1367,10 +1345,66 @@ export default function ClassesScreen() {
                 </View>
             </Modal>
 
+            {/* Withdraw Student Confirm Modal */}
+            <Modal visible={isWithdrawConfirmVisible} transparent animationType="slide">
+                <View style={[styles.modalOverlay, { justifyContent: 'center', padding: 20 }]}>
+                    <View style={[styles.modalContent, { backgroundColor: colors.modal, maxHeight: '80%', borderRadius: 24, padding: 24 }]}>
+                        <View style={{ alignItems: 'center', marginBottom: 20 }}>
+                            <View style={{ width: 60, height: 60, borderRadius: 30, backgroundColor: '#ff4d4d20', alignItems: 'center', justifyContent: 'center', marginBottom: 15 }}>
+                                <Trash2 size={28} color="#ff4d4d" />
+                            </View>
+                            <Text style={[styles.modalTitle, { color: colors.text, fontSize: 22, textAlign: 'center', marginBottom: 10 }]}>
+                                Retirar Estudiante
+                            </Text>
+                            <Text style={{ color: colors.icon, fontSize: 16, textAlign: 'center', lineHeight: 24 }}>
+                                ¿Deseas retirar a <Text style={{ fontWeight: 'bold' }}>{studentToWithdraw?.firstName} {studentToWithdraw?.lastName}</Text> de esta clase?
+                            </Text>
+                            <Text style={{ color: colors.icon, fontSize: 14, textAlign: 'center', marginTop: 10, fontStyle: 'italic' }}>
+                                Se conservarán sus registros de pagos históricos.
+                            </Text>
+                        </View>
+
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 }}>
+                            <TouchableOpacity
+                                style={[styles.saveButton, { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, flex: 1, marginRight: 10 }]}
+                                onPress={() => {
+                                    setStudentToWithdraw(null);
+                                    setIsWithdrawConfirmVisible(false);
+                                }}
+                            >
+                                <Text style={[styles.saveText, { color: colors.text }]}>Cancelar</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[styles.saveButton, { backgroundColor: '#ff4d4d', flex: 1, marginLeft: 10 }]}
+                                onPress={() => {
+                                    if (studentToWithdraw && selectedClassId) {
+                                        const enrollmentToWithdraw = enrollments.find(
+                                            e => e.classId === selectedClassId && e.studentId === studentToWithdraw.id && e.status !== 'withdrawn'
+                                        );
+                                        if (enrollmentToWithdraw) {
+                                            updateEnrollment({
+                                                ...enrollmentToWithdraw,
+                                                status: 'withdrawn',
+                                                withdrawalDate: new Date().toISOString().split('T')[0]
+                                            });
+                                            setEnrolledInSelected(prev => prev.filter(id => id !== studentToWithdraw.id));
+                                        }
+                                        setIsWithdrawConfirmVisible(false);
+                                        setStudentToWithdraw(null);
+                                    }
+                                }}
+                            >
+                                <Text style={styles.saveText}>Confirmar Retiro</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+
             {/* Move Student Modal */}
             <Modal visible={!!moveStudentId} transparent animationType="slide">
                 <View style={[styles.modalOverlay, { justifyContent: 'center', padding: 20 }]}>
-                    <View style={[styles.modalContent, { backgroundColor: colors.card, maxHeight: '80%', borderRadius: 24 }]}>
+                    <View style={[styles.modalContent, { backgroundColor: colors.modal, maxHeight: '80%', borderRadius: 24 }]}>
                         <View style={styles.modalHeader}>
                             <Text style={[styles.modalTitle, { color: colors.text }]}>Mover Alumno</Text>
                             <TouchableOpacity onPress={() => setMoveStudentId(null)}>
@@ -1398,7 +1432,7 @@ export default function ClassesScreen() {
                                                 <Text style={{ color: colors.text, fontWeight: 'bold' }}>{c.courseName}</Text>
                                                 <Text style={{ color: colors.icon, fontSize: 12 }}>{c.teacherName}</Text>
                                                 <Text style={{ color: colors.icon, fontSize: 12 }}>
-                                                    {c.schedules.map(s => `${s.day} ${s.startTime}`).join(', ')}
+                                                    {c.schedules.map(s => `${s.day} ${s.startTime} `).join(', ')}
                                                 </Text>
                                             </View>
                                             <View style={{
@@ -1430,7 +1464,7 @@ export default function ClassesScreen() {
             {/* Merge Class / Import Students Modal */}
             <Modal visible={mergeModalVisible} transparent animationType="slide">
                 <View style={[styles.modalOverlay, { justifyContent: 'center', padding: 20 }]}>
-                    <View style={[styles.modalContent, { backgroundColor: colors.card, maxHeight: '80%', borderRadius: 24 }]}>
+                    <View style={[styles.modalContent, { backgroundColor: colors.modal, maxHeight: '80%', borderRadius: 24 }]}>
                         <View style={styles.modalHeader}>
                             <Text style={[styles.modalTitle, { color: colors.text }]}>Importar Alumnos</Text>
                             <TouchableOpacity onPress={() => { setMergeModalVisible(false); setSelectedSourceClassIds([]); }}>
@@ -1442,11 +1476,11 @@ export default function ClassesScreen() {
                         </Text>
                         <ScrollView style={{ maxHeight: 300 }}>
                             {classes
-                                .filter(c => {
+                                .filter((c: any) => {
                                     if (c.id === selectedClassId || c.mergedToClassId) return false;
-                                    const sourceCycle = academicCycles.find(ac => ac.id === c.cycleId);
-                                    const targetClass = classes.find(tc => tc.id === selectedClassId);
-                                    const targetCycle = academicCycles.find(ac => ac.id === targetClass?.cycleId);
+                                    const sourceCycle = academicCycles.find((ac: any) => ac.id === c.cycleId);
+                                    const targetClass = classes.find((tc: any) => tc.id === selectedClassId);
+                                    const targetCycle = academicCycles.find((ac: any) => ac.id === targetClass?.cycleId);
 
                                     if (!sourceCycle || !targetCycle) return false;
 
@@ -1455,9 +1489,9 @@ export default function ClassesScreen() {
 
                                     return sourceCycle.name.toLowerCase().includes('verano') && sourceYear === targetYear;
                                 })
-                                .map(c => {
-                                    const cycleName = academicCycles.find(ac => ac.id === c.cycleId)?.name || 'Ciclo Desconocido';
-                                    const sourceEnrolled = enrollments.filter(e => e.classId === c.id && e.status === 'active').length;
+                                .map((c: any) => {
+                                    const cycleName = academicCycles.find((ac: any) => ac.id === c.cycleId)?.name || 'Ciclo Desconocido';
+                                    const sourceEnrolled = enrollments.filter((e: any) => e.classId === c.id && e.status === 'active').length;
                                     const isSelected = selectedSourceClassIds.includes(c.id);
                                     return (
                                         <TouchableOpacity
@@ -1468,7 +1502,7 @@ export default function ClassesScreen() {
                                             ]}
                                             onPress={() => {
                                                 if (isSelected) {
-                                                    setSelectedSourceClassIds(prev => prev.filter(id => id !== c.id));
+                                                    setSelectedSourceClassIds(prev => prev.filter((id: string) => id !== c.id));
                                                 } else {
                                                     setSelectedSourceClassIds(prev => [...prev, c.id]);
                                                 }
@@ -1477,7 +1511,14 @@ export default function ClassesScreen() {
                                             <View style={{ flex: 1 }}>
                                                 <Text style={{ color: colors.text, fontWeight: 'bold' }}>{c.courseName}</Text>
                                                 <Text style={{ color: colors.icon, fontSize: 12 }}>{cycleName} - {c.teacherName}</Text>
-                                                <Text style={{ color: colors.primary, fontSize: 12, marginTop: 4 }}>
+                                                <View style={{ marginTop: 2 }}>
+                                                    {c.schedules.map((s: any, idx: number) => (
+                                                        <Text key={idx} style={{ color: colors.icon, fontSize: 11 }}>
+                                                            {s.day}: <Text style={{ color: c.color || colors.primary, fontWeight: '500' }}>{s.startTime} - {calculateEndTime(s.startTime, c.duration)}</Text>
+                                                        </Text>
+                                                    ))}
+                                                </View>
+                                                <Text style={{ color: colors.primary, fontSize: 11, marginTop: 4, fontWeight: 'bold' }}>
                                                     {sourceEnrolled} alumnos activos
                                                 </Text>
                                             </View>
@@ -1510,6 +1551,328 @@ export default function ClassesScreen() {
                 </View>
                 <Text style={styles.trashText}>Suelta para eliminar</Text>
             </Animated.View>
+            {/* Delete Confirmation JSX (Unchanged) */}
+
+            {/* Modal para Confirmar Matrícula con Fecha */}
+            <Modal visible={isEnrollConfirmVisible} transparent animationType="slide">
+                <View style={styles.modalOverlay}>
+                    <View style={[styles.modalContent, { backgroundColor: colors.modal }]}>
+                        <View style={styles.modalHeader}>
+                            <Text style={[styles.modalTitle, { color: colors.text }]}>Confirmar Matrícula</Text>
+                            <TouchableOpacity onPress={() => setIsEnrollConfirmVisible(false)}>
+                                <X color={colors.text} size={24} />
+                            </TouchableOpacity>
+                        </View>
+                        <Text style={[styles.label, { color: colors.text, marginBottom: 15 }]}>
+                            ¿Deseas matricular a "{studentToEnroll?.firstName} {studentToEnroll?.lastName}" en "{classes.find(c => c.id === selectedClassId)?.courseName}"?
+                        </Text>
+
+                        <View style={styles.formGroup}>
+                            <Text style={[styles.label, { color: colors.text }]}>Fecha efectiva de inscripción:</Text>
+                            {Platform.OS === 'web' ? (
+                                React.createElement('input', {
+                                    type: 'date',
+                                    value: enrollDate.toISOString().split('T')[0],
+                                    onChange: (e: any) => {
+                                        if (e.target.value) setEnrollDate(new Date(`${e.target.value}T12:00:00`));
+                                    },
+                                    style: { padding: '10px', borderRadius: '10px', border: `1px solid ${colors.border}`, color: colors.text, backgroundColor: 'transparent', outline: 'none', fontSize: '16px' }
+                                })
+                            ) : Platform.OS === 'ios' ? (
+                                <DateTimePicker
+                                    value={enrollDate}
+                                    mode="date"
+                                    display="spinner"
+                                    onChange={(event: any, selectedDate?: Date) => {
+                                        if (selectedDate) setEnrollDate(selectedDate);
+                                    }}
+                                    textColor={colors.text}
+                                    style={{ height: 120 }}
+                                />
+                            ) : (
+                                <>
+                                    <TouchableOpacity
+                                        style={[styles.inputWrapper, { borderColor: colors.border }]}
+                                        onPress={() => setShowEnrollDatePicker(true)}
+                                    >
+                                        <CalendarDays color={colors.text} size={20} />
+                                        <Text style={[styles.input, { color: colors.text }]}>
+                                            {enrollDate.toLocaleDateString()}
+                                        </Text>
+                                    </TouchableOpacity>
+                                    {showEnrollDatePicker && (
+                                        <DateTimePicker
+                                            value={enrollDate}
+                                            mode="date"
+                                            display="default"
+                                            onChange={(event: any, selectedDate?: Date) => {
+                                                setShowEnrollDatePicker(false);
+                                                if (selectedDate) setEnrollDate(selectedDate);
+                                            }}
+                                        />
+                                    )}
+                                </>
+                            )}
+                        </View>
+
+                        <View style={styles.row}>
+                            <TouchableOpacity
+                                style={[styles.saveButton, { flex: 1, backgroundColor: colors.border, marginRight: 10 }]}
+                                onPress={() => setIsEnrollConfirmVisible(false)}
+                            >
+                                <Text style={[styles.saveText, { color: colors.text }]}>Cancelar</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[styles.saveButton, { flex: 1, backgroundColor: colors.primary }]}
+                                onPress={() => {
+                                    if (selectedClassId && studentToEnroll) {
+                                        const dateStr = enrollDate.toISOString().split('T')[0];
+                                        const withdrawnEnrollment = enrollments.find(e => e.studentId === studentToEnroll.id && e.classId === selectedClassId && e.status === 'withdrawn');
+
+                                        if (withdrawnEnrollment) {
+                                            updateEnrollment({
+                                                ...withdrawnEnrollment,
+                                                status: 'active',
+                                                date: dateStr,
+                                                withdrawalDate: undefined
+                                            });
+                                        } else {
+                                            addEnrollment({
+                                                id: `${studentToEnroll.id} -${selectedClassId} -${Date.now()} `,
+                                                studentId: studentToEnroll.id,
+                                                classId: selectedClassId,
+                                                date: dateStr,
+                                                status: 'active',
+                                                isImported: false
+                                            });
+                                        }
+                                        setEnrolledInSelected(prev => [...prev, studentToEnroll.id]);
+                                        setIsEnrollConfirmVisible(false);
+                                        setStudentToEnroll(null);
+                                    }
+                                }}
+                            >
+                                <Text style={styles.saveText}>Matricular</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+
+            {/* Modal para Confirmar Traslado con Fecha */}
+            <Modal visible={isMoveConfirmVisible} transparent animationType="slide">
+                <View style={styles.modalOverlay}>
+                    <View style={[styles.modalContent, { backgroundColor: colors.modal }]}>
+                        <View style={styles.modalHeader}>
+                            <Text style={[styles.modalTitle, { color: colors.text }]}>Confirmar Traslado</Text>
+                            <TouchableOpacity onPress={() => setIsEnrollConfirmVisible(false)}>
+                                <X color={colors.text} size={24} />
+                            </TouchableOpacity>
+                        </View>
+                        <Text style={[styles.label, { color: colors.text, marginBottom: 15 }]}>
+                            El alumno será retirado de su clase actual e ingresado a la nueva conservando su historial previo de pagos.
+                        </Text>
+
+                        <View style={styles.formGroup}>
+                            <Text style={[styles.label, { color: colors.text }]}>Fecha efectiva de traslado:</Text>
+                            {Platform.OS === 'web' ? (
+                                React.createElement('input', {
+                                    type: 'date',
+                                    value: moveDate.toISOString().split('T')[0],
+                                    onChange: (e: any) => {
+                                        if (e.target.value) setMoveDate(new Date(`${e.target.value}T12:00:00`));
+                                    },
+                                    style: { padding: '10px', borderRadius: '10px', border: `1px solid ${colors.border}`, color: colors.text, backgroundColor: 'transparent', outline: 'none', fontSize: '16px' }
+                                })
+                            ) : Platform.OS === 'ios' ? (
+                                <DateTimePicker
+                                    value={moveDate}
+                                    mode="date"
+                                    display="spinner"
+                                    onChange={(event: any, selectedDate?: Date) => {
+                                        if (selectedDate) setMoveDate(selectedDate);
+                                    }}
+                                    textColor={colors.text}
+                                    style={{ height: 120 }}
+                                />
+                            ) : (
+                                <>
+                                    <TouchableOpacity
+                                        style={[styles.inputWrapper, { borderColor: colors.border }]}
+                                        onPress={() => setShowMoveDatePicker(true)}
+                                    >
+                                        <CalendarDays color={colors.text} size={20} />
+                                        <Text style={[styles.input, { color: colors.text }]}>
+                                            {moveDate.toLocaleDateString()}
+                                        </Text>
+                                    </TouchableOpacity>
+                                    {showMoveDatePicker && (
+                                        <DateTimePicker
+                                            value={moveDate}
+                                            mode="date"
+                                            display="default"
+                                            onChange={(event: any, selectedDate?: Date) => {
+                                                setShowMoveDatePicker(false);
+                                                if (selectedDate) setMoveDate(selectedDate);
+                                            }}
+                                        />
+                                    )}
+                                </>
+                            )}
+                        </View>
+
+                        <View style={styles.row}>
+                            <TouchableOpacity
+                                style={[styles.saveButton, { flex: 1, backgroundColor: colors.border, marginRight: 10 }]}
+                                onPress={() => setIsMoveConfirmVisible(false)}
+                            >
+                                <Text style={[styles.saveText, { color: colors.text }]}>Cancelar</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[styles.saveButton, { flex: 1, backgroundColor: colors.primary }]}
+                                onPress={() => {
+                                    // Perform move
+                                    const currentEnrollment = enrollments.find((e: any) => e.classId === selectedClassId && e.studentId === moveStudentId && e.status === 'active');
+                                    if (!currentEnrollment) return; //Safety Catch
+
+                                    const targetClass = classes.find((c: any) => c.id === targetMoveClassId);
+                                    if (!targetClass) return; //Safety Catch
+
+                                    const dateStr = moveDate.toISOString().split('T')[0];
+
+                                    // 1. Withdraw from current
+                                    updateEnrollment({
+                                        ...currentEnrollment,
+                                        status: 'withdrawn',
+                                        withdrawalDate: dateStr
+                                    });
+
+                                    // 2. Enroll in target
+                                    const withdrawnTarget = enrollments.find((e: any) => e.studentId === moveStudentId && e.classId === targetMoveClassId && e.status === 'withdrawn');
+                                    const isImportedFlag = currentEnrollment.isImported;
+                                    const originalImportId = currentEnrollment.originalImportedClassId || (isImportedFlag ? selectedClassId : undefined);
+
+                                    if (withdrawnTarget) {
+                                        updateEnrollment({
+                                            ...withdrawnTarget,
+                                            status: 'active',
+                                            date: dateStr,
+                                            withdrawalDate: undefined,
+                                            isImported: isImportedFlag,
+                                            originalImportedClassId: originalImportId ?? undefined
+                                        });
+                                    } else {
+                                        addEnrollment({
+                                            id: `${moveStudentId} -${targetMoveClassId} -${Date.now()} `,
+                                            studentId: moveStudentId!, //Fix null problem
+                                            classId: targetMoveClassId!, //Fix null problem
+                                            date: dateStr,
+                                            status: 'active',
+                                            isImported: isImportedFlag,
+                                            originalImportedClassId: originalImportId ?? undefined
+                                        });
+                                    }
+
+                                    setEnrolledInSelected(prev => prev.filter((id: string) => id !== moveStudentId));
+                                    setMoveStudentId(null);
+                                    setTargetMoveClassId(null);
+                                    setIsMoveConfirmVisible(false);
+                                }}
+                            >
+                                <Text style={styles.saveText}>Trasladar</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+
+            {/* Modal para Editar Fecha de Inscripción Activa */}
+            <Modal visible={isEditDateVisible} transparent animationType="slide">
+                <View style={styles.modalOverlay}>
+                    <View style={[styles.modalContent, { backgroundColor: colors.modal }]}>
+                        <View style={styles.modalHeader}>
+                            <Text style={[styles.modalTitle, { color: colors.text }]}>Editar Fecha de Matrícula</Text>
+                            <TouchableOpacity onPress={() => setIsEditDateVisible(false)}>
+                                <X color={colors.text} size={24} />
+                            </TouchableOpacity>
+                        </View>
+
+                        <Text style={[styles.label, { color: colors.text, marginBottom: 15 }]}>
+                            Estás modificando la fecha en la que "{students.find((s: any) => s.id === enrollmentToEdit?.studentId)?.firstName}" fue matriculado(a). Esto recalculará todas las deudas pendientes para esta clase a partir de la nueva fecha elegida.
+                        </Text>
+
+                        <View style={styles.formGroup}>
+                            <Text style={[styles.label, { color: colors.text }]}>Nueva Fecha de Matrícula:</Text>
+                            {Platform.OS === 'web' ? (
+                                React.createElement('input', {
+                                    type: 'date',
+                                    value: editDate.toISOString().split('T')[0],
+                                    onChange: (e: any) => {
+                                        if (e.target.value) setEditDate(new Date(`${e.target.value}T12:00:00`));
+                                    },
+                                    style: { padding: '10px', borderRadius: '10px', border: `1px solid ${colors.border}`, color: colors.text, backgroundColor: 'transparent', outline: 'none', fontSize: '16px' }
+                                })
+                            ) : Platform.OS === 'ios' ? (
+                                <DateTimePicker
+                                    value={editDate}
+                                    mode="date"
+                                    display="spinner"
+                                    onChange={(event: any, selectedDate?: Date) => {
+                                        if (selectedDate) setEditDate(selectedDate);
+                                    }}
+                                    textColor={colors.text}
+                                    style={{ height: 120 }}
+                                />
+                            ) : (
+                                <>
+                                    <TouchableOpacity
+                                        style={[styles.inputWrapper, { borderColor: colors.border }]}
+                                        onPress={() => setShowEditDatePicker(true)}
+                                    >
+                                        <CalendarDays color={colors.text} size={20} />
+                                        <Text style={[styles.input, { color: colors.text }]}>
+                                            {editDate.toLocaleDateString()}
+                                        </Text>
+                                    </TouchableOpacity>
+                                    {showEditDatePicker && (
+                                        <DateTimePicker
+                                            value={editDate}
+                                            mode="date"
+                                            display="default"
+                                            onChange={(event: any, selectedDate?: Date) => {
+                                                setShowEditDatePicker(false);
+                                                if (selectedDate) setEditDate(selectedDate);
+                                            }}
+                                        />
+                                    )}
+                                </>
+                            )}
+                        </View>
+
+                        <View style={styles.row}>
+                            <TouchableOpacity
+                                style={[styles.saveButton, { flex: 1, backgroundColor: colors.border, marginRight: 10 }]}
+                                onPress={() => setIsEditDateVisible(false)}
+                            >
+                                <Text style={[styles.saveText, { color: colors.text }]}>Cancelar</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[styles.saveButton, { flex: 1, backgroundColor: colors.primary }]}
+                                onPress={async () => {
+                                    if (!enrollmentToEdit) return;
+                                    const dateStr = editDate.toISOString().split('T')[0];
+                                    await updateEnrollmentDate(enrollmentToEdit.id, dateStr);
+                                    setIsEditDateVisible(false);
+                                    setEnrollmentToEdit(null);
+                                }}
+                            >
+                                <Text style={styles.saveText}>Guardar y Recalcular</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+
         </View>
     );
 }
@@ -1530,7 +1893,7 @@ const styles = StyleSheet.create({
         marginHorizontal: 20,
         paddingHorizontal: 15,
         height: 52,
-        borderRadius: 24, // Consistent 24px
+        borderRadius: 32, // Upgraded
         borderWidth: 1,
         marginBottom: 15,
         overflow: 'hidden',
@@ -1543,7 +1906,7 @@ const styles = StyleSheet.create({
     card: {
         flexDirection: 'row',
         padding: 15,
-        borderRadius: 24, // Consistent with liquid glass
+        borderRadius: 32, // Upgraded to Elite 32px
         borderWidth: 1,
         alignItems: 'center',
         overflow: 'hidden',
@@ -1552,19 +1915,9 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.05,
         shadowRadius: 10,
-        elevation: 2,
+        elevation: Platform.OS === 'android' ? 0 : 6
     },
-    liquidHighlight: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        height: '40%',
-        backgroundColor: 'rgba(255, 255, 255, 0.25)', // Specular reflection
-        borderTopLeftRadius: 24,
-        borderTopRightRadius: 24,
-    },
-    cardMain: { flex: 1, flexDirection: 'row', alignItems: 'center' },
+    cardMain: { flex: 1, flexDirection: 'row', alignItems: 'center', flexShrink: 1 },
     courseIcon: { width: 48, height: 48, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
     iconBox: { width: 48, height: 48, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
     cardInfo: { flex: 1, marginLeft: 15 },
@@ -1638,7 +1991,6 @@ const styles = StyleSheet.create({
         borderRadius: 18,
         justifyContent: 'center',
         alignItems: 'center',
-        marginLeft: 10,
     },
     enrollBtn: {
         width: 36,
@@ -1661,11 +2013,11 @@ const styles = StyleSheet.create({
         borderWidth: 2,
         borderColor: 'transparent'
     },
-    cardContent: { flex: 1, marginLeft: 15 },
+    cardContent: { flex: 1, marginLeft: 15, flexShrink: 1 },
     courseTitle: { fontSize: 16, fontWeight: 'bold', marginBottom: 4 },
     infoText: { fontSize: 13, marginLeft: 5 },
     timeText: { fontSize: 13, fontWeight: 'bold' },
-    cardActions: { flexDirection: 'row', alignItems: 'center' },
+    cardActions: { flexDirection: 'column', alignItems: 'center', gap: 10 },
     actionButton: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -1689,7 +2041,7 @@ const styles = StyleSheet.create({
         borderRadius: 40,
         justifyContent: 'center',
         alignItems: 'center',
-        elevation: 10,
+        elevation: Platform.OS === 'android' ? 0 : 10,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 5 },
         shadowOpacity: 0.3,
@@ -1727,7 +2079,17 @@ const styles = StyleSheet.create({
         marginLeft: 6,
         fontWeight: 'bold',
         fontSize: 12
-    }
+    },
+    liquidHighlight: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: '50%',
+        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        borderTopLeftRadius: 32,
+        borderTopRightRadius: 32,
+    },
 });
 
 

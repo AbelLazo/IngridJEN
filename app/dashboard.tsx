@@ -6,9 +6,10 @@ import { BlurView } from 'expo-blur';
 import { useRouter } from 'expo-router';
 import { AlertCircle, Award, Calendar, ChevronLeft, DollarSign, TrendingUp, Users } from 'lucide-react-native';
 import React, { useMemo } from 'react';
-import { Dimensions, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { Dimensions, Platform, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { BarChart, PieChart } from 'react-native-gifted-charts';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 
 export default function DashboardScreen() {
     const { width } = useWindowDimensions();
@@ -276,11 +277,11 @@ export default function DashboardScreen() {
                                 intensity={90}
                                 tint={colorScheme === 'light' ? 'light' : 'dark'}
                                 style={[styles.kpiCard, {
-                                    backgroundColor: colorScheme === 'light' ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.08)',
-                                    borderColor: colorScheme === 'light' ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.15)'
+                                    backgroundColor: colorScheme === 'light' ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.1)',
+                                    borderColor: colorScheme === 'light' ? 'rgba(0, 0, 0, 0.15)' : 'rgba(255, 255, 255, 0.15)'
                                 }]}
                             >
-                                <View style={styles.liquidHighlight} />
+
                                 <View style={[styles.kpiIcon, { backgroundColor: colorScheme === 'light' ? '#4C6EF515' : '#4C6EF530' }]}>
                                     <Users size={22} color="#4C6EF5" />
                                 </View>
@@ -292,11 +293,11 @@ export default function DashboardScreen() {
                                 intensity={90}
                                 tint={colorScheme === 'light' ? 'light' : 'dark'}
                                 style={[styles.kpiCard, {
-                                    backgroundColor: colorScheme === 'light' ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.08)',
-                                    borderColor: colorScheme === 'light' ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.15)'
+                                    backgroundColor: colorScheme === 'light' ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.1)',
+                                    borderColor: colorScheme === 'light' ? 'rgba(0, 0, 0, 0.15)' : 'rgba(255, 255, 255, 0.15)'
                                 }]}
                             >
-                                <View style={styles.liquidHighlight} />
+
                                 <View style={[styles.kpiIcon, { backgroundColor: colorScheme === 'light' ? '#12B88615' : '#12B88630' }]}>
                                     <DollarSign size={22} color="#12B886" />
                                 </View>
@@ -308,11 +309,11 @@ export default function DashboardScreen() {
                                 intensity={90}
                                 tint={colorScheme === 'light' ? 'light' : 'dark'}
                                 style={[styles.kpiCard, {
-                                    backgroundColor: colorScheme === 'light' ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.08)',
-                                    borderColor: colorScheme === 'light' ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.15)'
+                                    backgroundColor: colorScheme === 'light' ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.1)',
+                                    borderColor: colorScheme === 'light' ? 'rgba(0, 0, 0, 0.15)' : 'rgba(255, 255, 255, 0.15)'
                                 }]}
                             >
-                                <View style={styles.liquidHighlight} />
+
                                 <View style={[styles.kpiIcon, { backgroundColor: colorScheme === 'light' ? '#FA525215' : '#FA525230' }]}>
                                     <TrendingUp size={22} color="#FA5252" />
                                 </View>
@@ -325,11 +326,11 @@ export default function DashboardScreen() {
                                 tint={colorScheme === 'light' ? 'light' : 'dark'}
                                 style={[styles.kpiCard, {
                                     marginRight: 40,
-                                    backgroundColor: colorScheme === 'light' ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.08)',
-                                    borderColor: colorScheme === 'light' ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.15)'
+                                    backgroundColor: colorScheme === 'light' ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.1)',
+                                    borderColor: 'rgba(0,0,0,0.15)'
                                 }]}
                             >
-                                <View style={styles.liquidHighlight} />
+
                                 <View style={[styles.kpiIcon, { backgroundColor: colorScheme === 'light' ? '#FAB00515' : '#FAB00530' }]}>
                                     <Award size={22} color="#FAB005" />
                                 </View>
@@ -347,11 +348,11 @@ export default function DashboardScreen() {
                         intensity={90}
                         tint={colorScheme === 'light' ? 'light' : 'dark'}
                         style={[styles.chartCard, {
-                            backgroundColor: colorScheme === 'light' ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.08)',
-                            borderColor: colorScheme === 'light' ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.15)'
+                            backgroundColor: colorScheme === 'light' ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.1)',
+                            borderColor: 'rgba(0,0,0,0.15)'
                         }]}
                     >
-                        <View style={styles.liquidHighlight} />
+
                         <Text style={{ color: colors.text, fontWeight: '800', marginBottom: 20, alignSelf: 'flex-start', letterSpacing: -0.5 }}>Ingresos Históricos (S/ Por Mes)</Text>
                         <View style={{ width: '100%', alignItems: 'center' }}>
                             <BarChart
@@ -372,6 +373,7 @@ export default function DashboardScreen() {
                                 frontColor={colors.primary}
                                 isAnimated
                                 showFractionalValues={false}
+                                backgroundColor="transparent"
                             />
                         </View>
                     </BlurView>
@@ -380,12 +382,12 @@ export default function DashboardScreen() {
                         intensity={90}
                         tint={colorScheme === 'light' ? 'light' : 'dark'}
                         style={[styles.chartCard, {
-                            backgroundColor: colorScheme === 'light' ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.08)',
-                            borderColor: colorScheme === 'light' ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.15)',
+                            backgroundColor: colorScheme === 'light' ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.1)',
+                            borderColor: 'rgba(0,0,0,0.15)',
                             alignItems: 'center'
                         }]}
                     >
-                        <View style={styles.liquidHighlight} />
+
                         <Text style={{ color: colors.text, fontWeight: '800', marginBottom: 20, alignSelf: 'flex-start', letterSpacing: -0.5 }}>Balance de Cuotas</Text>
                         {totalCollected === 0 && totalDebt === 0 ? (
                             <Text style={{ color: colors.icon, marginVertical: 20 }}>No hay cuotas registradas en este ciclo.</Text>
@@ -397,7 +399,7 @@ export default function DashboardScreen() {
                                         donut
                                         radius={105}
                                         innerRadius={78}
-                                        innerCircleColor={colorScheme === 'dark' ? '#2D2621' : '#F5F5F7'}
+                                        innerCircleColor="transparent"
                                         centerLabelComponent={() => {
                                             const total = totalCollected + totalDebt;
                                             return (
@@ -437,11 +439,11 @@ export default function DashboardScreen() {
                                 intensity={90}
                                 tint={colorScheme === 'light' ? 'light' : 'dark'}
                                 style={[styles.listItem, {
-                                    backgroundColor: colorScheme === 'light' ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.08)',
-                                    borderColor: colorScheme === 'light' ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.15)'
+                                    backgroundColor: colorScheme === 'light' ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.1)',
+                                    borderColor: colorScheme === 'light' ? 'rgba(0, 0, 0, 0.15)' : 'rgba(255, 255, 255, 0.15)'
                                 }]}
                             >
-                                <View style={[styles.liquidHighlight, { opacity: 0.8 }]} />
+
                                 <View style={[styles.listRank, { backgroundColor: i === 0 ? '#FAB005' : i === 1 ? '#adb5bd' : '#cd7f32' }]}>
                                     <Text style={{ color: '#fff', fontWeight: 'bold' }}>{i + 1}</Text>
                                 </View>
@@ -465,10 +467,10 @@ export default function DashboardScreen() {
                                 tint={colorScheme === 'light' ? 'light' : 'dark'}
                                 style={[styles.listItem, {
                                     backgroundColor: colorScheme === 'light' ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.08)',
-                                    borderColor: colorScheme === 'light' ? 'rgba(255,255,255,1)' : 'rgba(255,255,255,0.15)'
+                                    borderColor: colorScheme === 'light' ? 'rgba(0, 0, 0, 0.15)' : 'rgba(255, 255, 255, 0.15)'
                                 }]}
                             >
-                                <View style={[styles.liquidHighlight, { opacity: 0.8 }]} />
+
                                 <View style={[styles.listRank, { backgroundColor: '#FA5252' }]}>
                                     <AlertCircle size={16} color="#fff" />
                                 </View>
@@ -515,40 +517,30 @@ const styles = StyleSheet.create({
         paddingVertical: 12, // Espacio para que no se corten las sombras
     },
     kpiCard: {
-        borderRadius: 24, padding: 20, marginRight: 16,
+        borderRadius: 32, padding: 20, marginRight: 16,
         width: 160, overflow: 'hidden',
         borderWidth: 1.5,
         alignItems: 'flex-start',
-        shadowColor: '#000', shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.08, shadowRadius: 15, elevation: 5
+        shadowColor: '#000', shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.1, shadowRadius: 18, elevation: Platform.OS === 'android' ? 0 : 8
     },
-    liquidHighlight: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        height: '50%',
-        backgroundColor: 'rgba(255, 255, 255, 0.4)',
-        borderTopLeftRadius: 24,
-        borderTopRightRadius: 24,
-    },
-    kpiIcon: { width: 42, height: 42, borderRadius: 14, justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
+    kpiIcon: { width: 44, height: 44, borderRadius: 16, justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
     kpiValue: { fontSize: 22, fontWeight: '800', letterSpacing: -0.6, marginBottom: 4 },
     kpiLabel: { fontSize: 13, fontWeight: '600', letterSpacing: -0.2 },
     content: { paddingTop: 24, paddingBottom: 40 },
     contentTablet: { maxWidth: 1000, alignSelf: 'center', width: '100%' },
     sectionTitle: { fontWeight: '800', marginHorizontal: 20, marginBottom: 16, letterSpacing: -0.5 },
     chartCard: {
-        marginHorizontal: 20, borderRadius: 24, borderWidth: 1.5, padding: 20, marginBottom: 15,
+        marginHorizontal: 20, borderRadius: 32, borderWidth: 1.5, padding: 20, marginBottom: 15,
         alignItems: 'center', overflow: 'hidden',
-        shadowColor: '#000', shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.08, shadowRadius: 15, elevation: 5
+        shadowColor: '#000', shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.1, shadowRadius: 18, elevation: Platform.OS === 'android' ? 0 : 8
     },
     listItem: {
-        flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 24,
+        flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 32,
         borderWidth: 1.5, marginBottom: 14, overflow: 'hidden',
-        shadowColor: '#000', shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.08, shadowRadius: 12, elevation: 5
+        shadowColor: '#000', shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.1, shadowRadius: 15, elevation: Platform.OS === 'android' ? 0 : 6
     },
     listRank: {
         width: 30, height: 30, borderRadius: 15, justifyContent: 'center',

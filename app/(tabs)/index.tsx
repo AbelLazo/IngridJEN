@@ -7,7 +7,7 @@ import { BlurView } from 'expo-blur';
 import { useRouter } from 'expo-router';
 import { Calendar, Check, ChevronDown, CloudSun, LogOut, Moon, Sun, X } from 'lucide-react-native';
 import React, { useMemo, useState } from 'react';
-import { Modal, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, TouchableWithoutFeedback, View, useWindowDimensions } from 'react-native';
+import { Modal, Platform, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, TouchableWithoutFeedback, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function DashboardScreen() {
@@ -145,12 +145,12 @@ export default function DashboardScreen() {
                   styles.summaryCard,
                   isTablet && styles.summaryCardTablet,
                   {
-                    backgroundColor: colorScheme === 'light' ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.08)',
+                    backgroundColor: colorScheme === 'light' ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.08)',
                     borderColor: colorScheme === 'light' ? 'rgba(255,255,255,1)' : 'rgba(255,255,255,0.15)'
                   }
                 ]}
               >
-                <View style={[styles.liquidHighlight, { height: '50%', opacity: 0.8 }]} />
+
                 <View style={styles.summaryItem}>
                   <Text style={[styles.summaryLabel, { fontSize: isTablet ? 14 : 12, color: colors.text, opacity: 0.7 }]}>Estudiantes</Text>
                   <Text style={[styles.summaryValue, { fontSize: isTablet ? 28 : 24, color: colors.text }]}>{activeStudentsCount}</Text>
@@ -180,13 +180,11 @@ export default function DashboardScreen() {
       >
         <TouchableWithoutFeedback onPress={() => setIsCycleMenuVisible(false)}>
           <View style={styles.modalOverlay}>
-            <BlurView
-              intensity={95}
-              tint={colorScheme === 'light' ? 'light' : 'dark'}
+            <View
               style={[
                 styles.menuContainer,
                 {
-                  backgroundColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.8)' : 'rgba(15, 15, 15, 0.85)',
+                  backgroundColor: colors.modal,
                   borderColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.9)' : 'rgba(255, 255, 255, 0.15)',
                 }
               ]}
@@ -215,7 +213,7 @@ export default function DashboardScreen() {
                           shadowOffset: { width: 0, height: 4 },
                           shadowOpacity: 0.3,
                           shadowRadius: 8,
-                          elevation: 4,
+                          elevation: Platform.OS === 'android' ? 0 : 4,
                         }
                       ]}
                       onPress={() => {
@@ -248,7 +246,7 @@ export default function DashboardScreen() {
                   );
                 })}
               </View>
-            </BlurView>
+            </View>
           </View>
         </TouchableWithoutFeedback>
       </Modal>
@@ -343,7 +341,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.1,
     shadowRadius: 15,
-    elevation: 5,
+    elevation: Platform.OS === 'android' ? 0 : 5,
   },
   summaryCardTablet: {
     padding: 24,
@@ -423,23 +421,13 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.15,
     shadowRadius: 20,
-    elevation: 10,
+    elevation: Platform.OS === 'android' ? 0 : 10,
     overflow: 'hidden',
   },
   menuItemsWrapper: {
     paddingHorizontal: 8,
     paddingBottom: 16,
     gap: 10,
-  },
-  liquidHighlight: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: '30%',
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
   },
   menuHeader: {
     flexDirection: 'row',

@@ -3,7 +3,7 @@ import * as Google from 'expo-auth-session/providers/google';
 import { BlurView } from 'expo-blur';
 import { useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
-import { createUserWithEmailAndPassword, GoogleAuthProvider, signInWithCredential, signInWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, GoogleAuthProvider, sendPasswordResetEmail, signInWithCredential, signInWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import { Eye, EyeOff, Lock, Mail } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
@@ -85,6 +85,30 @@ export default function LoginScreen() {
         }
     };
 
+    const handleResetPassword = async () => {
+        if (!email.trim()) {
+            Alert.alert('Correo Requerido', 'Por favor, ingresa tu correo electrónico para enviarte las instrucciones de recuperación.');
+            return;
+        }
+
+        try {
+            setIsLoading(true);
+            await sendPasswordResetEmail(auth, email.trim().toLowerCase());
+            Alert.alert('Éxito', 'Se ha enviado un correo con las instrucciones para restablecer tu contraseña. Revisa tu bandeja de entrada o spam.');
+        } catch (error: any) {
+            console.error('Password reset error detail:', error);
+            let errorMessage = 'No se pudo enviar el correo de recuperación. Inténtalo más tarde.';
+            if (error.code === 'auth/invalid-email') {
+                errorMessage = 'El formato del correo electrónico no es válido.';
+            } else if (error.code === 'auth/user-not-found') {
+                errorMessage = 'No hay ningún usuario registrado con este correo.';
+            }
+            Alert.alert('Error', errorMessage);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     const handleCreateRootAdmin = async () => {
         // Hidden functionality to create the first admin for testing.
         // In production, users will be created via a dedicated dashboard.
@@ -138,16 +162,17 @@ export default function LoginScreen() {
                             style={[
                                 styles.card,
                                 {
-                                    backgroundColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.08)',
-                                    borderColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 1)' : 'rgba(255, 255, 255, 0.15)'
+                                    backgroundColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.85)' : 'rgba(255, 255, 255, 0.05)',
+                                    borderColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 1)' : 'rgba(255, 255, 255, 0.1)',
+                                    overflow: 'hidden'
                                 }
                             ]}
                         >
-                            <View style={[styles.liquidHighlight, { height: '50%', opacity: 0.8 }]} />
+
 
                             <View style={styles.inputContainer}>
                                 <Text style={[styles.label, { color: colors.text }]}>Correo Electrónico</Text>
-                                <View style={[styles.inputWrapper, { backgroundColor: colorScheme === 'light' ? 'rgba(0,0,0,0.03)' : 'rgba(255,255,255,0.05)', borderColor: colorScheme === 'light' ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.1)' }]}>
+                                <View style={[styles.inputWrapper, { backgroundColor: colorScheme === 'light' ? 'rgba(0, 0, 0, 0.04)' : 'rgba(255, 255, 255, 0.03)', borderColor: colorScheme === 'light' ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.08)' }]}>
                                     <Mail color={colors.text} size={20} style={styles.inputIcon} />
                                     <TextInput
                                         style={[styles.input, { color: colors.text }]}
@@ -167,7 +192,7 @@ export default function LoginScreen() {
 
                             <View style={styles.inputContainer}>
                                 <Text style={[styles.label, { color: colors.text }]}>Contraseña</Text>
-                                <View style={[styles.inputWrapper, { backgroundColor: colorScheme === 'light' ? 'rgba(0,0,0,0.03)' : 'rgba(255,255,255,0.05)', borderColor: colorScheme === 'light' ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.1)' }]}>
+                                <View style={[styles.inputWrapper, { backgroundColor: colorScheme === 'light' ? 'rgba(0, 0, 0, 0.04)' : 'rgba(255, 255, 255, 0.03)', borderColor: colorScheme === 'light' ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.08)' }]}>
                                     <Lock color={colors.text} size={20} style={styles.inputIcon} />
                                     <TextInput
                                         ref={passwordInputRef}
@@ -184,6 +209,9 @@ export default function LoginScreen() {
                                         {showPassword ? <EyeOff size={20} color={colors.text + '80'} /> : <Eye size={20} color={colors.text + '80'} />}
                                     </TouchableOpacity>
                                 </View>
+                                <TouchableOpacity onPress={handleResetPassword} style={{ marginTop: 10, alignSelf: 'flex-end', marginRight: 4 }}>
+                                    <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '600' }}>¿Olvidaste tu contraseña?</Text>
+                                </TouchableOpacity>
                             </View>
 
                             <TouchableOpacity
@@ -192,7 +220,6 @@ export default function LoginScreen() {
                                     {
                                         backgroundColor: colors.primary,
                                         opacity: isLoading ? 0.7 : 1,
-                                        shadowColor: colors.primary,
                                     }
                                 ]}
                                 onPress={handleLogin}
@@ -264,18 +291,9 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 12 },
         shadowOpacity: 0.15,
         shadowRadius: 20,
-        elevation: 8,
+        elevation: Platform.OS === 'android' ? 0 : 8,
     },
-    liquidHighlight: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        backgroundColor: 'rgba(255, 255, 255, 0.25)',
-        borderTopLeftRadius: 32,
-        borderTopRightRadius: 32,
-        zIndex: 0,
-    },
+
     inputContainer: {
         marginBottom: 20,
     },
@@ -310,7 +328,7 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 6 },
         shadowOpacity: 0.4,
         shadowRadius: 12,
-        elevation: 6,
+        elevation: Platform.OS === 'android' ? 0 : 6,
     },
     buttonText: {
         fontSize: 16,

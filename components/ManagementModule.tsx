@@ -3,7 +3,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Picker } from '@react-native-picker/picker';
 import { BlurView } from 'expo-blur';
 import { Stack, useRouter } from 'expo-router';
-import { ChevronLeft, Edit3, Phone, Plus, Search, Trash2, UserPlus, X } from 'lucide-react-native';
+import { ChevronLeft, Edit3, Mail, Phone, Plus, Search, Trash2, UserPlus, X } from 'lucide-react-native';
 import React, { useState } from 'react';
 import {
     Alert,
@@ -52,6 +52,11 @@ interface ManagementModuleProps {
     iconExtra?: any;
 }
 
+
+const triggerHaptic = () => {
+    Vibration.vibrate(100);
+};
+
 export default function ManagementModule({ title, type, placeholderExtra, iconExtra: IconExtra }: ManagementModuleProps) {
     const insets = useSafeAreaInsets();
     const router = useRouter();
@@ -70,7 +75,8 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
         phone: '',
         status: 'active' as 'active' | 'inactive',
         activeYears: [new Date().getFullYear().toString()] as string[],
-        selectedSpecialties: [] as string[]
+        selectedSpecialties: [] as string[],
+        email: ''
     });
     const [errors, setErrors] = useState<Record<string, boolean>>({});
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -82,7 +88,8 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
             phone: '',
             status: 'active',
             activeYears: [currentCycleYear],
-            selectedSpecialties: []
+            selectedSpecialties: [],
+            email: ''
         });
         setEditingEntityId(null);
         setErrorMsg(null);
@@ -198,18 +205,29 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
         );
     };
 
-    const DraggableCard = ({ item, colors, onEdit, onDelete }: any) => {
+    const DraggableCard = ({ item, colors, onEdit, onDelete, onDragStart }: any) => {
         const translateX = useSharedValue(0);
         const translateY = useSharedValue(0);
         const isDragging = useSharedValue(false);
 
         const screenHeight = Dimensions.get('window').height;
 
-        const panGesture = Gesture.Pan()
+        const longPressGesture = Gesture.LongPress()
+            .minDuration(1000)
             .onStart(() => {
                 isDragging.value = true;
                 isDraggingGlobal.value = withSpring(1);
-                runOnJS(Vibration.vibrate)(40);
+                if (onDragStart) runOnJS(onDragStart)();
+            });
+
+        const panGesture = Gesture.Pan()
+            .manualActivation(true)
+            .onTouchesMove((event, stateManager) => {
+                if (isDragging.value) {
+                    stateManager.activate();
+                } else {
+                    stateManager.fail();
+                }
             })
             .onUpdate((event) => {
                 translateX.value = event.translationX;
@@ -227,6 +245,8 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
                 isDragging.value = false;
                 isDraggingGlobal.value = withSpring(0);
             });
+
+        const composedGesture = Gesture.Simultaneous(longPressGesture, panGesture);
 
         const animatedStyle = useAnimatedStyle(() => {
             return {
@@ -246,7 +266,7 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
             : item.status;
 
         return (
-            <GestureDetector gesture={panGesture}>
+            <GestureDetector gesture={composedGesture}>
                 <Animated.View style={[styles.cardContainer, animatedStyle]}>
                     <BlurView
                         intensity={90}
@@ -254,8 +274,8 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
                         style={[
                             styles.card,
                             {
-                                backgroundColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.4)' : 'rgba(255, 255, 255, 0.08)',
-                                borderColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.15)',
+                                backgroundColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.1)',
+                                borderColor: colorScheme === 'light' ? 'rgba(0, 0, 0, 0.1)' : 'rgba(255, 255, 255, 0.15)',
                             }
                         ]}
                     >
@@ -277,7 +297,7 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
                                 <Text style={[styles.cardSub, { color: colors.icon, marginLeft: 4 }]}>{item.phone}</Text>
                                 {computedStatus === 'inactive' && (
                                     <Text style={{ fontSize: 10, color: '#FF4444', marginLeft: 10, fontWeight: 'bold' }}>
-                                        (Inactivo{type === 'student' && item.activeYears && !item.activeYears.includes(currentCycleYear) ? ` - Sin registro en este periodo` : ''})
+                                        (Inactivo)
                                     </Text>
                                 )}
                             </View>
@@ -310,6 +330,8 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
         if (!formData.firstName.trim()) newErrors.firstName = true;
         if (!formData.lastName.trim()) newErrors.lastName = true;
         if (!formData.phone.trim() || formData.phone.length !== 9) newErrors.phone = true;
+        if (type === 'teacher' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) newErrors.email = true;
+
 
         if (Object.keys(newErrors).length > 0) {
             setErrors(newErrors);
@@ -337,6 +359,7 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
                 }
 
                 entityData.extra = formData.selectedSpecialties.join(', ');
+                entityData.email = formData.email.trim().toLowerCase(); // Add email for teacher
                 if (editingEntityId) {
                     await updateTeacher(entityData);
                 } else {
@@ -373,7 +396,8 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
             phone: item.phone,
             status: item.status || 'active',
             activeYears: (item as any).activeYears || [currentCycleYear],
-            selectedSpecialties: item.extra ? item.extra.split(', ') : []
+            selectedSpecialties: item.extra ? item.extra.split(', ') : [],
+            email: type === 'teacher' ? (item as any).email || '' : '' // Add email for teacher
         });
         setErrors({});
         setEditingEntityId(item.id);
@@ -426,8 +450,8 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
                 style={[
                     styles.searchContainer,
                     {
-                        backgroundColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.4)' : 'rgba(255, 255, 255, 0.08)',
-                        borderColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.15)',
+                        backgroundColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.1)',
+                        borderColor: colorScheme === 'light' ? 'rgba(0, 0, 0, 0.1)' : 'rgba(255, 255, 255, 0.15)',
                         marginTop: 10
                     }
                 ]}
@@ -466,7 +490,7 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
                     behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                     style={styles.modalOverlay}
                 >
-                    <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
+                    <View style={[styles.modalContent, { backgroundColor: colors.modal }]}>
                         <View style={styles.modalHeader}>
                             <Text style={[styles.modalTitle, { color: colors.text }]}>
                                 {editingEntityId ? 'Editar' : 'Registrar'} {title.slice(0, -1)}
@@ -533,6 +557,31 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
                                 </View>
                                 {errors.phone && <Text style={styles.errorText}>El teléfono debe tener 9 dígitos</Text>}
                             </View>
+
+                            {type === 'teacher' && (
+                                <View style={styles.formGroup}>
+                                    <Text style={[styles.label, { color: colors.text }]}>Correo Electrónico *</Text>
+                                    <View style={[styles.inputWrapper, { borderColor: errors.email ? '#ff4d4d' : colors.border, backgroundColor: errors.email ? '#ff4d4d10' : 'transparent' }]}>
+                                        <Mail size={18} color={errors.email ? '#ff4d4d' : colors.icon} />
+                                        <TextInput
+                                            style={[styles.input, { color: colors.text }]}
+                                            placeholder="correo@ejemplo.com"
+                                            placeholderTextColor={colors.icon}
+                                            autoCapitalize="none"
+                                            keyboardType="email-address"
+                                            value={formData.email}
+                                            onChangeText={(v) => {
+                                                setFormData({ ...formData, email: v });
+                                                if (errors.email) setErrors(prev => ({ ...prev, email: false }));
+                                            }}
+                                        />
+                                    </View>
+                                    <Text style={{ fontSize: 11, color: colors.icon, marginTop: 4, marginLeft: 4 }}>
+                                        Este correo servirá para filtrar el horario de este profesor.
+                                    </Text>
+                                    {errors.email && <Text style={styles.errorText}>El correo no es válido</Text>}
+                                </View>
+                            )}
 
                             <View style={styles.formGroup}>
                                 <Text style={[styles.label, { color: colors.text }]}>Estado en la Institución</Text>
@@ -712,9 +761,9 @@ const styles = StyleSheet.create({
         marginHorizontal: 20,
         paddingHorizontal: 15,
         height: 52,
-        borderRadius: 24, // Consistent 24px premium
-        borderWidth: 1,
-        marginBottom: 20,
+        borderRadius: 32, // Upgraded to Elite 32px
+        borderWidth: 1.5,
+        marginBottom: 16,
         overflow: 'hidden',
     },
     searchInput: {
@@ -733,15 +782,15 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         padding: 16,
-        borderRadius: 24, // Consistent with liquid glass
-        borderWidth: 1,
+        borderRadius: 32, // Consistent with liquid glass elite
+        borderWidth: 1.5,
         overflow: 'hidden',
         // Layered shadows for depth
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.05,
-        shadowRadius: 10,
-        elevation: 5,
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.1,
+        shadowRadius: 15,
+        elevation: Platform.OS === 'android' ? 0 : 8,
     },
     liquidHighlight: {
         position: 'absolute',
@@ -749,9 +798,9 @@ const styles = StyleSheet.create({
         left: 0,
         right: 0,
         height: '50%',
-        backgroundColor: 'rgba(255, 255, 255, 0.25)', // Specular reflection
-        borderTopLeftRadius: 24,
-        borderTopRightRadius: 24,
+        backgroundColor: 'rgba(255, 255, 255, 0.05)', // Minimal reflection to avoid "white box"
+        borderTopLeftRadius: 32,
+        borderTopRightRadius: 32,
     },
     avatar: {
         width: 50,
