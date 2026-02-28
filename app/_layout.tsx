@@ -2,6 +2,7 @@ import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native
 import * as NavigationBar from 'expo-navigation-bar';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import * as Updates from 'expo-updates';
 import React, { useEffect } from 'react';
 import { Platform } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -47,6 +48,41 @@ function RootLayoutNav() {
       NavigationBar.setButtonStyleAsync(colorScheme === 'dark' ? 'light' : 'dark');
     }
   }, [colorScheme]);
+
+  // OTA Updates Check
+  useEffect(() => {
+    async function onFetchUpdateAsync() {
+      try {
+        const update = await Updates.checkForUpdateAsync();
+
+        if (update.isAvailable) {
+          Alert.alert(
+            "Actualización Disponible",
+            "Hay una nueva versión de la aplicación. ¿Deseas actualizar ahora?",
+            [
+              { text: "Más tarde", style: "cancel" },
+              {
+                text: "Actualizar",
+                onPress: async () => {
+                  try {
+                    await Updates.fetchUpdateAsync();
+                    await Updates.reloadAsync();
+                  } catch (e) {
+                    Alert.alert("Error", "No se pudo descargar la actualización.");
+                  }
+                }
+              }
+            ]
+          );
+        }
+      } catch (error) {
+        // Silently fail if testing in Expo Go or error checking for updates
+        console.log("Error checking for updates:", error);
+      }
+    }
+
+    onFetchUpdateAsync();
+  }, []);
 
   useEffect(() => {
     if (isLoading) return;
