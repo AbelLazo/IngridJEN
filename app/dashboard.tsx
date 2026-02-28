@@ -393,19 +393,31 @@ export default function DashboardScreen() {
                             <Text style={{ color: colors.icon, marginVertical: 20 }}>No hay cuotas registradas en este ciclo.</Text>
                         ) : (
                             <View style={{ alignItems: 'center', marginVertical: 10 }}>
-                                <View style={{ alignItems: 'center', justifyContent: 'center', height: 240, width: '100%' }}>
+                                <View style={{ alignItems: 'center', justifyContent: 'center', height: 260, width: '100%' }}>
                                     <PieChart
+                                        key="final-modern-donut"
                                         data={pieChartData}
-                                        donut
-                                        radius={105}
-                                        innerRadius={78}
-                                        innerCircleColor="transparent"
+                                        donut={true}
+                                        radius={110}
+                                        innerRadius={70}
+                                        strokeWidth={2}
+                                        strokeColor={colorScheme === 'light' ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.1)'}
+                                        backgroundColor="transparent"
+                                        innerCircleColor={colorScheme === 'light' ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.1)'}
                                         centerLabelComponent={() => {
                                             const total = totalCollected + totalDebt;
+                                            const totalParts = formatCurrency(total).split('.');
+                                            const integerPart = totalParts[0].substring(3);
+                                            const decimalPart = totalParts[1];
                                             return (
                                                 <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-                                                    <Text style={{ fontSize: 11, color: colors.icon, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1 }}>Total</Text>
-                                                    <Text style={{ fontSize: 22, color: colors.text, fontWeight: '900', marginTop: 1 }}>{formatCurrency(total).split('.')[0]}</Text>
+                                                    <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+                                                        <Text style={{ fontSize: 16, color: colors.text, fontWeight: '400', marginTop: 10, marginRight: 2 }}>S/</Text>
+                                                        <Text style={{ fontSize: 40, color: colors.text, fontWeight: '600', letterSpacing: -1 }}>{integerPart}</Text>
+                                                        <Text style={{ fontSize: 16, color: colors.text, fontWeight: '400', marginTop: 10 }}>.{decimalPart}</Text>
+                                                    </View>
+                                                    <Text style={{ fontSize: 13, color: '#888', fontWeight: '500', marginTop: 4 }}>Total consolidado</Text>
+                                                    <Text style={{ fontSize: 11, color: '#888', marginTop: 2 }}>Ciclo: {activeCycle?.name}</Text>
                                                 </View>
                                             );
                                         }}
@@ -414,14 +426,17 @@ export default function DashboardScreen() {
                                     />
                                 </View>
                                 {/* Custom Legend */}
-                                <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: 30, flexWrap: 'wrap' }}>
-                                    <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: 24 }}>
-                                        <View style={{ width: 12, height: 12, borderRadius: 3, backgroundColor: '#22D3EE', marginRight: 8 }} />
-                                        <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14 }}>Recaudado: {formatCurrency(totalCollected).split('.')[0]}</Text>
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-around', width: '100%', marginTop: 25, paddingHorizontal: 15 }}>
+                                    <View style={{ alignItems: 'center' }}>
+                                        <Text style={{ color: '#22D3EE', fontWeight: '800', fontSize: 16 }}>{formatCurrency(totalCollected)}</Text>
+                                        <Text style={{ color: colors.text, fontWeight: '700', fontSize: 13, marginTop: 4 }}>Recaudado</Text>
                                     </View>
-                                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                        <View style={{ width: 12, height: 12, borderRadius: 3, backgroundColor: '#C084FC', marginRight: 8 }} />
-                                        <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14 }}>Por Cobrar: {formatCurrency(totalDebt).split('.')[0]}</Text>
+
+                                    <View style={{ width: 1, backgroundColor: colors.border, opacity: 0.5, marginVertical: 4 }} />
+
+                                    <View style={{ alignItems: 'center' }}>
+                                        <Text style={{ color: '#C084FC', fontWeight: '800', fontSize: 16 }}>{formatCurrency(totalDebt)}</Text>
+                                        <Text style={{ color: colors.text, fontWeight: '700', fontSize: 13, marginTop: 4 }}>Por Cobrar</Text>
                                     </View>
                                 </View>
                             </View>

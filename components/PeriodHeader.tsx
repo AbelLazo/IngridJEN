@@ -16,7 +16,7 @@ interface PeriodHeaderProps {
 export default function PeriodHeader({ title, onBack, rightAction }: PeriodHeaderProps) {
     const { academicCycles, currentCycleId, setCurrentCycleId } = useInstitution();
     const colorScheme = useColorScheme();
-    const colors = Colors[colorScheme ?? 'light'];
+    const colors = Colors[colorScheme === 'dark' ? 'dark' : 'light'];
     const insets = useSafeAreaInsets();
     const [isMenuVisible, setIsMenuVisible] = useState(false);
 
