@@ -5,7 +5,11 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "ingridjen",
+    "scheme": [
+      "ingridjen",
+      "com.anonymous.ingridjen",
+      "com.googleusercontent.apps.794528666075-nbrcoq95g122dkq78eo5i4e6bud8gckt"
+    ],
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true
@@ -44,6 +48,19 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "80b995d8-cc24-4491-89bd-323933107ccc"
+      }
+    },
+    "owner": "abelazo16",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/80b995d8-cc24-4491-89bd-323933107ccc"
     }
   }
 }

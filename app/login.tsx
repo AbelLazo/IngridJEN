@@ -1,7 +1,10 @@
 import { FontAwesome } from '@expo/vector-icons';
+import * as AuthSession from 'expo-auth-session';
 import * as Google from 'expo-auth-session/providers/google';
 import { BlurView } from 'expo-blur';
+import * as Linking from 'expo-linking';
 import { useRouter } from 'expo-router';
+import * as Updates from 'expo-updates';
 import * as WebBrowser from 'expo-web-browser';
 import { createUserWithEmailAndPassword, GoogleAuthProvider, sendPasswordResetEmail, signInWithCredential, signInWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
@@ -27,31 +30,134 @@ export default function LoginScreen() {
     const [request, response, promptAsync] = Google.useAuthRequest({
         clientId: '794528666075-n2268ldbqu0ju16n6n165a9hj1858cpe.apps.googleusercontent.com',
         webClientId: '794528666075-n2268ldbqu0ju16n6n165a9hj1858cpe.apps.googleusercontent.com',
+        androidClientId: '794528666075-nbrcoq95g122dkq78eo5i4e6bud8gckt.apps.googleusercontent.com',
+        scopes: ['profile', 'email', 'openid'],
     });
 
+    const url = Linking.useURL();
+
+    // Fallback: manually parse URL if expo-auth-session loses its internal state during redirect
     useEffect(() => {
-        if (response?.type === 'success') {
-            const { id_token, access_token } = response.params;
+        if (url && (url.includes('id_token=') || url.includes('access_token=') || url.includes('code='))) {
+            try {
+                const idTokenMatch = url.match(/id_token=([^&]+)/);
+                const accessTokenMatch = url.match(/access_token=([^&]+)/);
+                const codeMatch = url.match(/code=([^&]+)/);
+
+                const id_token = idTokenMatch ? idTokenMatch[1] : null;
+                const access_token = accessTokenMatch ? accessTokenMatch[1] : null;
+
+                if (id_token || access_token) {
+                    setIsLoading(true);
+                    const credential = id_token
+                        ? GoogleAuthProvider.credential(id_token)
+                        : GoogleAuthProvider.credential(null, access_token!);
+
+                    signInWithCredential(auth, credential)
+                        .then(() => setIsLoading(false))
+                        .catch(error => {
+                            console.error("Firebase signInWithCredential Error from DeepLink:", error);
+                            Alert.alert('Error', 'No se pudo iniciar sesión con Google. ' + error.message);
+                            setIsLoading(false);
+                        });
+                } else if (codeMatch && !idTokenMatch) {
+                    const code = codeMatch[1];
+                    setIsLoading(true);
+                    const redirectUri = request?.redirectUri || Linking.createURL('/oauthredirect');
+                    AuthSession.exchangeCodeAsync(
+                        {
+                            clientId: request?.clientId || '794528666075-nbrcoq95g122dkq78eo5i4e6bud8gckt.apps.googleusercontent.com',
+                            code,
+                            redirectUri,
+                            extraParams: request?.codeVerifier ? { code_verifier: request.codeVerifier } : undefined,
+                        },
+                        { tokenEndpoint: 'https://oauth2.googleapis.com/token' }
+                    ).then(tokenResult => {
+                        const credential = tokenResult.idToken
+                            ? GoogleAuthProvider.credential(tokenResult.idToken)
+                            : GoogleAuthProvider.credential(null, tokenResult.accessToken);
+                        return signInWithCredential(auth, credential);
+                    }).then(() => {
+                        setIsLoading(false);
+                    }).catch(error => {
+                        console.error("Manual Token Exchange Error:", error);
+                        Alert.alert('Error', 'No se pudo iniciar sesión con Google (exchange). ' + error.message);
+                        setIsLoading(false);
+                    });
+                }
+            } catch (e) {
+                console.error("Manual Deep Link parsing failed", e);
+                setIsLoading(false);
+            }
+        }
+    }, [url]);
+
+    useEffect(() => {
+        if (!response) return;
+
+        if (response.type === 'success') {
+            const id_token = response.params?.id_token || response.authentication?.idToken;
+            const access_token = response.params?.access_token || response.authentication?.accessToken;
+            const code = response.params?.code;
 
             try {
-                if (!id_token && !access_token) {
-                    throw new Error("No token received from Google");
-                }
+                if (id_token || access_token) {
+                    setIsLoading(true);
+                    // If we get an id_token, pass it as the first param.
+                    // If we only get an access_token, pass null for the first param and the access_token for the second.
+                    const credential = id_token
+                        ? GoogleAuthProvider.credential(id_token)
+                        : GoogleAuthProvider.credential(null, access_token!);
 
-                // If we get an id_token, pass it as the first param.
-                // If we only get an access_token, pass null for the first param and the access_token for the second.
-                const credential = id_token
-                    ? GoogleAuthProvider.credential(id_token)
-                    : GoogleAuthProvider.credential(null, access_token);
-
-                signInWithCredential(auth, credential)
-                    .catch(error => {
-                        console.error("Firebase signInWithCredential Error:", error);
-                        Alert.alert('Error', 'No se pudo iniciar sesión en Firebase con Google.');
+                    signInWithCredential(auth, credential)
+                        .then(() => setIsLoading(false))
+                        .catch(error => {
+                            console.error("Firebase signInWithCredential Error:", error);
+                            Alert.alert('Error', 'No se pudo iniciar sesión en Firebase con Google. ' + error.message);
+                            setIsLoading(false);
+                        });
+                } else if (code) {
+                    setIsLoading(true);
+                    const redirectUri = request?.redirectUri || response.url || Linking.createURL('/oauthredirect');
+                    AuthSession.exchangeCodeAsync(
+                        {
+                            clientId: request?.clientId || '794528666075-nbrcoq95g122dkq78eo5i4e6bud8gckt.apps.googleusercontent.com',
+                            code,
+                            redirectUri,
+                            extraParams: request?.codeVerifier ? { code_verifier: request.codeVerifier } : undefined,
+                        },
+                        { tokenEndpoint: 'https://oauth2.googleapis.com/token' }
+                    ).then(tokenResult => {
+                        const credential = tokenResult.idToken
+                            ? GoogleAuthProvider.credential(tokenResult.idToken)
+                            : GoogleAuthProvider.credential(null, tokenResult.accessToken);
+                        return signInWithCredential(auth, credential);
+                    }).then(() => {
+                        setIsLoading(false);
+                    }).catch(err => {
+                        console.error("Token Exchange Error:", err);
+                        Alert.alert('Error', 'No se pudo intercambiar el código por un token. ' + err.message);
+                        setIsLoading(false);
                     });
-            } catch (error) {
+                } else {
+                    Alert.alert("Error de Token", "La autenticación fue exitosa pero Google no devolvió un Id Token válido.\nParams: " + JSON.stringify(response.params));
+                    setIsLoading(false);
+                }
+            } catch (error: any) {
                 console.error("Credential Creation Error:", error);
+                Alert.alert('Error', error.message || 'Error occurred');
+                setIsLoading(false);
             }
+        } else if (response.type !== 'dismiss' && response.type !== 'cancel') {
+            // Handle 'error' or any other types
+            const errorMessage = response.type === 'error' && response.error
+                ? response.error.message
+                : (response as any).params?.error || 'Unknown error';
+            Alert.alert("Autenticación Fallida", `Tipo: ${response.type}\nDetalle: ${errorMessage}`);
+            setIsLoading(false);
+        } else {
+            // Dismissed or canceled
+            setIsLoading(false);
         }
     }, [response]);
 
@@ -104,6 +210,24 @@ export default function LoginScreen() {
                 errorMessage = 'No hay ningún usuario registrado con este correo.';
             }
             Alert.alert('Error', errorMessage);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleForceUpdate = async () => {
+        setIsLoading(true);
+        try {
+            const update = await Updates.checkForUpdateAsync();
+            if (update.isAvailable) {
+                await Updates.fetchUpdateAsync();
+                Alert.alert("Éxito", "Actualización instalada. Reiniciando...");
+                await Updates.reloadAsync();
+            } else {
+                Alert.alert("Actualizado", "Ya tienes la versión más reciente.");
+            }
+        } catch (error) {
+            Alert.alert("Error de Envío", "No se pudo consultar al servidor de actualizaciones.");
         } finally {
             setIsLoading(false);
         }
@@ -247,6 +371,10 @@ export default function LoginScreen() {
                                     <FontAwesome name="google" size={20} color={colors.text} style={styles.googleIcon} />
                                     <Text style={[styles.googleButtonText, { color: colors.text }]}>Acceder con Google</Text>
                                 </View>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity onPress={handleForceUpdate} style={{ marginTop: 20, alignSelf: 'center' }}>
+                                <Text style={{ color: colors.text, opacity: 0.5, fontSize: 13, textDecorationLine: 'underline' }}>Forzar Actualización de la Nube</Text>
                             </TouchableOpacity>
                         </BlurView>
 

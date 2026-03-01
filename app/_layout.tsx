@@ -93,7 +93,7 @@ function RootLayoutNav() {
       return;
     }
 
-    const inAuthGroup = segments[0] === 'login';
+    const inAuthGroup = segments[0] === 'login' || segments[0] === 'oauthredirect';
     const isAccessingUsers = segments[0] === 'users';
 
     if (!user && !inAuthGroup) {
