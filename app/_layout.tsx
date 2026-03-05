@@ -9,6 +9,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { AlertProvider, useAlert } from '@/context/AlertContext';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { InstitutionProvider } from '@/context/InstitutionContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -25,11 +26,13 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <AuthProvider>
-          <InstitutionProvider>
-            <RootLayoutNav />
-          </InstitutionProvider>
-        </AuthProvider>
+        <AlertProvider>
+          <AuthProvider>
+            <InstitutionProvider>
+              <RootLayoutNav />
+            </InstitutionProvider>
+          </AuthProvider>
+        </AlertProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
@@ -40,6 +43,7 @@ function RootLayoutNav() {
   const { user, userRole, isLoading } = useAuth();
   const segments = useSegments();
   const router = useRouter();
+  const { showAlert } = useAlert();
 
   useEffect(() => {
     if (Platform.OS === 'android') {
@@ -88,7 +92,7 @@ function RootLayoutNav() {
     if (isLoading) return;
 
     if (user && userRole === null) {
-      Alert.alert("Acceso Denegado", "Tu cuenta está sin privilegios. Contacta a un administrador.");
+      showAlert("Acceso Denegado", "Tu cuenta está sin privilegios. Contacta a un administrador.", undefined, 'error');
       signOut(auth);
       return;
     }

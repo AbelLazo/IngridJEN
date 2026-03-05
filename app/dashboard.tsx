@@ -2,7 +2,6 @@ import { Colors } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { useInstitution } from '@/context/InstitutionContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { BlurView } from 'expo-blur';
 import { useRouter } from 'expo-router';
 import { AlertCircle, Award, Calendar, ChevronLeft, DollarSign, TrendingUp, Users } from 'lucide-react-native';
 import React, { useMemo } from 'react';
@@ -29,7 +28,7 @@ export default function DashboardScreen() {
                 <Text style={{ color: colors.icon, marginTop: 8 }}>Solo los administradores pueden ver este dashboard.</Text>
                 <TouchableOpacity
                     onPress={() => router.back()}
-                    style={{ marginTop: 24, paddingHorizontal: 20, paddingVertical: 10, backgroundColor: colors.primary, borderRadius: 12 }}
+                    style={{ marginTop: 24, paddingHorizontal: 20, paddingVertical: 10, backgroundColor: colors.tint, borderRadius: 12 }}
                 >
                     <Text style={{ color: '#FFF', fontWeight: 'bold' }}>Volver</Text>
                 </TouchableOpacity>
@@ -254,13 +253,13 @@ export default function DashboardScreen() {
                 <View style={{ overflow: 'hidden' }}>
                     <View style={[styles.header, isTablet && styles.headerTablet]}>
                         <View style={styles.headerTop}>
-                            <TouchableOpacity onPress={() => router.back()} style={[styles.backButton, { backgroundColor: colorScheme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]}>
+                            <TouchableOpacity onPress={() => router.back()} style={[styles.backButton, { backgroundColor: '#FFF0F5', borderWidth: 1, borderColor: '#FCE4EC' }]}>
                                 <ChevronLeft size={24} color={colors.text} />
                             </TouchableOpacity>
                             <View style={{ flex: 1, marginLeft: 15 }}>
                                 <Text style={[styles.greeting, { fontSize: isTablet ? 32 : 24, color: colors.text }]}>Dashboard de Negocio</Text>
-                                <View style={[styles.cycleBadge, { backgroundColor: colorScheme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)' }]}>
-                                    <Calendar size={14} color={colors.primary} />
+                                <View style={[styles.cycleBadge, { backgroundColor: colorScheme === 'dark' ? '#FFFFFF' : '#FFF0F5' }]}>
+                                    <Calendar size={14} color={colors.tint} />
                                     <Text style={[styles.cycleBadgeText, { color: colors.text }]}>Ciclo: {activeCycle?.name || 'Cargando...'}</Text>
                                 </View>
                             </View>
@@ -273,13 +272,10 @@ export default function DashboardScreen() {
                             style={styles.kpiScrollView}
                             contentContainerStyle={styles.kpiScrollContent}
                         >
-                            <BlurView
-                                intensity={90}
-                                tint={colorScheme === 'light' ? 'light' : 'dark'}
-                                style={[styles.kpiCard, {
-                                    backgroundColor: colorScheme === 'light' ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.1)',
-                                    borderColor: colorScheme === 'light' ? 'rgba(0, 0, 0, 0.15)' : 'rgba(255, 255, 255, 0.15)'
-                                }]}
+                            <View style={[styles.kpiCard, {
+                                backgroundColor: colorScheme === 'light' ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.1)',
+                                borderColor: colorScheme === 'light' ? '#FCE4EC' : '#FFFFFF'
+                            }]}
                             >
 
                                 <View style={[styles.kpiIcon, { backgroundColor: colorScheme === 'light' ? '#4C6EF515' : '#4C6EF530' }]}>
@@ -287,15 +283,12 @@ export default function DashboardScreen() {
                                 </View>
                                 <Text style={[styles.kpiValue, { color: colors.text }]}>{activeStudentsCount}</Text>
                                 <Text style={[styles.kpiLabel, { color: colors.icon }]}>Alumnos Activos</Text>
-                            </BlurView>
+                            </View>
 
-                            <BlurView
-                                intensity={90}
-                                tint={colorScheme === 'light' ? 'light' : 'dark'}
-                                style={[styles.kpiCard, {
-                                    backgroundColor: colorScheme === 'light' ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.1)',
-                                    borderColor: colorScheme === 'light' ? 'rgba(0, 0, 0, 0.15)' : 'rgba(255, 255, 255, 0.15)'
-                                }]}
+                            <View style={[styles.kpiCard, {
+                                backgroundColor: colorScheme === 'light' ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.1)',
+                                borderColor: colorScheme === 'light' ? '#FCE4EC' : '#FFFFFF'
+                            }]}
                             >
 
                                 <View style={[styles.kpiIcon, { backgroundColor: colorScheme === 'light' ? '#12B88615' : '#12B88630' }]}>
@@ -303,15 +296,12 @@ export default function DashboardScreen() {
                                 </View>
                                 <Text style={[styles.kpiValue, { color: colors.text }]}>{formatCurrency(totalCollected)}</Text>
                                 <Text style={[styles.kpiLabel, { color: colors.icon }]}>Recaudado</Text>
-                            </BlurView>
+                            </View>
 
-                            <BlurView
-                                intensity={90}
-                                tint={colorScheme === 'light' ? 'light' : 'dark'}
-                                style={[styles.kpiCard, {
-                                    backgroundColor: colorScheme === 'light' ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.1)',
-                                    borderColor: colorScheme === 'light' ? 'rgba(0, 0, 0, 0.15)' : 'rgba(255, 255, 255, 0.15)'
-                                }]}
+                            <View style={[styles.kpiCard, {
+                                backgroundColor: colorScheme === 'light' ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.1)',
+                                borderColor: colorScheme === 'light' ? '#FCE4EC' : '#FFFFFF'
+                            }]}
                             >
 
                                 <View style={[styles.kpiIcon, { backgroundColor: colorScheme === 'light' ? '#FA525215' : '#FA525230' }]}>
@@ -319,16 +309,13 @@ export default function DashboardScreen() {
                                 </View>
                                 <Text style={[styles.kpiValue, { color: colors.text }]}>{formatCurrency(totalDebt)}</Text>
                                 <Text style={[styles.kpiLabel, { color: colors.icon }]}>Cuentas X Cobrar</Text>
-                            </BlurView>
+                            </View>
 
-                            <BlurView
-                                intensity={90}
-                                tint={colorScheme === 'light' ? 'light' : 'dark'}
-                                style={[styles.kpiCard, {
-                                    marginRight: 40,
-                                    backgroundColor: colorScheme === 'light' ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.1)',
-                                    borderColor: 'rgba(0,0,0,0.15)'
-                                }]}
+                            <View style={[styles.kpiCard, {
+                                marginRight: 40,
+                                backgroundColor: colorScheme === 'light' ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.1)',
+                                borderColor: 'rgba(0,0,0,0.15)'
+                            }]}
                             >
 
                                 <View style={[styles.kpiIcon, { backgroundColor: colorScheme === 'light' ? '#FAB00515' : '#FAB00530' }]}>
@@ -336,7 +323,7 @@ export default function DashboardScreen() {
                                 </View>
                                 <Text style={[styles.kpiValue, { color: colors.text }]}>{classes.filter(c => c.cycleId === currentCycleId).length}</Text>
                                 <Text style={[styles.kpiLabel, { color: colors.icon }]}>Total Clases</Text>
-                            </BlurView>
+                            </View>
                         </ScrollView>
                     </View>
                 </View>
@@ -344,13 +331,10 @@ export default function DashboardScreen() {
                 <View style={[styles.content, isTablet && styles.contentTablet]}>
                     <Text style={[styles.sectionTitle, { color: colors.text, fontSize: isTablet ? 24 : 18 }]}>Salud Financiera (Ciclo Actual)</Text>
 
-                    <BlurView
-                        intensity={90}
-                        tint={colorScheme === 'light' ? 'light' : 'dark'}
-                        style={[styles.chartCard, {
-                            backgroundColor: colorScheme === 'light' ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.1)',
-                            borderColor: 'rgba(0,0,0,0.15)'
-                        }]}
+                    <View style={[styles.chartCard, {
+                        backgroundColor: colorScheme === 'light' ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.1)',
+                        borderColor: 'rgba(0,0,0,0.15)'
+                    }]}
                     >
 
                         <Text style={{ color: colors.text, fontWeight: '800', marginBottom: 20, alignSelf: 'flex-start', letterSpacing: -0.5 }}>Ingresos Históricos (S/ Por Mes)</Text>
@@ -370,22 +354,19 @@ export default function DashboardScreen() {
                                 xAxisThickness={1}
                                 xAxisColor={colors.border}
                                 xAxisLabelTextStyle={{ color: colors.icon, fontSize: 11 }}
-                                frontColor={colors.primary}
+                                frontColor={colors.tint}
                                 isAnimated
                                 showFractionalValues={false}
                                 backgroundColor="transparent"
                             />
                         </View>
-                    </BlurView>
+                    </View>
 
-                    <BlurView
-                        intensity={90}
-                        tint={colorScheme === 'light' ? 'light' : 'dark'}
-                        style={[styles.chartCard, {
-                            backgroundColor: colorScheme === 'light' ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.1)',
-                            borderColor: 'rgba(0,0,0,0.15)',
-                            alignItems: 'center'
-                        }]}
+                    <View style={[styles.chartCard, {
+                        backgroundColor: colorScheme === 'light' ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.1)',
+                        borderColor: 'rgba(0,0,0,0.15)',
+                        alignItems: 'center'
+                    }]}
                     >
 
                         <Text style={{ color: colors.text, fontWeight: '800', marginBottom: 20, alignSelf: 'flex-start', letterSpacing: -0.5 }}>Balance de Cuotas</Text>
@@ -441,7 +422,7 @@ export default function DashboardScreen() {
                                 </View>
                             </View>
                         )}
-                    </BlurView>
+                    </View>
 
                     {/* Top Classes & Alerts */}
                     <View style={{ marginTop: 24, paddingHorizontal: 20 }}>
@@ -449,13 +430,11 @@ export default function DashboardScreen() {
 
                         {topClasses.length === 0 && <Text style={{ color: colors.icon }}>No hay clases con matrículas.</Text>}
                         {topClasses.map((c, i) => (
-                            <BlurView
+                            <View
                                 key={c.id}
-                                intensity={90}
-                                tint={colorScheme === 'light' ? 'light' : 'dark'}
                                 style={[styles.listItem, {
-                                    backgroundColor: colorScheme === 'light' ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.1)',
-                                    borderColor: colorScheme === 'light' ? 'rgba(0, 0, 0, 0.15)' : 'rgba(255, 255, 255, 0.15)'
+                                    backgroundColor: colorScheme === 'light' ? '#FFFFFF' : colors.card,
+                                    borderColor: colorScheme === 'light' ? '#FCE4EC' : colors.border
                                 }]}
                             >
 
@@ -467,22 +446,20 @@ export default function DashboardScreen() {
                                     <Text style={{ color: colors.icon, fontSize: 12 }}>{c.teacherName}</Text>
                                 </View>
                                 <View style={{ alignItems: 'flex-end' }}>
-                                    <Text style={{ color: colors.primary, fontWeight: 'bold' }}>{c.count} / {c.capacity}</Text>
+                                    <Text style={{ color: colors.tint, fontWeight: 'bold' }}>{c.count} / {c.capacity}</Text>
                                     <Text style={{ color: colors.icon, fontSize: 11 }}>{c.percentage.toFixed(0)}% Ocupado</Text>
                                 </View>
-                            </BlurView>
+                            </View>
                         ))}
 
                         <Text style={[styles.sectionTitle, { color: colors.text, fontSize: isTablet ? 24 : 18, marginLeft: 0, marginTop: 20 }]}>Clases en Riesgo (Baja Ocupación)</Text>
                         {emptyClasses.length === 0 && <Text style={{ color: colors.icon }}>No hay clases con baja ocupación.</Text>}
                         {emptyClasses.map(c => (
-                            <BlurView
+                            <View
                                 key={c.id}
-                                intensity={90}
-                                tint={colorScheme === 'light' ? 'light' : 'dark'}
                                 style={[styles.listItem, {
-                                    backgroundColor: colorScheme === 'light' ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.08)',
-                                    borderColor: colorScheme === 'light' ? 'rgba(0, 0, 0, 0.15)' : 'rgba(255, 255, 255, 0.15)'
+                                    backgroundColor: colorScheme === 'light' ? '#FFFFFF' : colors.card,
+                                    borderColor: colorScheme === 'light' ? '#FCE4EC' : colors.border
                                 }]}
                             >
 
@@ -496,7 +473,7 @@ export default function DashboardScreen() {
                                 <View style={{ alignItems: 'flex-end' }}>
                                     <Text style={{ color: '#FA5252', fontWeight: 'bold' }}>{c.count} / {c.capacity}</Text>
                                 </View>
-                            </BlurView>
+                            </View>
                         ))}
                     </View>
 

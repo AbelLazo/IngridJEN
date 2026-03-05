@@ -1,4 +1,5 @@
 import PeriodHeader from '@/components/PeriodHeader';
+import { useAlert } from '@/context/AlertContext';
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { useInstitution } from '@/context/InstitutionContext';
@@ -65,7 +66,7 @@ const EnrollmentItem = ({ student, detail, colors, onPay, onShowDetail }: Enroll
                             )}
                         </Text>
                         {detail.status !== 'withdrawn' && !detail.isPaid && (
-                            <Text style={{ fontSize: 12, color: colors.primary, marginTop: 2, fontWeight: '500' }}>
+                            <Text style={{ fontSize: 12, color: colors.tint, marginTop: 2, fontWeight: '500' }}>
                                 Próximo pago: {detail.nextDate}
                             </Text>
                         )}
@@ -97,7 +98,7 @@ const EnrollmentItem = ({ student, detail, colors, onPay, onShowDetail }: Enroll
                                 </Text>
                                 {month.notes && (
                                     <Text
-                                        style={{ fontSize: 10, color: colors.primary, marginTop: 4, marginBottom: 4, fontStyle: 'italic', opacity: month.isPaid ? 0.6 : 0.8 }}
+                                        style={{ fontSize: 10, color: colors.tint, marginTop: 4, marginBottom: 4, fontStyle: 'italic', opacity: month.isPaid ? 0.6 : 0.8 }}
                                         numberOfLines={2}
                                     >
                                         {month.notes.replace('Descuento automático: ', '🎁 ')}
@@ -119,7 +120,7 @@ const EnrollmentItem = ({ student, detail, colors, onPay, onShowDetail }: Enroll
                                 <TouchableOpacity
                                     style={[
                                         styles.payMonthButton,
-                                        { backgroundColor: month.isOverdue ? '#ff4d4d' : colors.primary }
+                                        { backgroundColor: month.isOverdue ? '#ff4d4d' : colors.tint }
                                     ]}
                                     onPress={() => onPay(student, detail, month)}
                                 >
@@ -150,14 +151,11 @@ const StudentCard = ({ item, colors, onPay, onShowDetail }: StudentCardProps) =>
 
     return (
         <View style={styles.cardContainer}>
-            <BlurView
-                intensity={90}
-                tint={colorScheme === 'light' ? 'light' : 'dark'}
-                style={[
+            <View style={[
                     styles.card,
                     {
-                        backgroundColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.1)',
-                        borderColor: item.totalDebt > 0 ? '#ff4d4d80' : (colorScheme === 'light' ? 'rgba(0, 0, 0, 0.15)' : 'rgba(255, 255, 255, 0.15)'),
+                        backgroundColor: colorScheme === 'light' ? '#FFFFFF' : '#FFFFFF',
+                        borderColor: item.totalDebt > 0 ? '#ff4d4d80' : (colorScheme === 'light' ? '#FCE4EC' : '#FFFFFF'),
                     }
                 ]}
             >
@@ -169,8 +167,8 @@ const StudentCard = ({ item, colors, onPay, onShowDetail }: StudentCardProps) =>
                     onPress={() => setIsExpanded(!isExpanded)}
                     activeOpacity={0.7}
                 >
-                    <View style={[styles.avatarBox, { backgroundColor: colors.primary + '15' }]}>
-                        <User size={24} color={colors.primary} />
+                    <View style={[styles.avatarBox, { backgroundColor: colors.tint + '15' }]}>
+                        <User size={24} color={colors.tint} />
                     </View>
                     <View style={styles.headerInfo}>
                         <Text style={[styles.studentName, { color: colors.text }]}>
@@ -203,12 +201,13 @@ const StudentCard = ({ item, colors, onPay, onShowDetail }: StudentCardProps) =>
                         </View>
                     </>
                 )}
-            </BlurView>
+            </View>
         </View>
     );
 };
 
 export default function FeesScreen() {
+    const { showAlert } = useAlert();
     const { userRole } = useAuth();
     const insets = useSafeAreaInsets();
     const router = useRouter();
@@ -223,7 +222,7 @@ export default function FeesScreen() {
                 <Text style={{ color: colors.icon, marginTop: 8 }}>Solo los administradores pueden gestionar las mensualidades.</Text>
                 <TouchableOpacity
                     onPress={() => router.back()}
-                    style={{ marginTop: 24, paddingHorizontal: 20, paddingVertical: 10, backgroundColor: colors.primary, borderRadius: 12 }}
+                    style={{ marginTop: 24, paddingHorizontal: 20, paddingVertical: 10, backgroundColor: colors.tint, borderRadius: 12 }}
                 >
                     <Text style={{ color: '#FFF', fontWeight: 'bold' }}>Volver</Text>
                 </TouchableOpacity>
@@ -394,7 +393,7 @@ export default function FeesScreen() {
 
     const handleShowPaymentDetail = (payment: any, monthName: string, studentName: string, courseName: string) => {
         if (!payment) {
-            Alert.alert("Información", "No se encontró el registro de este pago.");
+            showAlert("Información", "No se encontró el registro de este pago.");
             return;
         }
         setDetailData({ payment, monthName, studentName, courseName });
@@ -451,7 +450,7 @@ export default function FeesScreen() {
                 <TouchableOpacity
                     style={[
                         styles.toggleButton,
-                        viewMode === 'pendientes' && { backgroundColor: colors.primary }
+                        viewMode === 'pendientes' && { backgroundColor: colors.tint }
                     ]}
                     onPress={() => setViewMode('pendientes')}
                 >
@@ -461,7 +460,7 @@ export default function FeesScreen() {
                 <TouchableOpacity
                     style={[
                         styles.toggleButton,
-                        viewMode === 'historial' && { backgroundColor: colors.primary }
+                        viewMode === 'historial' && { backgroundColor: colors.tint }
                     ]}
                     onPress={() => setViewMode('historial')}
                 >
@@ -473,14 +472,11 @@ export default function FeesScreen() {
             {viewMode === 'pendientes' ? (
                 <>
                     <View style={styles.summaryContainer}>
-                        <BlurView
-                            intensity={90}
-                            tint={colorScheme === 'light' ? 'light' : 'dark'}
-                            style={[
+                        <View style={[
                                 styles.summaryItem,
                                 {
-                                    backgroundColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.1)',
-                                    borderColor: colorScheme === 'light' ? 'rgba(0, 0, 0, 0.15)' : 'rgba(255, 255, 255, 0.15)',
+                                    backgroundColor: colorScheme === 'light' ? '#FFFFFF' : '#FFFFFF',
+                                    borderColor: colorScheme === 'light' ? '#FCE4EC' : '#FFFFFF',
                                 }
                             ]}
                         >
@@ -493,18 +489,15 @@ export default function FeesScreen() {
                                 <Text style={[styles.summaryLabel, { color: colors.icon }]}>Total Recaudado ({selectedMonthYear})</Text>
                                 <Text style={[styles.summaryValue, { color: '#40C057' }]}>S/ {totalPaid}</Text>
                             </View>
-                        </BlurView>
+                        </View>
                     </View>
 
                     <View style={styles.summaryContainer}>
-                        <BlurView
-                            intensity={90}
-                            tint={colorScheme === 'light' ? 'light' : 'dark'}
-                            style={[
+                        <View style={[
                                 styles.summaryItem,
                                 {
-                                    backgroundColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.1)',
-                                    borderColor: cycleTotalDebt > 0 ? '#ff4d4d80' : (colorScheme === 'light' ? 'rgba(0, 0, 0, 0.15)' : 'rgba(255, 255, 255, 0.15)'),
+                                    backgroundColor: colorScheme === 'light' ? '#FFFFFF' : '#FFFFFF',
+                                    borderColor: cycleTotalDebt > 0 ? '#ff4d4d80' : (colorScheme === 'light' ? '#FCE4EC' : '#FFFFFF'),
                                 }
                             ]}
                         >
@@ -517,23 +510,20 @@ export default function FeesScreen() {
                                 <Text style={[styles.summaryLabel, { color: colors.icon }]}>Deuda Ciclo Seleccionado</Text>
                                 <Text style={[styles.summaryValue, { color: '#ff4d4d' }]}>S/ {cycleTotalDebt}</Text>
                             </View>
-                        </BlurView>
+                        </View>
                     </View>
 
 
-                    <BlurView
-                        intensity={90}
-                        tint={colorScheme === 'light' ? 'light' : 'dark'}
-                        style={[
+                    <View style={[
                             styles.searchContainer,
                             {
-                                backgroundColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.1)',
-                                borderColor: colorScheme === 'light' ? 'rgba(0, 0, 0, 0.15)' : 'rgba(255, 255, 255, 0.15)',
+                                backgroundColor: colorScheme === 'light' ? '#FFFFFF' : '#FFFFFF',
+                                borderColor: colorScheme === 'light' ? '#FCE4EC' : '#FFFFFF',
                             }
                         ]}
                     >
                         <View style={styles.liquidHighlight} />
-                        <Search color={colorScheme === 'light' ? '#666' : '#AAA'} size={20} />
+                        <Search color={colors.tint} size={20} />
                         <TextInput
                             style={[styles.searchInput, { color: colors.text }]}
                             placeholder="Buscar estudiante..."
@@ -541,7 +531,7 @@ export default function FeesScreen() {
                             value={searchQuery}
                             onChangeText={setSearchQuery}
                         />
-                    </BlurView>
+                    </View>
 
                     <FlatList
                         data={filteredFees}
@@ -558,20 +548,17 @@ export default function FeesScreen() {
                 </>
             ) : (
                 <>
-                    <BlurView
-                        intensity={90}
-                        tint={colorScheme === 'light' ? 'light' : 'dark'}
-                        style={[
+                    <View style={[
                             styles.searchContainer,
                             {
-                                backgroundColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.1)',
-                                borderColor: colorScheme === 'light' ? 'rgba(0, 0, 0, 0.15)' : 'rgba(255, 255, 255, 0.15)',
+                                backgroundColor: colorScheme === 'light' ? '#FFFFFF' : '#FFFFFF',
+                                borderColor: colorScheme === 'light' ? '#FCE4EC' : '#FFFFFF',
                                 marginTop: 10
                             }
                         ]}
                     >
                         <View style={styles.liquidHighlight} />
-                        <Search color={colorScheme === 'light' ? '#666' : '#AAA'} size={20} />
+                        <Search color={colors.tint} size={20} />
                         <TextInput
                             style={[styles.searchInput, { color: colors.text }]}
                             placeholder="Buscar en historial..."
@@ -579,7 +566,7 @@ export default function FeesScreen() {
                             value={searchQuery}
                             onChangeText={setSearchQuery}
                         />
-                    </BlurView>
+                    </View>
                     <FlatList
                         data={payments.filter(p => {
                             const student = students.find(s => s.id === p.studentId);
@@ -592,14 +579,11 @@ export default function FeesScreen() {
                             const cls = classes.find(c => c.id === enrollment?.classId);
                             return (
                                 <View style={styles.cardContainer}>
-                                    <BlurView
-                                        intensity={90}
-                                        tint={colorScheme === 'light' ? 'light' : 'dark'}
-                                        style={[
+                                    <View style={[
                                             styles.historyCard,
                                             {
-                                                backgroundColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.1)',
-                                                borderColor: colorScheme === 'light' ? 'rgba(0, 0, 0, 0.15)' : 'rgba(255, 255, 255, 0.15)',
+                                                backgroundColor: colorScheme === 'light' ? '#FFFFFF' : '#FFFFFF',
+                                                borderColor: colorScheme === 'light' ? '#FCE4EC' : '#FFFFFF',
                                             }
                                         ]}
                                     >
@@ -610,8 +594,8 @@ export default function FeesScreen() {
                                             onPress={() => handleShowPaymentDetail(item, item.monthYear, `${student?.firstName} ${student?.lastName}`, cls?.courseName || 'Desconocido')}
                                             activeOpacity={0.7}
                                         >
-                                            <View style={[styles.avatarBox, { backgroundColor: colors.primary + '10', width: 40, height: 40 }]}>
-                                                <Calendar size={18} color={colors.primary} />
+                                            <View style={[styles.avatarBox, { backgroundColor: colors.tint + '10', width: 40, height: 40 }]}>
+                                                <Calendar size={18} color={colors.tint} />
                                             </View>
                                             <View style={{ flex: 1, marginLeft: 12 }}>
                                                 <Text style={[styles.historyName, { color: colors.text }]}>{student?.firstName} {student?.lastName}</Text>
@@ -622,7 +606,7 @@ export default function FeesScreen() {
                                                 <Text style={{ fontSize: 10, color: colors.icon }}>{item.date}</Text>
                                             </View>
                                         </TouchableOpacity>
-                                    </BlurView>
+                                    </View>
                                 </View>
                             );
                         }}
@@ -662,7 +646,7 @@ export default function FeesScreen() {
                                 <Text style={[styles.saveText, { color: colors.text }]}>Cancelar</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
-                                style={[styles.saveButton, { backgroundColor: colors.primary, flex: 1, marginLeft: 10 }]}
+                                style={[styles.saveButton, { backgroundColor: colors.tint, flex: 1, marginLeft: 10 }]}
                                 onPress={() => {
                                     if (payData) {
                                         const today = networkTime || new Date();
@@ -707,7 +691,7 @@ export default function FeesScreen() {
                             </View>
                         )}
                         <TouchableOpacity
-                            style={[styles.saveButton, { backgroundColor: colors.primary, width: '100%', marginTop: 10 }]}
+                            style={[styles.saveButton, { backgroundColor: colors.tint, width: '100%', marginTop: 10 }]}
                             onPress={() => setIsDetailVisible(false)}
                         >
                             <Text style={styles.saveText}>Cerrar</Text>
@@ -855,7 +839,7 @@ const styles = StyleSheet.create({
         left: 0,
         right: 0,
         height: '50%',
-        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        backgroundColor: '#FFFFFF',
         borderTopLeftRadius: 32,
         borderTopRightRadius: 32,
     },

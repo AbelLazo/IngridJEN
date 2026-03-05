@@ -141,7 +141,7 @@ export default function AttendanceModal({ visible, onClose, classData, dateStrin
                             style={[
                                 styles.toggleButton,
                                 isTeacher && styles.toggleButtonExpanded,
-                                isSelected ? { backgroundColor: opt.color || colors.primary, borderColor: opt.color || colors.primary }
+                                isSelected ? { backgroundColor: opt.color || colors.tint, borderColor: opt.color || colors.tint }
                                     : { backgroundColor: colors.background, borderColor: colors.border }
                             ]}
                         >
@@ -197,8 +197,8 @@ export default function AttendanceModal({ visible, onClose, classData, dateStrin
                     <ScrollView style={styles.scrollArea} showsVerticalScrollIndicator={false}>
 
                         {/* TEACHER SECTION */}
-                        <View style={[styles.sectionBlock, { backgroundColor: colors.primary + '10', borderColor: colors.primary + '30', borderWidth: 1 }]}>
-                            <Text style={[styles.sectionHeaderTitle, { color: colors.primary }]}>PROFESOR</Text>
+                        <View style={[styles.sectionBlock, { backgroundColor: colors.tint + '10', borderColor: colors.tint + '30', borderWidth: 1 }]}>
+                            <Text style={[styles.sectionHeaderTitle, { color: colors.tint }]}>PROFESOR</Text>
                             <View style={styles.personRow}>
                                 <Text style={[styles.personName, { color: colors.text }]}>
                                     {classData.teacherName}
@@ -254,7 +254,7 @@ export default function AttendanceModal({ visible, onClose, classData, dateStrin
                     {/* Footer Actions */}
                     <View style={[styles.footer, { borderTopColor: colors.border }]}>
                         <TouchableOpacity
-                            style={[styles.saveButton, { backgroundColor: colors.primary }]}
+                            style={[styles.saveButton, { backgroundColor: colors.tint }]}
                             onPress={handleSave}
                             activeOpacity={0.8}
                         >

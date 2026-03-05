@@ -1,12 +1,12 @@
 import { Colors } from '@/constants/theme';
+import { useAlert } from '@/context/AlertContext';
 import { useAuth } from '@/context/AuthContext';
 import { auth, db, firebaseConfig } from '@/lib/firebaseConfig';
-import { BlurView } from 'expo-blur';
 import { useRouter } from 'expo-router';
 import { getApps, initializeApp } from 'firebase/app';
 import { createUserWithEmailAndPassword, getAuth, sendPasswordResetEmail, signOut } from 'firebase/auth';
 import { collection, doc, onSnapshot, query, setDoc, updateDoc } from 'firebase/firestore';
-import { AlertCircle, Check, ChevronDown, ChevronLeft, Clock, Eye, EyeOff, Mail, Plus, ShieldAlert, ShieldCheck, User as UserIcon, X } from 'lucide-react-native';
+import { AlertCircle, Check, ChevronDown, ChevronLeft, Clock, Eye, EyeOff, Plus, ShieldAlert, ShieldCheck, User as UserIcon, X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { Alert, FlatList, Modal, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -20,6 +20,7 @@ interface AppUser {
 }
 
 export default function UsersScreen() {
+    const { showAlert } = useAlert();
     const { userRole } = useAuth();
     const router = useRouter();
     const { user: currentUser } = useAuth();
@@ -36,7 +37,7 @@ export default function UsersScreen() {
                 <Text style={{ color: colors.icon, marginTop: 8 }}>Solo los administradores pueden gestionar usuarios.</Text>
                 <TouchableOpacity
                     onPress={() => router.back()}
-                    style={{ marginTop: 24, paddingHorizontal: 20, paddingVertical: 10, backgroundColor: colors.primary, borderRadius: 12 }}
+                    style={{ marginTop: 24, paddingHorizontal: 20, paddingVertical: 10, backgroundColor: colors.tint, borderRadius: 12 }}
                 >
                     <Text style={{ color: '#FFF', fontWeight: 'bold' }}>Volver</Text>
                 </TouchableOpacity>
@@ -78,7 +79,7 @@ export default function UsersScreen() {
             setIsLoading(false);
         }, (error) => {
             console.error("Error fetching users:", error);
-            Alert.alert("Error", "No se pudieron cargar los usuarios.");
+            showAlert("Error", "No se pudieron cargar los usuarios.");
             setIsLoading(false);
         });
 
@@ -89,7 +90,7 @@ export default function UsersScreen() {
         if (!selectedUser) return;
 
         if (currentUser?.email === selectedUser.email) {
-            Alert.alert("Acción denegada", "No puedes modificar tus propios privilegios por cuestiones de seguridad.");
+            showAlert("Acción denegada", "No puedes modificar tus propios privilegios por cuestiones de seguridad.");
             return;
         }
 
@@ -102,7 +103,7 @@ export default function UsersScreen() {
             setSelectedUser(null);
         } catch (error) {
             console.error("Error updating role:", error);
-            Alert.alert("Error", "No se pudo actualizar el rol del usuario.");
+            showAlert("Error", "No se pudo actualizar el rol del usuario.");
         } finally {
             setIsUpdating(false);
         }
@@ -114,10 +115,10 @@ export default function UsersScreen() {
         setIsUpdating(true);
         try {
             await sendPasswordResetEmail(auth, selectedUser.email);
-            Alert.alert("Éxito", `Se ha enviado un correo de restablecimiento a ${selectedUser.email}`);
+            showAlert("Éxito", `Se ha enviado un correo de restablecimiento a ${selectedUser.email}`);
         } catch (error: any) {
             console.error("Error sending password reset:", error);
-            Alert.alert("Error", "No se pudo enviar el correo de restablecimiento.");
+            showAlert("Error", "No se pudo enviar el correo de restablecimiento.");
         } finally {
             setIsUpdating(false);
         }
@@ -171,7 +172,7 @@ export default function UsersScreen() {
             setNewUserPassword('');
             setNewUserRole(null);
             // Only one success alert is enough
-            Alert.alert("Éxito", "Usuario registrado correctamente.");
+            showAlert("Éxito", "Usuario registrado correctamente.");
         } catch (error: any) {
             console.error("Error al agregar usuario:", error);
 
@@ -196,16 +197,16 @@ export default function UsersScreen() {
         switch (role) {
             case 'admin':
                 return (
-                    <View style={[styles.badge, { backgroundColor: colors.secondary + '15', borderColor: colors.secondary }]}>
-                        <ShieldAlert size={14} color={colors.secondary} style={styles.badgeIcon} />
-                        <Text style={[styles.badgeText, { color: colors.secondary }]}>Administrador</Text>
+                    <View style={[styles.badge, { backgroundColor: '#1A1A2E' + '15', borderColor: '#1A1A2E' }]}>
+                        <ShieldAlert size={14} color={'#1A1A2E'} style={styles.badgeIcon} />
+                        <Text style={[styles.badgeText, { color: '#1A1A2E' }]}>Administrador</Text>
                     </View>
                 );
             case 'professor':
                 return (
-                    <View style={[styles.badge, { backgroundColor: colors.primary + '15', borderColor: colors.primary }]}>
-                        <UserIcon size={14} color={colors.primary} style={styles.badgeIcon} />
-                        <Text style={[styles.badgeText, { color: colors.primary }]}>Profesor</Text>
+                    <View style={[styles.badge, { backgroundColor: colors.tint + '15', borderColor: colors.tint }]}>
+                        <UserIcon size={14} color={colors.tint} style={styles.badgeIcon} />
+                        <Text style={[styles.badgeText, { color: colors.tint }]}>Profesor</Text>
                     </View>
                 );
             default:
@@ -224,21 +225,18 @@ export default function UsersScreen() {
                 onPress={() => openRoleModal(item)}
                 activeOpacity={0.7}
             >
-                <BlurView
-                    intensity={90}
-                    tint={colorScheme === 'light' ? 'light' : 'dark'}
-                    style={[
-                        styles.userCard,
-                        {
-                            backgroundColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.1)',
-                            borderColor: colorScheme === 'light' ? 'rgba(0, 0, 0, 0.15)' : 'rgba(255, 255, 255, 0.15)',
-                        }
-                    ]}
+                <View style={[
+                    styles.userCard,
+                    {
+                        backgroundColor: colorScheme === 'light' ? '#FFFFFF' : '#FFFFFF',
+                        borderColor: colorScheme === 'light' ? '#FCE4EC' : '#FFFFFF',
+                    }
+                ]}
                 >
 
                     <View style={styles.userInfo}>
-                        <View style={[styles.avatarBox, { backgroundColor: colors.primary + '15' }]}>
-                            <Text style={[styles.avatarText, { color: colors.primary }]}>
+                        <View style={[styles.avatarBox, { backgroundColor: colors.tint + '15' }]}>
+                            <Text style={[styles.avatarText, { color: colors.tint }]}>
                                 {item.email.substring(0, 1).toUpperCase()}
                             </Text>
                         </View>
@@ -252,7 +250,7 @@ export default function UsersScreen() {
                         </View>
                     </View>
                     <ChevronDown size={20} color={colors.icon} />
-                </BlurView>
+                </View>
             </TouchableOpacity>
         </View>
     );
@@ -261,12 +259,12 @@ export default function UsersScreen() {
         <View style={[styles.container, { backgroundColor: colors.background, paddingTop: Math.max(insets.top, 16) }]}>
             {/* Header */}
             <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()} style={[styles.backButton, { backgroundColor: colorScheme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]}>
+                <TouchableOpacity onPress={() => router.back()} style={[styles.backButton, { backgroundColor: '#FFF0F5', borderWidth: 1, borderColor: '#FCE4EC' }]}>
                     <ChevronLeft size={24} color={colors.text} />
                 </TouchableOpacity>
                 <Text style={[styles.headerTitle, { color: colors.text }]}>Gestión de Usuarios</Text>
                 <TouchableOpacity
-                    style={[styles.addButton, { backgroundColor: colors.primary }]}
+                    style={[styles.addButton, { backgroundColor: colors.tint }]}
                     onPress={() => {
                         setNewUserEmail('');
                         setNewUserPassword('');
@@ -336,15 +334,15 @@ export default function UsersScreen() {
                                 style={[
                                     styles.roleButton,
                                     selectedUser?.role === 'admin' ? {
-                                        backgroundColor: colors.secondary,
-                                        shadowColor: colors.secondary,
+                                        backgroundColor: '#1A1A2E',
+                                        shadowColor: '#1A1A2E',
                                         shadowOffset: { width: 0, height: 4 },
                                         shadowOpacity: 0.3,
                                         shadowRadius: 8,
                                         elevation: Platform.OS === 'android' ? 0 : 4,
                                         borderColor: 'transparent'
                                     } : {
-                                        backgroundColor: 'rgba(255, 255, 255, 0.45)',
+                                        backgroundColor: '#FFFFFF',
                                         borderColor: colorScheme === 'light' ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.1)',
                                     },
                                     currentUser?.email === selectedUser?.email && { opacity: 0.5 }
@@ -375,15 +373,15 @@ export default function UsersScreen() {
                                 style={[
                                     styles.roleButton,
                                     selectedUser?.role === 'professor' ? {
-                                        backgroundColor: colors.primary,
-                                        shadowColor: colors.primary,
+                                        backgroundColor: colors.tint,
+                                        shadowColor: colors.tint,
                                         shadowOffset: { width: 0, height: 4 },
                                         shadowOpacity: 0.3,
                                         shadowRadius: 8,
                                         elevation: Platform.OS === 'android' ? 0 : 4,
                                         borderColor: 'transparent'
                                     } : {
-                                        backgroundColor: 'rgba(255, 255, 255, 0.45)',
+                                        backgroundColor: '#FFFFFF',
                                         borderColor: colorScheme === 'light' ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.1)',
                                     },
                                     currentUser?.email === selectedUser?.email && { opacity: 0.5 }
@@ -422,7 +420,7 @@ export default function UsersScreen() {
                                         elevation: Platform.OS === 'android' ? 0 : 4,
                                         borderColor: 'transparent'
                                     } : {
-                                        backgroundColor: 'rgba(255, 255, 255, 0.45)',
+                                        backgroundColor: '#FFFFFF',
                                         borderColor: colorScheme === 'light' ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.1)',
                                     },
                                     currentUser?.email === selectedUser?.email && { opacity: 0.5 }
@@ -450,30 +448,6 @@ export default function UsersScreen() {
                             </TouchableOpacity>
                         </View>
 
-                        <View style={{ paddingHorizontal: 20, marginTop: 24 }}>
-                            <TouchableOpacity
-                                style={[
-                                    {
-                                        flexDirection: 'row',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        padding: 16,
-                                        borderRadius: 12,
-                                        backgroundColor: colors.secondary,
-                                        shadowColor: colors.secondary,
-                                        shadowOffset: { width: 0, height: 4 },
-                                        shadowOpacity: 0.3,
-                                        shadowRadius: 8,
-                                        elevation: Platform.OS === 'android' ? 0 : 4,
-                                    }
-                                ]}
-                                onPress={handlePasswordReset}
-                                disabled={isUpdating}
-                            >
-                                <Mail size={20} color="#fff" />
-                                <Text style={{ color: '#fff', fontWeight: '700', marginLeft: 10 }}>Enviar Correo de Restablecimiento</Text>
-                            </TouchableOpacity>
-                        </View>
                     </View>
                 </View>
             </Modal>
@@ -620,9 +594,9 @@ export default function UsersScreen() {
                                 style={[
                                     styles.roleButton,
                                     newUserRole === 'professor' ? {
-                                        backgroundColor: colors.primary,
-                                        borderColor: colors.primary,
-                                        shadowColor: colors.primary,
+                                        backgroundColor: colors.tint,
+                                        borderColor: colors.tint,
+                                        shadowColor: colors.tint,
                                         shadowOffset: { width: 0, height: 8 },
                                         shadowOpacity: 0.4,
                                         shadowRadius: 16,
@@ -686,7 +660,7 @@ export default function UsersScreen() {
                         <TouchableOpacity
                             style={[
                                 styles.primaryButton,
-                                { backgroundColor: colors.primary, opacity: isUpdating || !newUserEmail.trim() || !newUserPassword.trim() ? 0.6 : 1 }
+                                { backgroundColor: colors.tint, opacity: isUpdating || !newUserEmail.trim() || !newUserPassword.trim() ? 0.6 : 1 }
                             ]}
                             onPress={handleAddUser}
                             disabled={isUpdating || !newUserEmail.trim() || !newUserPassword.trim()}
@@ -772,7 +746,7 @@ const styles = StyleSheet.create({
         left: 0,
         right: 0,
         height: '50%',
-        backgroundColor: 'rgba(255, 255, 255, 0.25)',
+        backgroundColor: '#FFFFFF',
         borderTopLeftRadius: 32,
         borderTopRightRadius: 32,
     },

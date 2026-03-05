@@ -31,7 +31,7 @@ export default function PeriodHeader({ title, onBack, rightAction }: PeriodHeade
         <View style={[styles.header, { backgroundColor: colors.background, paddingTop: insets.top + 10 }]}>
             <View style={styles.topRow}>
                 {onBack && (
-                    <TouchableOpacity onPress={onBack} style={styles.backButton}>
+                    <TouchableOpacity onPress={onBack} style={[styles.backButton, { backgroundColor: '#FFF0F5', borderWidth: 1, borderColor: '#FCE4EC' }]}>
                         <ChevronLeft size={28} color={colors.text} />
                     </TouchableOpacity>
                 )}
@@ -55,12 +55,12 @@ export default function PeriodHeader({ title, onBack, rightAction }: PeriodHeade
                         ]}
                     >
                         <View style={styles.glassChipContent}>
-                            <Calendar size={14} color={colors.text} />
+                            <Calendar size={14} color={colors.tint} />
                             <Text style={[styles.periodText, { color: colors.text }]}>
                                 {currentCycle?.name || 'Seleccionar Período'}
                             </Text>
-                            <View style={[styles.badgeArrow, { backgroundColor: colors.text + '15' }]}>
-                                <ChevronDown size={14} color={colors.text} />
+                            <View style={[styles.badgeArrow, { backgroundColor: colors.tint + '15' }]}>
+                                <ChevronDown size={14} color={colors.tint} />
                             </View>
                         </View>
                     </BlurView>
@@ -108,8 +108,8 @@ export default function PeriodHeader({ title, onBack, rightAction }: PeriodHeade
                                             style={[
                                                 styles.menuItem,
                                                 isSelected && {
-                                                    backgroundColor: colors.primary,
-                                                    shadowColor: colors.primary,
+                                                    backgroundColor: colors.tint,
+                                                    shadowColor: colors.tint,
                                                     shadowOffset: { width: 0, height: 4 },
                                                     shadowOpacity: 0.3,
                                                     shadowRadius: 8,
@@ -122,7 +122,7 @@ export default function PeriodHeader({ title, onBack, rightAction }: PeriodHeade
                                             <View style={styles.menuItemContent}>
                                                 <View style={[
                                                     styles.iconBg,
-                                                    { backgroundColor: isSelected ? 'rgba(255,255,255,0.2)' : colors.border + '40' }
+                                                    { backgroundColor: isSelected ? 'rgba(255,255,255,0.2)' : colors.tint + '15' }
                                                 ]}>
                                                     <Calendar
                                                         size={16}

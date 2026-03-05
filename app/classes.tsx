@@ -1,11 +1,11 @@
 import PeriodHeader from '@/components/PeriodHeader';
+import { useAlert } from '@/context/AlertContext';
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { Student } from '@/context/InstitutionContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Picker } from '@react-native-picker/picker';
-import { BlurView } from 'expo-blur';
 import { Stack, useRouter } from 'expo-router';
 import {
     AlertCircle,
@@ -78,6 +78,7 @@ const triggerHaptic = () => {
 };
 
 export default function ClassesScreen() {
+    const { showAlert } = useAlert();
     const { userRole } = useAuth();
     const insets = useSafeAreaInsets();
     const router = useRouter();
@@ -92,7 +93,7 @@ export default function ClassesScreen() {
                 <Text style={{ color: colors.icon, marginTop: 8 }}>Solo los administradores pueden gestionar las clases.</Text>
                 <TouchableOpacity
                     onPress={() => router.back()}
-                    style={{ marginTop: 24, paddingHorizontal: 20, paddingVertical: 10, backgroundColor: colors.primary, borderRadius: 12 }}
+                    style={{ marginTop: 24, paddingHorizontal: 20, paddingVertical: 10, backgroundColor: colors.tint, borderRadius: 12 }}
                 >
                     <Text style={{ color: '#FFF', fontWeight: 'bold' }}>Volver</Text>
                 </TouchableOpacity>
@@ -325,7 +326,7 @@ export default function ClassesScreen() {
                 }
 
                 if (conflictFound) {
-                    Alert.alert("Conflicto de Horario", conflictMsg);
+                    showAlert("Conflicto de Horario", conflictMsg);
                     return;
                 }
 
@@ -339,7 +340,7 @@ export default function ClassesScreen() {
             const currentEnrolledCount = selectedClassId ? getValidActiveEnrollments(selectedClassId).length : 0;
 
             if (currentEnrolledCount >= currentCapacity) {
-                Alert.alert(
+                showAlert(
                     "Aforo Excedido",
                     `La clase ha alcanzado su límite de ${currentCapacity} alumnos.No se pueden matricular más alumnos de forma individual.`
                 );
@@ -366,7 +367,7 @@ export default function ClassesScreen() {
 
         const existingTargetEnrollment = enrollments.find(e => e.classId === targetMoveClassId && e.studentId === moveStudentId && e.status === 'active');
         if (existingTargetEnrollment) {
-            Alert.alert("Error", "Este alumno ya está inscrito activamente en la clase de destino seleccionada.");
+            showAlert("Error", "Este alumno ya está inscrito activamente en la clase de destino seleccionada.");
             return;
         }
 
@@ -397,7 +398,7 @@ export default function ClassesScreen() {
             }
 
             if (conflictFound) {
-                Alert.alert("Conflicto de Horario", conflictMsg);
+                showAlert("Conflicto de Horario", conflictMsg);
                 return;
             }
 
@@ -408,7 +409,7 @@ export default function ClassesScreen() {
         };
 
         if (targetEnrolledCount >= targetCapacity) {
-            Alert.alert(
+            showAlert(
                 "Aforo Excedido en Destino",
                 `La clase destino ha alcanzado su límite de ${targetCapacity} alumnos.No puedes añadir más alumnos manualmente.`
             );
@@ -421,11 +422,11 @@ export default function ClassesScreen() {
         const sourceClasses = classes.filter(c => c.mergedToClassId === targetClass.id);
 
         if (sourceClasses.length === 0) {
-            Alert.alert("Error", "No se encontraron clases de origen vinculadas a esta importación.");
+            showAlert("Error", "No se encontraron clases de origen vinculadas a esta importación.");
             return;
         }
 
-        Alert.alert(
+        showAlert(
             "Deshacer Importación",
             `¿Estás seguro que deseas deshacer la importación masiva ? Esta acción retirará a todos los alumnos importados de la clase actual("${targetClass.courseName}") y de cualquier otra a la que hayan sido movidos posteriormente, además eliminará el vínculo de fusión de las clases de origen.`,
             [
@@ -451,7 +452,7 @@ export default function ClassesScreen() {
                             updateClass({ ...updatedSourceClass, mergedToClassId: null } as any);
                         });
 
-                        Alert.alert("Éxito", "La importación ha sido deshecha exitosamente.");
+                        showAlert("Éxito", "La importación ha sido deshecha exitosamente.");
                     }
                 }
             ]
@@ -462,11 +463,11 @@ export default function ClassesScreen() {
         const sourceClasses = classes.filter(c => c.mergedToClassId === targetClass.id);
 
         if (sourceClasses.length === 0) {
-            Alert.alert("Error", "No se encontraron clases de origen vinculadas a esta importación.");
+            showAlert("Error", "No se encontraron clases de origen vinculadas a esta importación.");
             return;
         }
 
-        Alert.alert(
+        showAlert(
             "Confirmar Importación",
             `¿Estás seguro que deseas confirmar la importación masiva ? Esta acción consolidará permanentemente a los alumnos importados en la clase actual("${targetClass.courseName}") y no se podrá deshacer masivamente.`,
             [
@@ -480,7 +481,7 @@ export default function ClassesScreen() {
                                 mergedToClassId: undefined
                             });
                         });
-                        Alert.alert("Éxito", "Las importaciones han sido confirmadas.");
+                        showAlert("Éxito", "Las importaciones han sido confirmadas.");
                     }
                 }
             ]
@@ -511,7 +512,7 @@ export default function ClassesScreen() {
         const studentsToImport = uniqueSourceStudents.filter(id => !alreadyEnrolled.includes(id));
 
         if (studentsToImport.length === 0) {
-            Alert.alert("Atención", "Todos los estudiantes de las clases origen ya están en la clase destino.");
+            showAlert("Atención", "Todos los estudiantes de las clases origen ya están en la clase destino.");
             setMergeModalVisible(false);
             setSelectedSourceClassIds([]);
             return;
@@ -550,7 +551,7 @@ export default function ClassesScreen() {
             }
 
             if (conflictFound) {
-                Alert.alert("Conflicto de Horario", conflictMsg);
+                showAlert("Conflicto de Horario", conflictMsg);
                 return;
             }
 
@@ -579,11 +580,11 @@ export default function ClassesScreen() {
             setMergeModalVisible(false);
             setSelectedSourceClassIds([]);
             setEnrollModalVisible(false);
-            Alert.alert("Éxito", `Se han importado ${studentsToImport.length} alumnos correctamente.`);
+            showAlert("Éxito", `Se han importado ${studentsToImport.length} alumnos correctamente.`);
         };
 
         if (potentialTotal > targetCapacity) {
-            Alert.alert(
+            showAlert(
                 "Aforo Excedido en Destino",
                 `La importación sumará un total de ${potentialTotal} alumnos, superando el límite de ${targetCapacity}.`,
                 [
@@ -638,7 +639,7 @@ export default function ClassesScreen() {
             }
 
             if (conflictFound) {
-                Alert.alert("Conflicto de Horario", conflictMsg);
+                showAlert("Conflicto de Horario", conflictMsg);
                 return;
             }
 
@@ -666,7 +667,7 @@ export default function ClassesScreen() {
             resetForm();
             setModalVisible(false);
         } else if (!allDaysSelected) {
-            Alert.alert("Error", "Por favor selecciona el día para todos los horarios");
+            showAlert("Error", "Por favor selecciona el día para todos los horarios");
         }
     };
 
@@ -674,14 +675,14 @@ export default function ClassesScreen() {
         const enrolledCount = getValidActiveEnrollments(item.id).length;
 
         if (enrolledCount > 0) {
-            Alert.alert(
+            showAlert(
                 "No se puede eliminar",
                 `La clase de ${item.courseName} no puede ser eliminada porque tiene ${enrolledCount} ${enrolledCount === 1 ? 'alumno activo' : 'alumnos activos'}. Por favor, retire o mueva a los alumnos primero.`
             );
             return;
         }
 
-        Alert.alert(
+        showAlert(
             "Eliminar Clase",
             `¿Estás seguro de que deseas eliminar la clase de ${item.courseName} con ${item.teacherName}?`,
             [
@@ -761,16 +762,13 @@ export default function ClassesScreen() {
         return (
             <GestureDetector gesture={composedGesture}>
                 <Animated.View style={[styles.cardContainer, animatedStyle]}>
-                    <BlurView
-                        intensity={90}
-                        tint={colorScheme === 'light' ? 'light' : 'dark'}
-                        style={[
-                            styles.card,
-                            {
-                                backgroundColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.1)',
-                                borderColor: item.color || (colorScheme === 'light' ? 'rgba(0, 0, 0, 0.1)' : 'rgba(255, 255, 255, 0.1)'),
-                            }
-                        ]}
+                    <View style={[
+                        styles.card,
+                        {
+                            backgroundColor: colorScheme === 'light' ? '#FFFFFF' : '#FFFFFF',
+                            borderColor: item.color || (colorScheme === 'light' ? '#FCE4EC' : '#FFFFFF'),
+                        }
+                    ]}
                     >
                         <View style={styles.liquidHighlight} />
 
@@ -828,20 +826,20 @@ export default function ClassesScreen() {
                                 getValidActiveEnrollments(item.id).length === 0 &&
                                 academicCycles.find(ac => ac.id === item.cycleId)?.name.toLowerCase().includes('anual') && (
                                     <TouchableOpacity
-                                        style={[styles.editCircle, { backgroundColor: colors.primary + '20' }]}
+                                        style={[styles.editCircle, { backgroundColor: colors.tint + '20' }]}
                                         onPress={() => { setSelectedClassId(item.id); setSelectedSourceClassIds([]); setMergeModalVisible(true); }}
                                     >
-                                        <Download size={18} color={colors.primary} />
+                                        <Download size={18} color={colors.tint} />
                                     </TouchableOpacity>
                                 )}
                             <TouchableOpacity
-                                style={[styles.editCircle, { backgroundColor: colors.primary + '10' }]}
+                                style={[styles.editCircle, { backgroundColor: colors.tint + '10' }]}
                                 onPress={() => onEdit(item)}
                             >
-                                <Edit3 size={18} color={colors.primary} />
+                                <Edit3 size={18} color={colors.tint} />
                             </TouchableOpacity>
                         </View>
-                    </BlurView>
+                    </View>
                 </Animated.View>
             </GestureDetector>
         );
@@ -976,10 +974,10 @@ export default function ClassesScreen() {
                 onBack={() => router.back()}
                 rightAction={
                     <TouchableOpacity
-                        style={[styles.addButton, { backgroundColor: colors.primary }]}
+                        style={[styles.addButton, { backgroundColor: colors.tint }]}
                         onPress={() => {
                             if (!currentCycleId) {
-                                Alert.alert('Seleccionar Periodo', 'Debe seleccionar un periodo antes de crear una clase.');
+                                showAlert('Seleccionar Periodo', 'Debe seleccionar un periodo antes de crear una clase.');
                                 return;
                             }
                             setModalVisible(true);
@@ -994,14 +992,14 @@ export default function ClassesScreen() {
             <View style={[styles.toggleContainer, { backgroundColor: colors.card }]}>
                 <TouchableOpacity
                     onPress={() => setViewMode('list')}
-                    style={[styles.toggleButton, viewMode === 'list' && { backgroundColor: colors.primary }]}
+                    style={[styles.toggleButton, viewMode === 'list' && { backgroundColor: colors.tint }]}
                 >
                     <List size={20} color={viewMode === 'list' ? '#fff' : colors.icon} />
                     <Text style={[styles.toggleLabel, { color: viewMode === 'list' ? '#fff' : colors.icon }]}>Lista</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                     onPress={() => setViewMode('schedule')}
-                    style={[styles.toggleButton, viewMode === 'schedule' && { backgroundColor: colors.primary }]}
+                    style={[styles.toggleButton, viewMode === 'schedule' && { backgroundColor: colors.tint }]}
                 >
                     <CalendarDays size={20} color={viewMode === 'schedule' ? '#fff' : colors.icon} />
                     <Text style={[styles.toggleLabel, { color: viewMode === 'schedule' ? '#fff' : colors.icon }]}>Horario</Text>
@@ -1012,18 +1010,15 @@ export default function ClassesScreen() {
 
             {viewMode === 'list' ? (
                 <>
-                    <BlurView
-                        intensity={40}
-                        tint={colorScheme === 'light' ? 'light' : 'dark'}
-                        style={[
-                            styles.searchBar,
-                            {
-                                backgroundColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.1)',
-                                borderColor: colorScheme === 'light' ? 'rgba(0, 0, 0, 0.1)' : 'rgba(255, 255, 255, 0.1)',
-                            }
-                        ]}
+                    <View style={[
+                        styles.searchBar,
+                        {
+                            backgroundColor: colorScheme === 'light' ? '#FFFFFF' : '#FFFFFF',
+                            borderColor: colorScheme === 'light' ? '#FCE4EC' : '#FFFFFF',
+                        }
+                    ]}
                     >
-                        <Search color={colorScheme === 'light' ? '#666' : '#AAA'} size={20} />
+                        <Search color={colors.tint} size={20} />
                         <TextInput
                             style={[styles.searchInput, { color: colors.text }]}
                             placeholder="Buscar clase o profesor..."
@@ -1031,7 +1026,7 @@ export default function ClassesScreen() {
                             value={searchQuery}
                             onChangeText={setSearchQuery}
                         />
-                    </BlurView>
+                    </View>
                     <FlatList
                         data={filteredClasses}
                         renderItem={renderClassCard}
@@ -1064,7 +1059,7 @@ export default function ClassesScreen() {
                                         selectedValue={formData.courseId}
                                         onValueChange={(itemValue) => handleCourseSelect(itemValue)}
                                         style={{ color: colors.text, width: '100%', height: 50 }}
-                                        dropdownIconColor={colors.primary}
+                                        dropdownIconColor={colors.tint}
                                     >
                                         <Picker.Item label="Selecciona una materia..." value="" color="#666" />
                                         {courses.map(course => (
@@ -1082,7 +1077,7 @@ export default function ClassesScreen() {
                                         selectedValue={formData.teacherId}
                                         onValueChange={(itemValue) => setFormData({ ...formData, teacherId: itemValue })}
                                         style={{ color: colors.text, width: '100%', height: 50 }}
-                                        dropdownIconColor={colors.primary}
+                                        dropdownIconColor={colors.tint}
                                     >
                                         <Picker.Item label="Selecciona un profesor..." value="" color="#666" />
                                         {teachers.map(teacher => (
@@ -1102,11 +1097,11 @@ export default function ClassesScreen() {
                                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
                                     <Text style={[styles.label, { color: colors.text, marginBottom: 0 }]}>Horarios Semanales</Text>
                                     <TouchableOpacity
-                                        style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.primary + '20', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10 }}
+                                        style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.tint + '20', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10 }}
                                         onPress={addScheduleSlot}
                                     >
-                                        <Plus size={16} color={colors.primary} />
-                                        <Text style={{ color: colors.primary, fontWeight: '600', marginLeft: 4, fontSize: 13 }}>Añadir</Text>
+                                        <Plus size={16} color={colors.tint} />
+                                        <Text style={{ color: colors.tint, fontWeight: '600', marginLeft: 4, fontSize: 13 }}>Añadir</Text>
                                     </TouchableOpacity>
                                 </View>
 
@@ -1126,7 +1121,7 @@ export default function ClassesScreen() {
                                                 selectedValue={schedule.day}
                                                 onValueChange={(v) => updateScheduleSlot(index, 'day', v)}
                                                 style={{ color: colors.text, width: '100%', height: 50 }}
-                                                dropdownIconColor={colors.primary}
+                                                dropdownIconColor={colors.tint}
                                             >
                                                 <Picker.Item label="Selecciona el día..." value="" color="#666" />
                                                 {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'].map(d => (
@@ -1141,7 +1136,7 @@ export default function ClassesScreen() {
                                                     selectedValue={schedule.startHours}
                                                     onValueChange={(v) => updateScheduleSlot(index, 'startHours', v)}
                                                     style={{ color: colors.text, width: '100%', height: 50 }}
-                                                    dropdownIconColor={colors.primary}
+                                                    dropdownIconColor={colors.tint}
                                                 >
                                                     {Array.from({ length: 24 }).map((_, i) => (
                                                         <Picker.Item key={i} label={i.toString().padStart(2, '0')} value={i.toString().padStart(2, '0')} color="#000" />
@@ -1153,7 +1148,7 @@ export default function ClassesScreen() {
                                                     selectedValue={schedule.startMinutes}
                                                     onValueChange={(v) => updateScheduleSlot(index, 'startMinutes', v)}
                                                     style={{ color: colors.text, width: '100%', height: 50 }}
-                                                    dropdownIconColor={colors.primary}
+                                                    dropdownIconColor={colors.tint}
                                                 >
                                                     {['00', '15', '30', '45'].map(m => (
                                                         <Picker.Item key={m} label={m} value={m} color="#000" />
@@ -1225,7 +1220,7 @@ export default function ClassesScreen() {
                             </View>
 
                             <TouchableOpacity
-                                style={[styles.saveButton, { backgroundColor: colors.primary }]}
+                                style={[styles.saveButton, { backgroundColor: colors.tint }]}
                                 onPress={handleSaveClass}
                             >
                                 <Text style={styles.saveText}>
@@ -1288,13 +1283,13 @@ export default function ClassesScreen() {
                                                     styles.studentItem,
                                                     {
                                                         backgroundColor: colors.background,
-                                                        borderColor: isSelected ? colors.primary + '40' : colors.border
+                                                        borderColor: isSelected ? colors.tint + '40' : colors.border
                                                     }
                                                 ]}
                                             >
                                                 <View style={[styles.studentInfo, { flex: 1, marginRight: 10 }]}>
-                                                    <View style={[styles.avatarMini, { backgroundColor: colors.primary + '20' }]}>
-                                                        <User size={16} color={colors.primary} />
+                                                    <View style={[styles.avatarMini, { backgroundColor: colors.tint + '20' }]}>
+                                                        <User size={16} color={colors.tint} />
                                                     </View>
                                                     <Text style={[styles.studentName, { color: colors.text, flex: 1 }]} numberOfLines={1} ellipsizeMode="tail">
                                                         {student.firstName} {student.lastName}
@@ -1306,26 +1301,26 @@ export default function ClassesScreen() {
                                                         <TouchableOpacity
                                                             style={[
                                                                 styles.actionCircle,
-                                                                { backgroundColor: colors.primary + '20', marginRight: 10 }
+                                                                { backgroundColor: colors.tint + '20', marginRight: 10 }
                                                             ]}
                                                             onPress={() => {
                                                                 setMoveStudentId(student.id);
                                                             }}
                                                         >
-                                                            <ArrowRight size={18} color={colors.primary} />
+                                                            <ArrowRight size={18} color={colors.tint} />
                                                         </TouchableOpacity>
                                                     )}
                                                     <TouchableOpacity
                                                         style={[
                                                             styles.actionCircle,
-                                                            { backgroundColor: isSelected ? '#ff4d4d' + '20' : colors.primary + '20' }
+                                                            { backgroundColor: isSelected ? '#ff4d4d' + '20' : colors.tint + '20' }
                                                         ]}
                                                         onPress={() => handleEnrollAction(student)}
                                                     >
                                                         {isSelected ? (
                                                             <X size={18} color="#ff4d4d" />
                                                         ) : (
-                                                            <Plus size={18} color={colors.primary} />
+                                                            <Plus size={18} color={colors.tint} />
                                                         )}
                                                     </TouchableOpacity>
                                                     {isSelected && (
@@ -1443,7 +1438,7 @@ export default function ClassesScreen() {
                                             key={c.id}
                                             style={[
                                                 styles.studentItem,
-                                                { backgroundColor: colors.background, borderColor: isSelected ? colors.primary : colors.border, marginBottom: 10 }
+                                                { backgroundColor: colors.background, borderColor: isSelected ? colors.tint : colors.border, marginBottom: 10 }
                                             ]}
                                             onPress={() => setTargetMoveClassId(c.id)}
                                         >
@@ -1456,10 +1451,10 @@ export default function ClassesScreen() {
                                             </View>
                                             <View style={{
                                                 width: 24, height: 24, borderRadius: 12,
-                                                borderWidth: 2, borderColor: isSelected ? colors.primary : colors.icon,
+                                                borderWidth: 2, borderColor: isSelected ? colors.tint : colors.icon,
                                                 justifyContent: 'center', alignItems: 'center'
                                             }}>
-                                                {isSelected && <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: colors.primary }} />}
+                                                {isSelected && <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: colors.tint }} />}
                                             </View>
                                         </TouchableOpacity>
                                     );
@@ -1470,7 +1465,7 @@ export default function ClassesScreen() {
                         </ScrollView>
 
                         <TouchableOpacity
-                            style={[styles.saveButton, { backgroundColor: targetMoveClassId ? colors.primary : colors.icon, marginTop: 20, marginBottom: 0 }]}
+                            style={[styles.saveButton, { backgroundColor: targetMoveClassId ? colors.tint : colors.icon, marginTop: 20, marginBottom: 0 }]}
                             disabled={!targetMoveClassId}
                             onPress={handleFinalizeMove}
                         >
@@ -1517,7 +1512,7 @@ export default function ClassesScreen() {
                                             key={c.id}
                                             style={[
                                                 styles.studentItem,
-                                                { backgroundColor: colors.background, borderColor: isSelected ? colors.primary : colors.border, marginBottom: 10 }
+                                                { backgroundColor: colors.background, borderColor: isSelected ? colors.tint : colors.border, marginBottom: 10 }
                                             ]}
                                             onPress={() => {
                                                 if (isSelected) {
@@ -1533,20 +1528,20 @@ export default function ClassesScreen() {
                                                 <View style={{ marginTop: 2 }}>
                                                     {c.schedules.map((s: any, idx: number) => (
                                                         <Text key={idx} style={{ color: colors.icon, fontSize: 11 }}>
-                                                            {s.day}: <Text style={{ color: c.color || colors.primary, fontWeight: '500' }}>{s.startTime} - {calculateEndTime(s.startTime, c.duration)}</Text>
+                                                            {s.day}: <Text style={{ color: c.color || colors.tint, fontWeight: '500' }}>{s.startTime} - {calculateEndTime(s.startTime, c.duration)}</Text>
                                                         </Text>
                                                     ))}
                                                 </View>
-                                                <Text style={{ color: colors.primary, fontSize: 11, marginTop: 4, fontWeight: 'bold' }}>
+                                                <Text style={{ color: colors.tint, fontSize: 11, marginTop: 4, fontWeight: 'bold' }}>
                                                     {sourceEnrolled} alumnos activos
                                                 </Text>
                                             </View>
                                             <View style={{
                                                 width: 24, height: 24, borderRadius: 12,
-                                                borderWidth: 2, borderColor: isSelected ? colors.primary : colors.icon,
+                                                borderWidth: 2, borderColor: isSelected ? colors.tint : colors.icon,
                                                 justifyContent: 'center', alignItems: 'center'
                                             }}>
-                                                {isSelected && <Check size={14} color={colors.primary} />}
+                                                {isSelected && <Check size={14} color={colors.tint} />}
                                             </View>
                                         </TouchableOpacity>
                                     );
@@ -1554,7 +1549,7 @@ export default function ClassesScreen() {
                         </ScrollView>
 
                         <TouchableOpacity
-                            style={[styles.saveButton, { backgroundColor: selectedSourceClassIds.length > 0 ? colors.primary : colors.icon, marginTop: 20, marginBottom: 0 }]}
+                            style={[styles.saveButton, { backgroundColor: selectedSourceClassIds.length > 0 ? colors.tint : colors.icon, marginTop: 20, marginBottom: 0 }]}
                             disabled={selectedSourceClassIds.length === 0}
                             onPress={handleConfirmMerge}
                         >
@@ -1642,7 +1637,7 @@ export default function ClassesScreen() {
                                 <Text style={[styles.saveText, { color: colors.text }]}>Cancelar</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
-                                style={[styles.saveButton, { flex: 1, backgroundColor: colors.primary }]}
+                                style={[styles.saveButton, { flex: 1, backgroundColor: colors.tint }]}
                                 onPress={() => {
                                     if (selectedClassId && studentToEnroll) {
                                         const dateStr = enrollDate.toISOString().split('T')[0];
@@ -1748,7 +1743,7 @@ export default function ClassesScreen() {
                                 <Text style={[styles.saveText, { color: colors.text }]}>Cancelar</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
-                                style={[styles.saveButton, { flex: 1, backgroundColor: colors.primary }]}
+                                style={[styles.saveButton, { flex: 1, backgroundColor: colors.tint }]}
                                 onPress={() => {
                                     // Perform move
                                     const currentEnrollment = enrollments.find((e: any) => e.classId === selectedClassId && e.studentId === moveStudentId && e.status === 'active');
@@ -1769,27 +1764,28 @@ export default function ClassesScreen() {
                                     // 2. Enroll in target
                                     const withdrawnTarget = enrollments.find((e: any) => e.studentId === moveStudentId && e.classId === targetMoveClassId && e.status === 'withdrawn');
                                     const isImportedFlag = currentEnrollment.isImported;
-                                    const originalImportId = currentEnrollment.originalImportedClassId || (isImportedFlag ? selectedClassId : undefined);
+                                    const originalImportId = currentEnrollment.originalImportedClassId || (isImportedFlag ? selectedClassId : null);
 
                                     if (withdrawnTarget) {
                                         updateEnrollment({
                                             ...withdrawnTarget,
                                             status: 'active',
                                             date: dateStr,
-                                            withdrawalDate: undefined,
+                                            withdrawalDate: null as any,
                                             isImported: isImportedFlag,
-                                            originalImportedClassId: originalImportId ?? undefined
-                                        });
+                                            originalImportedClassId: originalImportId ?? null
+                                        } as any);
                                     } else {
-                                        addEnrollment({
+                                        const newEnrollment: any = {
                                             id: `${moveStudentId} -${targetMoveClassId} -${Date.now()} `,
-                                            studentId: moveStudentId!, //Fix null problem
-                                            classId: targetMoveClassId!, //Fix null problem
+                                            studentId: moveStudentId!,
+                                            classId: targetMoveClassId!,
                                             date: dateStr,
                                             status: 'active',
-                                            isImported: isImportedFlag,
-                                            originalImportedClassId: originalImportId ?? undefined
-                                        });
+                                        };
+                                        if (isImportedFlag) newEnrollment.isImported = true;
+                                        if (originalImportId) newEnrollment.originalImportedClassId = originalImportId;
+                                        addEnrollment(newEnrollment);
                                     }
 
                                     setEnrolledInSelected(prev => prev.filter((id: string) => id !== moveStudentId));
@@ -1876,7 +1872,7 @@ export default function ClassesScreen() {
                                 <Text style={[styles.saveText, { color: colors.text }]}>Cancelar</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
-                                style={[styles.saveButton, { flex: 1, backgroundColor: colors.primary }]}
+                                style={[styles.saveButton, { flex: 1, backgroundColor: colors.tint }]}
                                 onPress={async () => {
                                     if (!enrollmentToEdit) return;
                                     const dateStr = editDate.toISOString().split('T')[0];
@@ -2105,12 +2101,11 @@ const styles = StyleSheet.create({
         left: 0,
         right: 0,
         height: '50%',
-        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        backgroundColor: '#FFFFFF',
         borderTopLeftRadius: 32,
         borderTopRightRadius: 32,
     },
 });
-
 
 
 

@@ -3,7 +3,6 @@ import { Colors } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { useInstitution } from '@/context/InstitutionContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { BlurView } from 'expo-blur';
 import { useRouter } from 'expo-router';
 import { Calendar, Check, ChevronDown, CloudSun, LogOut, Moon, Sun, X } from 'lucide-react-native';
 import React, { useMemo, useState } from 'react';
@@ -29,17 +28,14 @@ export default function DashboardScreen() {
   };
 
   const greeting = getGreeting();
-
   const isTablet = width > 600;
 
-  // Dynamic calculations based on cycle
   const activeCycle = useMemo(() =>
     academicCycles.find(c => c.id === currentCycleId),
     [academicCycles, currentCycleId]
   );
 
   const activeStudentsCount = useMemo(() => {
-    // Unique students enrolled in any class of the current cycle
     const enrolledIds = new Set(
       enrollments
         .filter(e => {
@@ -55,11 +51,9 @@ export default function DashboardScreen() {
     const days = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
     const today = days[new Date().getDay()];
 
-    // Check if today is within active cycle dates
     if (activeCycle) {
       const now = new Date();
       const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-
       if (todayStr < activeCycle.startDate || todayStr > activeCycle.endDate) {
         return 0;
       }
@@ -92,92 +86,74 @@ export default function DashboardScreen() {
             { paddingBottom: insets.bottom + 20 }
           ]}
         >
-          <View style={styles.headerContainer}>
-            <View style={[styles.header, isTablet && styles.headerTablet]}>
-              <View style={styles.headerTop}>
-                <View style={styles.greetingWrapper}>
-                  <View style={styles.greetingTextContainer}>
-                    <View style={styles.greetingRow}>
-                      {greeting.icon}
-                      <Text style={[styles.greetingSub, { color: colors.icon }]}> {greeting.text},</Text>
-                    </View>
-                    <Text style={[styles.greeting, { fontSize: isTablet ? 32 : 24, color: colors.text }]}>
-                      {user?.displayName || user?.email?.split('@')[0] || 'Usuario'}
-                    </Text>
-                    <Text style={[styles.dateText, { color: colors.icon + '80' }]}>
-                      {currentDate.charAt(0).toUpperCase() + currentDate.slice(1)}
-                    </Text>
-                  </View>
+          {/* ─── Header Area ─── */}
+          <View style={[styles.header, isTablet && styles.headerTablet]}>
+            <View style={styles.headerTop}>
+              <View style={styles.greetingTextContainer}>
+                <View style={styles.greetingRow}>
+                  {greeting.icon}
+                  <Text style={[styles.greetingSub, { color: colors.icon }]}> {greeting.text},</Text>
                 </View>
-                <View style={styles.headerIcons}>
-                  <TouchableOpacity style={[styles.iconCircle, { backgroundColor: 'rgba(255, 255, 255, 0.5)' }]} onPress={handleLogout}>
-                    <LogOut size={isTablet ? 24 : 20} color={colors.text} />
-                  </TouchableOpacity>
-                </View>
+                <Text style={[styles.greeting, { fontSize: isTablet ? 34 : 26, color: colors.text }]}>
+                  {user?.displayName || user?.email?.split('@')[0] || 'Usuario'}
+                </Text>
+                <Text style={[styles.dateText, { color: colors.icon + '99' }]}>
+                  {currentDate.charAt(0).toUpperCase() + currentDate.slice(1)}
+                </Text>
               </View>
-
-              <View style={styles.cycleSelectorRow}>
-                {/* Modern Glass Chip Selector Trigger */}
-                <TouchableOpacity
-                  onPress={() => setIsCycleMenuVisible(true)}
-                  activeOpacity={0.7}
-                  style={styles.cycleBadgeWrapper}
-                >
-                  <BlurView
-                    intensity={90}
-                    tint={colorScheme === 'light' ? 'light' : 'dark'}
-                    style={[
-                      styles.cycleBadge,
-                      {
-                        backgroundColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.4)' : 'rgba(255, 255, 255, 0.08)',
-                        borderColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.15)',
-                      }
-                    ]}
-                  >
-                    <View style={styles.cycleBadgeContent}>
-                      <Calendar size={14} color={colors.text} />
-                      <Text style={[styles.cycleBadgeText, { color: colors.text }]}>
-                        {activeCycle?.name || 'Seleccionar Período'}
-                      </Text>
-                      <View style={[styles.badgeArrow, { backgroundColor: colors.text + '15' }]}>
-                        <ChevronDown size={14} color={colors.text} />
-                      </View>
-                    </View>
-                  </BlurView>
-                </TouchableOpacity>
-              </View>
-
-              {/* Quick Summary Card */}
-              <BlurView
-                intensity={90}
-                tint={colorScheme === 'light' ? 'light' : 'dark'}
-                style={[
-                  styles.summaryCard,
-                  isTablet && styles.summaryCardTablet,
-                  {
-                    backgroundColor: colorScheme === 'light' ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.08)',
-                    borderColor: colorScheme === 'light' ? 'rgba(255,255,255,1)' : 'rgba(255,255,255,0.15)'
-                  }
-                ]}
+              <TouchableOpacity
+                style={[styles.logoutButton, { backgroundColor: colors.secondary }]}
+                onPress={handleLogout}
               >
+                <LogOut size={isTablet ? 22 : 18} color={colors.tint} />
+              </TouchableOpacity>
+            </View>
 
-                {userRole !== 'professor' && (
-                  <>
-                    <View style={styles.summaryItem}>
-                      <Text style={[styles.summaryLabel, { fontSize: isTablet ? 14 : 12, color: colors.text, opacity: 0.7 }]}>Estudiantes</Text>
-                      <Text style={[styles.summaryValue, { fontSize: isTablet ? 28 : 24, color: colors.text }]}>{activeStudentsCount}</Text>
-                    </View>
-                    <View style={[styles.summaryDivider, { backgroundColor: colors.text, opacity: 0.1 }]} />
-                  </>
-                )}
-                <View style={styles.summaryItem}>
-                  <Text style={[styles.summaryLabel, { fontSize: isTablet ? 14 : 12, color: colors.text, opacity: 0.7 }]}>Cursos Hoy</Text>
-                  <Text style={[styles.summaryValue, { fontSize: isTablet ? 28 : 24, color: colors.text }]}>{classesTodayCount}</Text>
+            {/* Cycle Selector Pill */}
+            <TouchableOpacity
+              onPress={() => setIsCycleMenuVisible(true)}
+              activeOpacity={0.7}
+              style={styles.cyclePillWrapper}
+            >
+              <View style={[styles.cyclePill, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
+                <Calendar size={14} color={colors.tint} />
+                <Text style={[styles.cyclePillText, { color: colors.text }]}>
+                  {activeCycle?.name || 'Seleccionar Período'}
+                </Text>
+                <View style={[styles.pillArrow, { backgroundColor: colors.tint + '15' }]}>
+                  <ChevronDown size={14} color={colors.tint} />
                 </View>
-              </BlurView>
+              </View>
+            </TouchableOpacity>
+
+            {/* ─── Summary Card ─── */}
+            <View
+              style={[
+                styles.summaryCard,
+                isTablet && styles.summaryCardTablet,
+                {
+                  backgroundColor: colorScheme === 'light' ? '#FFFFFF' : colors.card,
+                  borderColor: colorScheme === 'light' ? '#FCE4EC' : colors.border,
+                }
+              ]}
+            >
+              {userRole !== 'professor' && (
+                <>
+                  <View style={styles.summaryItem}>
+                    <Text style={[styles.summaryLabel, { color: colors.icon + '90' }]}>Estudiantes</Text>
+                    <Text style={[styles.summaryValue, { fontSize: isTablet ? 30 : 28, color: colors.tint }]}>{activeStudentsCount}</Text>
+                  </View>
+                  <View style={[styles.summaryDivider, { backgroundColor: colors.border }]} />
+                </>
+              )}
+              <View style={styles.summaryItem}>
+                <Text style={[styles.summaryLabel, { color: colors.icon + '90' }]}>Cursos Hoy</Text>
+                <Text style={[styles.summaryValue, { fontSize: isTablet ? 30 : 28, color: colors.tint }]}>{classesTodayCount}</Text>
+              </View>
             </View>
           </View>
 
+          {/* ─── Module Grid ─── */}
           <View style={[styles.content, isTablet && styles.contentTablet]}>
             <Text style={[styles.sectionTitle, { color: colors.text, fontSize: isTablet ? 24 : 18 }]}>Menú Principal</Text>
             <DashboardGrid />
@@ -185,7 +161,7 @@ export default function DashboardScreen() {
         </ScrollView>
       </SafeAreaView>
 
-      {/* Dropdown Menu Modal */}
+      {/* ─── Cycle Selection Modal ─── */}
       <Modal
         visible={isCycleMenuVisible}
         transparent={true}
@@ -199,7 +175,7 @@ export default function DashboardScreen() {
                 styles.menuContainer,
                 {
                   backgroundColor: colors.modal,
-                  borderColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.9)' : 'rgba(255, 255, 255, 0.15)',
+                  borderColor: colorScheme === 'light' ? 'rgba(0,0,0,0.06)' : 'rgba(255, 255, 255, 0.15)',
                 }
               ]}
             >
@@ -207,9 +183,9 @@ export default function DashboardScreen() {
                 <Text style={[styles.menuTitle, { color: colors.text }]}>Seleccionar Período</Text>
                 <TouchableOpacity
                   onPress={() => setIsCycleMenuVisible(false)}
-                  style={[styles.closeButton, { backgroundColor: colors.border + '30' }]}
+                  style={[styles.closeButton, { backgroundColor: colors.secondary }]}
                 >
-                  <X size={18} color={colors.text} />
+                  <X size={18} color={colors.tint} />
                 </TouchableOpacity>
               </View>
 
@@ -221,13 +197,13 @@ export default function DashboardScreen() {
                       key={cycle.id}
                       style={[
                         styles.modernMenuItem,
+                        { backgroundColor: isSelected ? colors.tint : colors.secondary },
                         isSelected && {
-                          backgroundColor: colors.primary,
-                          shadowColor: colors.primary,
+                          shadowColor: colors.tint,
                           shadowOffset: { width: 0, height: 4 },
                           shadowOpacity: 0.3,
                           shadowRadius: 8,
-                          elevation: Platform.OS === 'android' ? 0 : 4,
+                          elevation: Platform.OS === 'android' ? 4 : 4,
                         }
                       ]}
                       onPress={() => {
@@ -239,9 +215,9 @@ export default function DashboardScreen() {
                       <View style={styles.menuItemContent}>
                         <View style={[
                           styles.iconBg,
-                          { backgroundColor: isSelected ? 'rgba(255,255,255,0.2)' : colors.border + '40' }
+                          { backgroundColor: isSelected ? 'rgba(255,255,255,0.2)' : colors.tint + '15' }
                         ]}>
-                          <Calendar size={16} color={isSelected ? '#FFF' : colors.text} />
+                          <Calendar size={16} color={isSelected ? '#FFF' : colors.tint} />
                         </View>
                         <Text style={[
                           styles.cycleName,
@@ -254,7 +230,7 @@ export default function DashboardScreen() {
                       {isSelected ? (
                         <Check size={18} color="#FFF" />
                       ) : (
-                        <View style={[styles.radioEmpty, { borderColor: colors.border }]} />
+                        <View style={[styles.radioEmpty, { borderColor: colors.tint + '40' }]} />
                       )}
                     </TouchableOpacity>
                   );
@@ -272,13 +248,10 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
   },
-  headerContainer: {
-    overflow: 'hidden',
-  },
   header: {
     paddingHorizontal: 20,
     paddingTop: 10,
-    paddingBottom: 25,
+    paddingBottom: 20,
   },
   headerTablet: {
     paddingHorizontal: 40,
@@ -288,77 +261,86 @@ const styles = StyleSheet.create({
   headerTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  greeting: {
-    fontWeight: '700',
-  },
-  greetingWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 15,
-    flex: 1,
-  },
-  avatarWrapper: {
-    // Hidden or removed
-  },
-  avatarBlur: {
-    // Hidden or removed
-  },
-  avatarText: {
-    // Hidden or removed
+    alignItems: 'flex-start',
+    marginBottom: 18,
   },
   greetingTextContainer: {
-    justifyContent: 'center',
+    flex: 1,
   },
   greetingRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 2,
+    marginBottom: 4,
   },
   greetingSub: {
     fontSize: 14,
     fontWeight: '500',
   },
+  greeting: {
+    fontWeight: '800',
+    letterSpacing: -0.5,
+  },
   dateText: {
-    fontSize: 12,
-    marginTop: 2,
+    fontSize: 13,
+    marginTop: 4,
     fontWeight: '500',
   },
-  cycleSelectorRow: {
-    marginBottom: 15,
-  },
-  headerIcons: {
-    flexDirection: 'row',
-    alignSelf: 'flex-start',
-    marginTop: 10,
-  },
-  iconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+  logoutButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
+    marginTop: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: Platform.OS === 'android' ? 2 : 3,
+  },
+  cyclePillWrapper: {
+    alignSelf: 'flex-start',
+    marginBottom: 18,
+  },
+  cyclePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.05)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: Platform.OS === 'android' ? 1 : 2,
+  },
+  cyclePillText: {
+    fontSize: 13,
+    fontWeight: '700',
+    letterSpacing: -0.2,
+  },
+  pillArrow: {
+    padding: 3,
+    borderRadius: 8,
+    marginLeft: 4,
   },
   summaryCard: {
     flexDirection: 'row',
-    borderRadius: 24,
-    padding: 18,
+    borderRadius: 22,
+    padding: 22,
     alignItems: 'center',
     justifyContent: 'space-around',
-    borderWidth: 1.5,
-    overflow: 'hidden',
+    borderWidth: 1,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.1,
-    shadowRadius: 15,
-    elevation: Platform.OS === 'android' ? 0 : 5,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.05,
+    shadowRadius: 14,
+    elevation: Platform.OS === 'android' ? 3 : 5,
   },
   summaryCardTablet: {
-    padding: 24,
+    padding: 28,
     maxWidth: 800,
     alignSelf: 'center',
     width: '100%',
@@ -368,16 +350,19 @@ const styles = StyleSheet.create({
   },
   summaryLabel: {
     marginBottom: 4,
-    fontWeight: '500',
+    fontWeight: '600',
+    fontSize: 12,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
   },
   summaryValue: {
-    fontWeight: '700',
+    fontWeight: '800',
     letterSpacing: -0.5,
   },
   summaryDivider: {
     width: 1,
-    height: 30,
-    opacity: 0.2,
+    height: 40,
+    opacity: 0.5,
   },
   content: {
     paddingTop: 10,
@@ -389,53 +374,28 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   sectionTitle: {
-    fontWeight: '700',
+    fontWeight: '800',
     marginHorizontal: 20,
-    marginBottom: 16,
-  },
-  cycleBadgeWrapper: {
-    alignSelf: 'flex-start',
-    borderRadius: 14,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
-  },
-  cycleBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  cycleBadgeContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  cycleBadgeText: {
-    fontSize: 13,
-    fontWeight: '700', // Increased weight
-    letterSpacing: -0.2,
-  },
-  badgeArrow: {
-    padding: 3,
-    borderRadius: 6,
-    marginLeft: 4,
+    marginBottom: 14,
+    letterSpacing: -0.5,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)', // Deeper backdrop for contrast
-    justifyContent: 'center', // Center it for better focus
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
     alignItems: 'center',
   },
   menuContainer: {
     width: '90%',
     maxWidth: 400,
-    borderRadius: 24,
+    borderRadius: 28,
     padding: 8,
     borderWidth: 1,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.15,
     shadowRadius: 20,
-    elevation: Platform.OS === 'android' ? 0 : 10,
+    elevation: Platform.OS === 'android' ? 8 : 10,
     overflow: 'hidden',
   },
   menuItemsWrapper: {
@@ -451,12 +411,12 @@ const styles = StyleSheet.create({
     paddingBottom: 15,
   },
   closeButton: {
-    padding: 6,
-    borderRadius: 12,
+    padding: 8,
+    borderRadius: 14,
   },
   menuTitle: {
     fontSize: 18,
-    fontWeight: '800', // Stronger font
+    fontWeight: '800',
     letterSpacing: -0.5,
   },
   modernMenuItem: {
@@ -465,13 +425,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     padding: 14,
     borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     marginHorizontal: 4,
   },
   iconBg: {
     width: 36,
     height: 36,
-    borderRadius: 12,
+    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -480,7 +439,6 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 10,
     borderWidth: 2,
-    opacity: 0.3,
   },
   menuItemContent: {
     flexDirection: 'row',
@@ -489,5 +447,6 @@ const styles = StyleSheet.create({
   },
   cycleName: {
     fontSize: 16,
+    fontWeight: '600',
   },
 });

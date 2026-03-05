@@ -1,13 +1,12 @@
 import { Colors } from '@/constants/theme';
+import { useAlert } from '@/context/AlertContext';
 import { useAuth } from '@/context/AuthContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Picker } from '@react-native-picker/picker';
-import { BlurView } from 'expo-blur';
 import { Stack, useRouter } from 'expo-router';
 import { AlertCircle, ChevronLeft, Edit3, Mail, Phone, Plus, Search, Trash2, UserPlus, X } from 'lucide-react-native';
 import React, { useState } from 'react';
 import {
-    Alert,
     Dimensions,
     FlatList,
     KeyboardAvoidingView,
@@ -59,6 +58,7 @@ const triggerHaptic = () => {
 };
 
 export default function ManagementModule({ title, type, placeholderExtra, iconExtra: IconExtra }: ManagementModuleProps) {
+    const { showAlert } = useAlert();
     const { userRole } = useAuth();
     const insets = useSafeAreaInsets();
     const router = useRouter();
@@ -68,19 +68,19 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
     if (userRole !== 'admin') {
         return (
             <View style={[styles.container, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center', paddingTop: insets.top }]}>
-                <AlertCircle size={48} color={colors.secondary} />
+                <AlertCircle size={48} color={colors.tint} />
                 <Text style={{ color: colors.text, fontSize: 18, fontWeight: 'bold', marginTop: 16 }}>Acceso Denegado</Text>
                 <Text style={{ color: colors.icon, marginTop: 8 }}>Solo los administradores pueden gestionar {title.toLowerCase()}.</Text>
                 <TouchableOpacity
                     onPress={() => router.back()}
-                    style={{ marginTop: 24, paddingHorizontal: 20, paddingVertical: 10, backgroundColor: colors.primary, borderRadius: 12 }}
+                    style={{ marginTop: 24, paddingHorizontal: 20, paddingVertical: 10, backgroundColor: colors.tint, borderRadius: 12 }}
                 >
                     <Text style={{ color: '#FFF', fontWeight: 'bold' }}>Volver</Text>
                 </TouchableOpacity>
             </View>
         );
     }
-    const { courses, students, teachers, addStudent, addTeacher, updateStudent, updateTeacher, removeStudent, removeTeacher, academicCycles, currentCycleId, enrollments, classes } = useInstitution();
+    const { courses, students, teachers, addStudent, addTeacher, updateStudent, updateTeacher, removeStudent, removeTeacher, academicCycles, currentCycleId, enrollments, classes, installments } = useInstitution();
     const isDraggingGlobal = useSharedValue(0); // 0 = not dragging, 1 = dragging
 
     const [searchQuery, setSearchQuery] = useState('');
@@ -141,8 +141,8 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
 
     const handleRemoveYear = (year: string) => {
         if (editingEntityId) {
-            // Verificar si el estudiante tiene alguna matrícula en este año específico
-            const hasEnrollmentsInYear = enrollments.some(e => {
+            // Find enrollments for this student in the given year
+            const yearEnrollments = enrollments.filter(e => {
                 if (e.studentId !== editingEntityId) return false;
                 const classItem = classes.find(c => c.id === e.classId);
                 if (!classItem) return false;
@@ -151,8 +151,18 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
                 return cycleYear === year;
             });
 
-            if (hasEnrollmentsInYear) {
-                Alert.alert("Acción Denegada", `No se puede remover la asignación al año ${year} porque el estudiante tiene matrículas o historial académico en él.`);
+            const hasActiveEnrollments = yearEnrollments.some(e => e.status !== 'withdrawn');
+
+            // Check if any installment for those enrollments has been paid
+            const hasPaidPayments = yearEnrollments.some(e =>
+                installments.some(inst => inst.enrollmentId === e.id && inst.isPaid)
+            );
+
+            if (hasActiveEnrollments || hasPaidPayments) {
+                const reason = hasActiveEnrollments
+                    ? 'tiene matrículas activas'
+                    : 'tiene pagos registrados';
+                showAlert("Acción Denegada", `No se puede remover la asignación al año ${year} porque el estudiante ${reason} en él.`, undefined, 'warning');
                 return;
             }
         }
@@ -191,18 +201,18 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
         if (type === 'student') {
             const hasEnrollments = enrollments.some(e => e.studentId === item.id);
             if (hasEnrollments) {
-                Alert.alert("Acción Denegada", "No se puede eliminar a este estudiante porque tiene registros de historial o matrícula.");
+                showAlert("Acción Denegada", "No se puede eliminar a este estudiante porque tiene registros de historial o matrícula.");
                 return;
             }
         } else {
             const hasClasses = classes.some(c => `${item.firstName} ${item.lastName}` === c.teacherName);
             if (hasClasses) {
-                Alert.alert("Acción Denegada", "No se puede eliminar a este profesor porque tiene clases asignadas.");
+                showAlert("Acción Denegada", "No se puede eliminar a este profesor porque tiene clases asignadas.");
                 return;
             }
         }
 
-        Alert.alert(
+        showAlert(
             "Eliminar Registro",
             `¿Estás seguro de que deseas eliminar a ${item.firstName} ${item.lastName}?`,
             [
@@ -286,21 +296,17 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
         return (
             <GestureDetector gesture={composedGesture}>
                 <Animated.View style={[styles.cardContainer, animatedStyle]}>
-                    <BlurView
-                        intensity={90}
-                        tint={colorScheme === 'light' ? 'light' : 'dark'}
+                    <View
                         style={[
                             styles.card,
                             {
-                                backgroundColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.1)',
-                                borderColor: colorScheme === 'light' ? 'rgba(0, 0, 0, 0.1)' : 'rgba(255, 255, 255, 0.15)',
+                                backgroundColor: colorScheme === 'light' ? '#FFFFFF' : colors.card,
+                                borderColor: colorScheme === 'light' ? '#FCE4EC' : colors.border,
                             }
                         ]}
                     >
-                        <View style={styles.liquidHighlight} />
-
-                        <View style={[styles.avatar, { backgroundColor: colors.primary + '20' }]}>
-                            <Text style={[styles.avatarText, { color: colors.primary }]}>{item.firstName.charAt(0)}</Text>
+                        <View style={[styles.avatar, { backgroundColor: '#FFF0F5' }]}>
+                            <Text style={[styles.avatarText, { color: colors.tint }]}>{item.firstName.charAt(0)}</Text>
                         </View>
                         <View style={styles.cardContent}>
                             <Text style={[
@@ -322,20 +328,20 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
                             {item.extra && item.extra.length > 0 && (
                                 <View style={styles.specialtyTags}>
                                     {item.extra.split(', ').map((s: string, idx: number) => (
-                                        <View key={idx} style={[styles.miniBadge, { backgroundColor: colors.primary + '10' }]}>
-                                            <Text style={[styles.miniBadgeText, { color: colors.primary }]}>{s}</Text>
+                                        <View key={idx} style={[styles.miniBadge, { backgroundColor: '#FFF0F5' }]}>
+                                            <Text style={[styles.miniBadgeText, { color: colors.tint }]}>{s}</Text>
                                         </View>
                                     ))}
                                 </View>
                             )}
                         </View>
                         <TouchableOpacity
-                            style={[styles.editCircle, { backgroundColor: colors.primary + '20' }]}
+                            style={[styles.editCircle, { backgroundColor: '#FFF0F5' }]}
                             onPress={() => onEdit(item)}
                         >
-                            <Edit3 size={18} color={colors.primary} />
+                            <Edit3 size={18} color={colors.tint} />
                         </TouchableOpacity>
-                    </BlurView>
+                    </View>
                 </Animated.View>
             </GestureDetector>
         );
@@ -449,12 +455,12 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
 
             {/* Header */}
             <View style={styles.header} >
-                <TouchableOpacity onPress={() => router.back()} style={[styles.backButton, { backgroundColor: colorScheme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]}>
+                <TouchableOpacity onPress={() => router.back()} style={[styles.backButton, { backgroundColor: '#FFF0F5', borderWidth: 1, borderColor: '#FCE4EC' }]}>
                     <ChevronLeft color={colors.text} size={24} />
                 </TouchableOpacity>
                 <Text style={[styles.headerTitle, { color: colors.text }]}>{title}</Text>
                 <TouchableOpacity
-                    style={[styles.addButton, { backgroundColor: colors.primary }]}
+                    style={[styles.addButton, { backgroundColor: colors.tint }]}
                     onPress={() => { resetForm(); setModalVisible(true); }}
                 >
                     <Plus color="#fff" size={24} />
@@ -462,19 +468,17 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
             </View >
 
             {/* Search Bar - Principal focus for simple management */}
-            <BlurView
-                intensity={90}
-                tint={colorScheme === 'light' ? 'light' : 'dark'}
+            <View
                 style={[
                     styles.searchContainer,
                     {
-                        backgroundColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.1)',
-                        borderColor: colorScheme === 'light' ? 'rgba(0, 0, 0, 0.1)' : 'rgba(255, 255, 255, 0.15)',
+                        backgroundColor: colorScheme === 'light' ? '#FFFFFF' : colors.card,
+                        borderColor: colorScheme === 'light' ? '#FCE4EC' : colors.border,
                         marginTop: 10
                     }
                 ]}
             >
-                <Search color={colorScheme === 'light' ? '#666' : '#AAA'} size={20} />
+                <Search color={colors.tint} size={20} />
                 <TextInput
                     style={[styles.searchInput, { color: colors.text }]}
                     placeholder={`Buscar ${title.toLowerCase()}...`}
@@ -482,7 +486,7 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
                     value={searchQuery}
                     onChangeText={setSearchQuery}
                 />
-            </BlurView>
+            </View>
 
             {/* List */}
             < FlatList
@@ -609,7 +613,7 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
                                             selectedValue={formData.status}
                                             onValueChange={(v) => setFormData({ ...formData, status: v })}
                                             style={{ color: colors.text, width: '100%', height: 50 }}
-                                            dropdownIconColor={colors.primary}
+                                            dropdownIconColor={colors.tint}
                                         >
                                             <Picker.Item label="Activo" value="active" />
                                             <Picker.Item label="Inactivo" value="inactive" />
@@ -622,7 +626,7 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
                                                 selectedValue=""
                                                 onValueChange={(v) => handleAddYear(v)}
                                                 style={{ color: colors.text, width: '100%', height: 50 }}
-                                                dropdownIconColor={colors.primary}
+                                                dropdownIconColor={colors.tint}
                                             >
                                                 <Picker.Item label="Añadir..." value="" />
                                                 {[...Array(3)].map((_, i) => {
@@ -647,8 +651,8 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
                                                     key={idx}
                                                     onPress={() => handleRemoveYear(year)}
                                                     style={[styles.specialtyChip, {
-                                                        backgroundColor: colors.primary,
-                                                        borderColor: colors.primary,
+                                                        backgroundColor: colors.tint,
+                                                        borderColor: colors.tint,
                                                         flexDirection: 'row',
                                                         alignItems: 'center'
                                                     }]}
@@ -676,7 +680,7 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
                                             selectedValue=""
                                             onValueChange={(itemValue) => handleAddSpecialty(itemValue)}
                                             style={{ color: colors.text, width: '100%', height: 50 }}
-                                            dropdownIconColor={colors.primary}
+                                            dropdownIconColor={colors.tint}
                                         >
                                             <Picker.Item label="Selecciona para añadir..." value="" color={colors.icon} />
                                             {courses.map(course => (
@@ -693,8 +697,8 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
                                                     key={idx}
                                                     onPress={() => handleRemoveSpecialty(spec)}
                                                     style={[styles.specialtyChip, {
-                                                        backgroundColor: colors.primary,
-                                                        borderColor: colors.primary,
+                                                        backgroundColor: colors.tint,
+                                                        borderColor: colors.tint,
                                                         flexDirection: 'row',
                                                         alignItems: 'center'
                                                     }]}
@@ -716,7 +720,7 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
                             )}
 
                             <TouchableOpacity
-                                style={[styles.submitButton, { backgroundColor: colors.primary }]}
+                                style={[styles.submitButton, { backgroundColor: colors.tint }]}
                                 onPress={handleSave}
                             >
                                 <Text style={styles.submitButtonText}>
@@ -764,14 +768,14 @@ const styles = StyleSheet.create({
     addButton: {
         width: 44,
         height: 44,
-        borderRadius: 12,
+        borderRadius: 14,
         justifyContent: 'center',
         alignItems: 'center',
-        elevation: 4,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 4,
+        shadowColor: '#EC4899',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.25,
+        shadowRadius: 12,
+        elevation: Platform.OS === 'android' ? 4 : 6,
     },
     searchContainer: {
         flexDirection: 'row',
@@ -779,10 +783,14 @@ const styles = StyleSheet.create({
         marginHorizontal: 20,
         paddingHorizontal: 15,
         height: 52,
-        borderRadius: 32, // Upgraded to Elite 32px
-        borderWidth: 1.5,
+        borderRadius: 18,
+        borderWidth: 1,
         marginBottom: 16,
         overflow: 'hidden',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.04,
+        shadowRadius: 10,
     },
     searchInput: {
         flex: 1,
@@ -800,15 +808,14 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         padding: 16,
-        borderRadius: 32, // Consistent with liquid glass elite
-        borderWidth: 1.5,
+        borderRadius: 20,
+        borderWidth: 1,
         overflow: 'hidden',
-        // Layered shadows for depth
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.1,
-        shadowRadius: 15,
-        elevation: Platform.OS === 'android' ? 0 : 8,
+        shadowOpacity: 0.06,
+        shadowRadius: 14,
+        elevation: Platform.OS === 'android' ? 3 : 5,
     },
     liquidHighlight: {
         position: 'absolute',
@@ -901,10 +908,14 @@ const styles = StyleSheet.create({
         justifyContent: 'flex-end',
     },
     modalContent: {
-        borderTopLeftRadius: 30,
-        borderTopRightRadius: 30,
+        borderTopLeftRadius: 28,
+        borderTopRightRadius: 28,
         padding: 25,
         maxHeight: '85%',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -8 },
+        shadowOpacity: 0.08,
+        shadowRadius: 20,
     },
     modalHeader: {
         flexDirection: 'row',
@@ -939,13 +950,17 @@ const styles = StyleSheet.create({
         fontSize: 15,
     },
     submitButton: {
-        height: 60,
-        borderRadius: 18,
+        height: 56,
+        borderRadius: 16,
         justifyContent: 'center',
         alignItems: 'center',
         marginTop: 10,
         marginBottom: 30,
-        elevation: 4,
+        shadowColor: '#EC4899',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.25,
+        shadowRadius: 12,
+        elevation: Platform.OS === 'android' ? 4 : 6,
     },
     submitButtonText: {
         color: '#fff',

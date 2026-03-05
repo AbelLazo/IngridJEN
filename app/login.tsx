@@ -1,4 +1,5 @@
 import { FontAwesome } from '@expo/vector-icons';
+import { useAlert } from '@/context/AlertContext';
 import * as AuthSession from 'expo-auth-session';
 import * as Google from 'expo-auth-session/providers/google';
 import { BlurView } from 'expo-blur';
@@ -18,6 +19,7 @@ import { auth, db } from '../lib/firebaseConfig';
 WebBrowser.maybeCompleteAuthSession();
 
 export default function LoginScreen() {
+    const { showAlert } = useAlert();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
@@ -57,7 +59,7 @@ export default function LoginScreen() {
                         .then(() => setIsLoading(false))
                         .catch(error => {
                             console.error("Firebase signInWithCredential Error from DeepLink:", error);
-                            Alert.alert('Error', 'No se pudo iniciar sesión con Google. ' + error.message);
+                            showAlert('Error', 'No se pudo iniciar sesión con Google. ' + error.message);
                             setIsLoading(false);
                         });
                 } else if (codeMatch && !idTokenMatch) {
@@ -81,7 +83,7 @@ export default function LoginScreen() {
                         setIsLoading(false);
                     }).catch(error => {
                         console.error("Manual Token Exchange Error:", error);
-                        Alert.alert('Error', 'No se pudo iniciar sesión con Google (exchange). ' + error.message);
+                        showAlert('Error', 'No se pudo iniciar sesión con Google (exchange). ' + error.message);
                         setIsLoading(false);
                     });
                 }
@@ -113,7 +115,7 @@ export default function LoginScreen() {
                         .then(() => setIsLoading(false))
                         .catch(error => {
                             console.error("Firebase signInWithCredential Error:", error);
-                            Alert.alert('Error', 'No se pudo iniciar sesión en Firebase con Google. ' + error.message);
+                            showAlert('Error', 'No se pudo iniciar sesión en Firebase con Google. ' + error.message);
                             setIsLoading(false);
                         });
                 } else if (code) {
@@ -136,16 +138,16 @@ export default function LoginScreen() {
                         setIsLoading(false);
                     }).catch(err => {
                         console.error("Token Exchange Error:", err);
-                        Alert.alert('Error', 'No se pudo intercambiar el código por un token. ' + err.message);
+                        showAlert('Error', 'No se pudo intercambiar el código por un token. ' + err.message);
                         setIsLoading(false);
                     });
                 } else {
-                    Alert.alert("Error de Token", "La autenticación fue exitosa pero Google no devolvió un Id Token válido.\nParams: " + JSON.stringify(response.params));
+                    showAlert("Error de Token", "La autenticación fue exitosa pero Google no devolvió un Id Token válido.\nParams: " + JSON.stringify(response.params));
                     setIsLoading(false);
                 }
             } catch (error: any) {
                 console.error("Credential Creation Error:", error);
-                Alert.alert('Error', error.message || 'Error occurred');
+                showAlert('Error', error.message || 'Error occurred');
                 setIsLoading(false);
             }
         } else if (response.type !== 'dismiss' && response.type !== 'cancel') {
@@ -153,7 +155,7 @@ export default function LoginScreen() {
             const errorMessage = response.type === 'error' && response.error
                 ? response.error.message
                 : (response as any).params?.error || 'Unknown error';
-            Alert.alert("Autenticación Fallida", `Tipo: ${response.type}\nDetalle: ${errorMessage}`);
+            showAlert("Autenticación Fallida", `Tipo: ${response.type}\nDetalle: ${errorMessage}`);
             setIsLoading(false);
         } else {
             // Dismissed or canceled
@@ -185,7 +187,7 @@ export default function LoginScreen() {
             } else if (error.code === 'auth/user-disabled') {
                 errorMessage = 'Esta cuenta ha sido deshabilitada por el administrador.';
             }
-            Alert.alert('Error de Autenticación', errorMessage);
+            showAlert('Error de Autenticación', errorMessage);
         } finally {
             setIsLoading(false);
         }
@@ -193,14 +195,14 @@ export default function LoginScreen() {
 
     const handleResetPassword = async () => {
         if (!email.trim()) {
-            Alert.alert('Correo Requerido', 'Por favor, ingresa tu correo electrónico para enviarte las instrucciones de recuperación.');
+            showAlert('Correo Requerido', 'Por favor, ingresa tu correo electrónico para enviarte las instrucciones de recuperación.');
             return;
         }
 
         try {
             setIsLoading(true);
             await sendPasswordResetEmail(auth, email.trim().toLowerCase());
-            Alert.alert('Éxito', 'Se ha enviado un correo con las instrucciones para restablecer tu contraseña. Revisa tu bandeja de entrada o spam.');
+            showAlert('Éxito', 'Se ha enviado un correo con las instrucciones para restablecer tu contraseña. Revisa tu bandeja de entrada o spam.');
         } catch (error: any) {
             console.error('Password reset error detail:', error);
             let errorMessage = 'No se pudo enviar el correo de recuperación. Inténtalo más tarde.';
@@ -209,7 +211,7 @@ export default function LoginScreen() {
             } else if (error.code === 'auth/user-not-found') {
                 errorMessage = 'No hay ningún usuario registrado con este correo.';
             }
-            Alert.alert('Error', errorMessage);
+            showAlert('Error', errorMessage);
         } finally {
             setIsLoading(false);
         }
@@ -221,13 +223,13 @@ export default function LoginScreen() {
             const update = await Updates.checkForUpdateAsync();
             if (update.isAvailable) {
                 await Updates.fetchUpdateAsync();
-                Alert.alert("Éxito", "Actualización instalada. Reiniciando...");
+                showAlert("Éxito", "Actualización instalada. Reiniciando...");
                 await Updates.reloadAsync();
             } else {
-                Alert.alert("Actualizado", "Ya tienes la versión más reciente.");
+                showAlert("Actualizado", "Ya tienes la versión más reciente.");
             }
         } catch (error) {
-            Alert.alert("Error de Envío", "No se pudo consultar al servidor de actualizaciones.");
+            showAlert("Error de Envío", "No se pudo consultar al servidor de actualizaciones.");
         } finally {
             setIsLoading(false);
         }
@@ -244,14 +246,14 @@ export default function LoginScreen() {
                 role: 'admin',
                 createdAt: new Date().toISOString()
             });
-            Alert.alert('Éxito', 'Administrador raíz creado e iniciada sesión.');
+            showAlert('Éxito', 'Administrador raíz creado e iniciada sesión.');
         } catch (error: any) {
             if (error.code === 'auth/email-already-in-use') {
                 // If already exists, just login
                 await signInWithEmailAndPassword(auth, 'abelazo6969@gmail.com', 'PUDGEward16//*//*');
             } else {
                 console.error('Error creating admin:', error);
-                Alert.alert('Error', 'No se pudo crear el admin raíz.');
+                showAlert('Error', 'No se pudo crear el admin raíz.');
             }
         } finally {
             setIsLoading(false);
@@ -334,7 +336,7 @@ export default function LoginScreen() {
                                     </TouchableOpacity>
                                 </View>
                                 <TouchableOpacity onPress={handleResetPassword} style={{ marginTop: 10, alignSelf: 'flex-end', marginRight: 4 }}>
-                                    <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '600' }}>¿Olvidaste tu contraseña?</Text>
+                                    <Text style={{ color: colors.tint, fontSize: 13, fontWeight: '600' }}>¿Olvidaste tu contraseña?</Text>
                                 </TouchableOpacity>
                             </View>
 
@@ -342,7 +344,7 @@ export default function LoginScreen() {
                                 style={[
                                     styles.button,
                                     {
-                                        backgroundColor: colors.primary,
+                                        backgroundColor: colors.tint,
                                         opacity: isLoading ? 0.7 : 1,
                                     }
                                 ]}
@@ -373,9 +375,8 @@ export default function LoginScreen() {
                                 </View>
                             </TouchableOpacity>
 
-                            <TouchableOpacity onPress={handleForceUpdate} style={{ marginTop: 20, alignSelf: 'center' }}>
-                                <Text style={{ color: colors.text, opacity: 0.5, fontSize: 13, textDecorationLine: 'underline' }}>Forzar Actualización de la Nube</Text>
-                            </TouchableOpacity>
+
+
                         </BlurView>
 
                     </View>

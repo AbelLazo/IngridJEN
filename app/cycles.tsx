@@ -1,4 +1,5 @@
 import PeriodHeader from '@/components/PeriodHeader';
+import { useAlert } from '@/context/AlertContext';
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { AcademicCycle, EventDiscount, useInstitution } from '@/context/InstitutionContext';
@@ -42,6 +43,7 @@ const triggerHaptic = () => {
 };
 
 export default function CyclesScreen() {
+    const { showAlert } = useAlert();
     const { userRole } = useAuth();
     const insets = useSafeAreaInsets();
     const router = useRouter();
@@ -56,7 +58,7 @@ export default function CyclesScreen() {
                 <Text style={{ color: colors.icon, marginTop: 8 }}>Solo los administradores pueden gestionar los ciclos.</Text>
                 <TouchableOpacity
                     onPress={() => router.back()}
-                    style={{ marginTop: 24, paddingHorizontal: 20, paddingVertical: 10, backgroundColor: colors.primary, borderRadius: 12 }}
+                    style={{ marginTop: 24, paddingHorizontal: 20, paddingVertical: 10, backgroundColor: colors.tint, borderRadius: 12 }}
                 >
                     <Text style={{ color: '#FFF', fontWeight: 'bold' }}>Volver</Text>
                 </TouchableOpacity>
@@ -142,13 +144,13 @@ export default function CyclesScreen() {
         const hasClasses = classes.some(c => c.cycleId === cycleId);
 
         if (hasClasses) {
-            Alert.alert(
+            showAlert(
                 "Acción Denegada",
                 "No se puede eliminar este periodo académico porque existen clases creadas bajo él. Elimina las clases primero."
             );
             return;
         }
-        Alert.alert(
+        showAlert(
             "Eliminar Ciclo",
             `¿Estás seguro que deseas eliminar el ciclo "${cycleName}"?`,
             [
@@ -200,14 +202,14 @@ export default function CyclesScreen() {
         // Validate duplicate cycle names
         const duplicateCycle = academicCycles.find(c => c.name === cycleName && c.id !== editingCycle?.id);
         if (duplicateCycle) {
-            Alert.alert("Nombre Duplicado", `Ya existe un periodo con el nombre "${cycleName}". No se pueden crear dos periodos iguales.`);
+            showAlert("Nombre Duplicado", `Ya existe un periodo con el nombre "${cycleName}". No se pueden crear dos periodos iguales.`);
             return;
         }
 
         const calculatedMonths = generateMonthsArray(formData.startDate, formData.endDate);
 
         if (calculatedMonths.length === 0) {
-            Alert.alert('Error', 'La fecha de fin debe ser posterior a la fecha de inicio.');
+            showAlert('Error', 'La fecha de fin debe ser posterior a la fecha de inicio.');
             return;
         }
 
@@ -233,7 +235,7 @@ export default function CyclesScreen() {
     const handleAddEvent = () => {
         const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
         if (!newEvent.name || !newEvent.startDate.match(dateRegex) || !newEvent.endDate.match(dateRegex) || isNaN(Number(newEvent.discountPercentage))) {
-            Alert.alert('Error', 'Verifica los campos del evento. Las fechas son obligatorias y el descuento debe ser numérico.');
+            showAlert('Error', 'Verifica los campos del evento. Las fechas son obligatorias y el descuento debe ser numérico.');
             return;
         }
 
@@ -241,7 +243,7 @@ export default function CyclesScreen() {
         const end = new Date(`${newEvent.endDate}T12:00:00`);
 
         if (end < start) {
-            Alert.alert('Error', 'La fecha de fin debe ser posterior a la fecha de inicio en el evento.');
+            showAlert('Error', 'La fecha de fin debe ser posterior a la fecha de inicio en el evento.');
             return;
         }
 
@@ -349,14 +351,11 @@ export default function CyclesScreen() {
         return (
             <GestureDetector gesture={composedGesture}>
                 <Animated.View style={[styles.cardContainer, animatedStyle]}>
-                    <BlurView
-                        intensity={90}
-                        tint={colorScheme === 'light' ? 'light' : 'dark'}
-                        style={[
+                    <View style={[
                             styles.card,
                             {
-                                backgroundColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.1)',
-                                borderColor: colorScheme === 'light' ? 'rgba(0, 0, 0, 0.15)' : 'rgba(255, 255, 255, 0.1)',
+                                backgroundColor: colorScheme === 'light' ? '#FFFFFF' : '#FFFFFF',
+                                borderColor: colorScheme === 'light' ? '#FCE4EC' : '#FFFFFF',
                             }
                         ]}
                     >
@@ -364,18 +363,18 @@ export default function CyclesScreen() {
                         <View style={styles.cardInfo}>
                             <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
                                 <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, paddingRight: 10 }}>
-                                    <View style={[styles.iconBox, { backgroundColor: colors.primary + '20' }]}>
-                                        <CalendarDays size={20} color={colors.primary} />
+                                    <View style={[styles.iconBox, { backgroundColor: colors.tint + '20' }]}>
+                                        <CalendarDays size={20} color={colors.tint} />
                                     </View>
                                     <Text style={[styles.cycleName, { color: colors.text }]} numberOfLines={2}>
                                         {item.name}
                                     </Text>
                                 </View>
                                 <TouchableOpacity
-                                    style={[styles.actionBtn, { backgroundColor: colors.primary + '15' }]}
+                                    style={[styles.actionBtn, { backgroundColor: colors.tint + '15' }]}
                                     onPress={() => onEdit(item)}
                                 >
-                                    <Edit3 size={18} color={colors.primary} />
+                                    <Edit3 size={18} color={colors.tint} />
                                 </TouchableOpacity>
                             </View>
 
@@ -412,7 +411,7 @@ export default function CyclesScreen() {
                                 </View>
                             </View>
                         </View>
-                    </BlurView>
+                    </View>
                 </Animated.View>
             </GestureDetector>
         );
@@ -447,7 +446,7 @@ export default function CyclesScreen() {
                 onBack={() => router.back()}
                 rightAction={
                     <TouchableOpacity
-                        style={[styles.addButtonHeader, { backgroundColor: colors.primary }]}
+                        style={[styles.addButtonHeader, { backgroundColor: colors.tint }]}
                         onPress={() => {
                             resetForm();
                             setModalVisible(true);
@@ -500,7 +499,7 @@ export default function CyclesScreen() {
                                             selectedValue={formData.cycleType}
                                             onValueChange={(v) => setFormData({ ...formData, cycleType: v })}
                                             style={{ color: colors.text, width: '100%', height: 50 }}
-                                            dropdownIconColor={colors.primary}
+                                            dropdownIconColor={colors.tint}
                                         >
                                             <Picker.Item label="Verano" value="Verano" />
                                             <Picker.Item label="Anual" value="Anual" />
@@ -514,7 +513,7 @@ export default function CyclesScreen() {
                                             selectedValue={formData.cycleYear}
                                             onValueChange={(v) => setFormData({ ...formData, cycleYear: v })}
                                             style={{ color: colors.text, width: '100%', height: 50 }}
-                                            dropdownIconColor={colors.primary}
+                                            dropdownIconColor={colors.tint}
                                         >
                                             {[...Array(5)].map((_, i) => {
                                                 const year = (new Date().getFullYear() + i).toString();
@@ -573,7 +572,7 @@ export default function CyclesScreen() {
                                         <View style={{ backgroundColor: colors.card, padding: 20, borderTopLeftRadius: 20, borderTopRightRadius: 20 }}>
                                             <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 10 }}>
                                                 <TouchableOpacity onPress={() => setDatePickerVisible(false)}>
-                                                    <Text style={{ color: colors.primary, fontWeight: 'bold', fontSize: 16 }}>Listo</Text>
+                                                    <Text style={{ color: colors.tint, fontWeight: 'bold', fontSize: 16 }}>Listo</Text>
                                                 </TouchableOpacity>
                                             </View>
                                             <DateTimePicker
@@ -598,8 +597,8 @@ export default function CyclesScreen() {
                                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                                     <Text style={[styles.label, { color: colors.text, marginBottom: 0 }]}>Eventos / Semanas No Laborables</Text>
                                     {!isAddingEvent && (
-                                        <TouchableOpacity onPress={() => setIsAddingEvent(true)} style={{ backgroundColor: colors.primary + '20', padding: 6, borderRadius: 8 }}>
-                                            <Plus size={16} color={colors.primary} />
+                                        <TouchableOpacity onPress={() => setIsAddingEvent(true)} style={{ backgroundColor: colors.tint + '20', padding: 6, borderRadius: 8 }}>
+                                            <Plus size={16} color={colors.tint} />
                                         </TouchableOpacity>
                                     )}
                                 </View>
@@ -611,7 +610,7 @@ export default function CyclesScreen() {
                                             <Text style={{ color: colors.text, fontSize: 13, marginBottom: 2 }}>
                                                 <Text style={{ fontWeight: '600' }}>Fechas: </Text>{ev.startDate} al {ev.endDate}
                                             </Text>
-                                            <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '600' }}>
+                                            <Text style={{ color: colors.tint, fontSize: 13, fontWeight: '600' }}>
                                                 Descuento del {ev.discountPercentage}% en {formatMonthYearStr(ev.targetMonthYear)}
                                             </Text>
                                         </View>
@@ -662,7 +661,7 @@ export default function CyclesScreen() {
                                                 <Text style={{ color: colors.text, fontWeight: '600' }}>Cancelar</Text>
                                             </TouchableOpacity>
                                             <TouchableOpacity
-                                                style={{ flex: 1, height: 40, justifyContent: 'center', alignItems: 'center', borderRadius: 10, backgroundColor: colors.primary }}
+                                                style={{ flex: 1, height: 40, justifyContent: 'center', alignItems: 'center', borderRadius: 10, backgroundColor: colors.tint }}
                                                 onPress={handleAddEvent}
                                             >
                                                 <Text style={{ color: '#fff', fontWeight: 'bold' }}>Agregar</Text>
@@ -679,7 +678,7 @@ export default function CyclesScreen() {
                             {/* -------------------------------------- */}
 
                             <TouchableOpacity
-                                style={[styles.saveButton, { backgroundColor: colors.primary }]}
+                                style={[styles.saveButton, { backgroundColor: colors.tint }]}
                                 onPress={handleSave}
                             >
                                 <Text style={styles.saveText}>Guardar Ciclo</Text>

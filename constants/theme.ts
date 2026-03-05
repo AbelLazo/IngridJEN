@@ -4,41 +4,41 @@
 
 import { Platform } from 'react-native';
 
-const tintColorLight = '#D4AF37'; // Ballet Gold
-const tintColorDark = '#F8C8DC'; // Rose Pink
+const tintColorLight = '#EC4899'; // Vibrant Pink
+const tintColorDark = '#F472B6'; // Softer Pink for dark mode
 
 export const Colors = {
   light: {
-    text: '#2D2621', // Bark Brown
-    background: '#F5F5F7', // Apple Gallery Gray for better Blur contrast
-    tint: '#AF4328', // Oxide Red
-    icon: '#5D5043', // Earth Brown
-    tabIconDefault: '#C5A88F', // Taupe
-    tabIconSelected: '#AF4328',
-    card: '#ffffff', // Solid white to remove transparency
-    border: '#C5A88F',
-    notification: '#AF4328',
-    primary: '#000000',
-    secondary: '#C5A88F',
-    surface: '#ffffff',
-    overlay: 'rgba(245, 241, 233, 0.4)',
+    text: '#1A1A2E', // Deep navy-black for sharp contrast
+    background: '#FFFFFF', // Pure white background
+    tint: tintColorLight,
+    icon: '#EC4899', // Pink icons
+    tabIconDefault: '#D1D5DB', // Light cool gray
+    tabIconSelected: tintColorLight,
+    card: '#FFFFFF',
+    border: '#FECDD3', // Soft pink border
+    notification: '#EC4899',
+    primary: '#1A1A2E',
+    secondary: '#FFF1F2', // Very light pink for backgrounds
+    surface: '#FFFFFF',
+    overlay: 'rgba(0, 0, 0, 0.2)',
     modal: '#FFFFFF',
   },
   dark: {
-    text: '#F5F1E9', // Linen Cream
-    background: '#2D2621', // Bark Brown
-    tint: '#CD855F', // terracotta
-    icon: '#C5A88F',
-    tabIconDefault: '#5D5043',
-    tabIconSelected: '#CD855F',
-    card: '#261F1A',
-    border: '#5D5043',
-    notification: '#CD855F',
-    primary: '#EBDCCB', // Sand/Cream contrast for dark mode buttons
-    secondary: '#5D5043',
-    surface: '#261F1A',
-    overlay: 'rgba(45, 38, 33, 0.6)',
-    modal: '#261F1A',
+    text: '#F9FAFB',
+    background: '#0F172A', // Deep slate
+    tint: tintColorDark,
+    icon: '#F472B6',
+    tabIconDefault: '#475569',
+    tabIconSelected: tintColorDark,
+    card: '#1E293B',
+    border: '#334155',
+    notification: '#F472B6',
+    primary: '#F1F5F9',
+    secondary: '#1E293B',
+    surface: '#1E293B',
+    overlay: 'rgba(0, 0, 0, 0.6)',
+    modal: '#1E293B',
   },
 };
 

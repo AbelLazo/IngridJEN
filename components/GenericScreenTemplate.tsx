@@ -19,7 +19,7 @@ export default function GenericScreen({ title }: { title: string }) {
         <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top, paddingBottom: insets.bottom }]}>
             <Stack.Screen options={{ headerShown: false }} />
             <View style={[styles.header, isTablet && styles.headerTablet]}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+                <TouchableOpacity onPress={() => router.back()} style={[styles.backButton, { backgroundColor: '#FFF0F5', borderWidth: 1, borderColor: '#FCE4EC' }]}>
                     <ChevronLeft color={colors.text} size={isTablet ? 32 : 28} />
                 </TouchableOpacity>
                 <Text style={[styles.title, { color: colors.text, fontSize: isTablet ? 28 : 20 }]}>{title}</Text>
@@ -52,7 +52,11 @@ const styles = StyleSheet.create({
         paddingVertical: 24,
     },
     backButton: {
-        padding: 4,
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     title: {
         fontWeight: 'bold',

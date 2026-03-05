@@ -1,7 +1,6 @@
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { BlurView } from 'expo-blur';
 import { useRouter } from 'expo-router';
 import {
     BookOpen,
@@ -13,20 +12,21 @@ import {
     Wallet
 } from 'lucide-react-native';
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { Platform, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 
-const GAP = 12;
+const GAP = 14;
 
+// All items use harmonious soft pink tones
 const MENU_ITEMS = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, color: '#000000', route: '/dashboard' },
-    { id: 'students', label: 'Estudiantes', icon: Users, color: '#000000', route: '/students' },
-    { id: 'teachers', label: 'Profesores', icon: GraduationCap, color: '#000000', route: '/teachers' },
-    { id: 'courses', label: 'Cursos', icon: BookOpen, color: '#000000', route: '/courses' },
-    { id: 'classes', label: 'Clases', icon: Presentation, color: '#000000', route: '/classes' },
-    { id: 'schedule', label: 'Horario', icon: Calendar, color: '#000000', route: '/schedule' },
-    { id: 'tuition', label: 'Mensualidad', icon: Wallet, color: '#000000', route: '/fees' },
-    { id: 'cycles', label: 'Ciclos', icon: Calendar, color: '#000000', route: '/cycles' },
-    { id: 'admin-users', label: 'Usuarios', icon: Users, color: '#000000', route: '/users' },
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, route: '/dashboard' },
+    { id: 'students', label: 'Estudiantes', icon: Users, route: '/students' },
+    { id: 'teachers', label: 'Profesores', icon: GraduationCap, route: '/teachers' },
+    { id: 'courses', label: 'Cursos', icon: BookOpen, route: '/courses' },
+    { id: 'classes', label: 'Clases', icon: Presentation, route: '/classes' },
+    { id: 'schedule', label: 'Horario', icon: Calendar, route: '/schedule' },
+    { id: 'tuition', label: 'Mensualidad', icon: Wallet, route: '/fees' },
+    { id: 'cycles', label: 'Ciclos', icon: Calendar, route: '/cycles' },
+    { id: 'admin-users', label: 'Usuarios', icon: Users, route: '/users' },
 ];
 
 export default function DashboardGrid() {
@@ -43,9 +43,8 @@ export default function DashboardGrid() {
         return true;
     });
 
-    // Horizontal Bento Style Logic: 2 columns, but shorter height
     const columnCount = width > 600 ? 3 : 2;
-    const cardWidth = (width - (GAP * (columnCount + 1))) / columnCount;
+    const cardWidth = (width - GAP * (columnCount + 1)) / columnCount;
 
     return (
         <View style={styles.container}>
@@ -53,40 +52,40 @@ export default function DashboardGrid() {
                 <TouchableOpacity
                     key={item.id}
                     onPress={() => router.push(item.route as any)}
-                    activeOpacity={0.8}
+                    activeOpacity={0.7}
+                    style={{ width: cardWidth }}
                 >
-                    <BlurView
-                        intensity={90} // Matching Elite intensity
-                        tint={colorScheme === 'light' ? 'light' : 'dark'}
+                    <View
                         style={[
                             styles.card,
                             {
-                                width: cardWidth,
-                                backgroundColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.9)' : 'rgba(255, 255, 255, 0.08)',
-                                borderColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 1)' : 'rgba(255, 255, 255, 0.15)',
+                                backgroundColor: colorScheme === 'light' ? '#FFFFFF' : colors.card,
+                                borderColor: colorScheme === 'light' ? '#FCE4EC' : colors.border,
                             }
                         ]}
                     >
-                        {/* Liquid Highlight - Specular reflection */}
-
-
-                        <View style={styles.iconContainer}>
-                            <item.icon size={width > 600 ? 28 : 24} color={colorScheme === 'dark' ? colors.text : '#000000'} />
+                        <View style={[styles.iconContainer, {
+                            backgroundColor: colorScheme === 'light' ? '#FFF0F5' : colors.tint + '15'
+                        }]}>
+                            <item.icon
+                                size={width > 600 ? 26 : 22}
+                                color={colors.tint}
+                                strokeWidth={1.8}
+                            />
                         </View>
                         <Text
                             style={[
                                 styles.label,
                                 {
                                     color: colors.text,
-                                    fontSize: width > 600 ? 15 : 13
+                                    fontSize: width > 600 ? 15 : 14,
                                 }
                             ]}
                             numberOfLines={1}
-                            adjustsFontSizeToFit
                         >
                             {item.label}
                         </Text>
-                    </BlurView>
+                    </View>
                 </TouchableOpacity>
             ))}
         </View>
@@ -97,50 +96,35 @@ const styles = StyleSheet.create({
     container: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        padding: GAP,
+        paddingHorizontal: GAP,
+        paddingTop: 4,
         justifyContent: 'flex-start',
         gap: GAP,
     },
     card: {
-        borderRadius: 24,
-        paddingVertical: 18,
-        paddingHorizontal: 14,
-        borderWidth: 1.5, // Thicker glass edge
+        borderRadius: 20,
+        paddingVertical: 20,
+        paddingHorizontal: 16,
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'flex-start',
-        gap: 12,
-        overflow: 'hidden',
+        gap: 14,
+        borderWidth: 1,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.1,
-        shadowRadius: 15,
-        elevation: 5, // Higher elevation for depth
-    },
-    liquidHighlight: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        height: '50%', // Taller specular reflection
-        backgroundColor: 'rgba(255, 255, 255, 0.25)',
-        borderTopLeftRadius: 24,
-        borderTopRightRadius: 24,
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.05,
+        shadowRadius: 12,
+        elevation: Platform.OS === 'android' ? 2 : 4,
     },
     iconContainer: {
-        width: 44,
-        height: 44,
-        borderRadius: 14,
-        backgroundColor: 'rgba(0,0,0,0.04)',
+        width: 46,
+        height: 46,
+        borderRadius: 15,
         justifyContent: 'center',
         alignItems: 'center',
-        zIndex: 1,
     },
     label: {
         fontWeight: '600',
-        textAlign: 'left',
+        letterSpacing: -0.2,
         flex: 1,
-        zIndex: 1,
     },
 });
-

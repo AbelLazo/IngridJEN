@@ -141,13 +141,13 @@ export default function ScheduleScreen() {
                                 style={[
                                     styles.dateCard,
                                     { backgroundColor: colors.card, borderColor: colors.border },
-                                    isSelected && { backgroundColor: colors.primary, borderColor: colors.primary }
+                                    isSelected && { backgroundColor: colors.tint, borderColor: colors.tint }
                                 ]}
                             >
                                 <Text style={[
                                     styles.dateDayName,
                                     { color: isSelected ? '#fff' : colors.icon },
-                                    isToday && !isSelected && { color: colors.primary, fontWeight: 'bold' }
+                                    isToday && !isSelected && { color: colors.tint, fontWeight: 'bold' }
                                 ]}>
                                     {dayName.toUpperCase()}
                                 </Text>
@@ -172,7 +172,7 @@ export default function ScheduleScreen() {
                         style={styles.todayButton}
                         onPress={() => setSelectedDate(new Date())}
                     >
-                        <Text style={[styles.todayButtonText, { color: colors.primary }]}>Hoy</Text>
+                        <Text style={[styles.todayButtonText, { color: colors.tint }]}>Hoy</Text>
                     </TouchableOpacity>
                 </View>
 
@@ -190,24 +190,21 @@ export default function ScheduleScreen() {
 
                         return (
                             <View key={cls.id} style={styles.cardContainer}>
-                                <BlurView
-                                    intensity={90}
-                                    tint={colorScheme === 'light' ? 'light' : 'dark'}
-                                    style={[
+                                <View style={[
                                         styles.classCard,
                                         {
-                                            backgroundColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.4)' : 'rgba(255, 255, 255, 0.08)',
-                                            borderLeftColor: cls.color || colors.primary,
-                                            borderColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.15)',
+                                            backgroundColor: colorScheme === 'light' ? '#FFFFFF' : '#FFFFFF',
+                                            borderLeftColor: cls.color || colors.tint,
+                                            borderColor: colorScheme === 'light' ? '#FFFFFF' : '#FFFFFF',
                                         }
                                     ]}
                                 >
 
 
                                     <View style={styles.classHeaderRow}>
-                                        <View style={[styles.timeBadge, { backgroundColor: (cls.color || colors.primary) + '20' }]}>
-                                            <Clock size={14} color={cls.color || colors.primary} />
-                                            <Text style={[styles.timeText, { color: cls.color || colors.primary }]}>
+                                        <View style={[styles.timeBadge, { backgroundColor: (cls.color || colors.tint) + '20' }]}>
+                                            <Clock size={14} color={cls.color || colors.tint} />
+                                            <Text style={[styles.timeText, { color: cls.color || colors.tint }]}>
                                                 {cls.startTime} - {cls.duration}
                                             </Text>
                                         </View>
@@ -242,14 +239,14 @@ export default function ScheduleScreen() {
                                         </View>
 
                                         <TouchableOpacity
-                                            style={[styles.attendanceButton, { backgroundColor: colors.primary }]}
+                                            style={[styles.attendanceButton, { backgroundColor: colors.tint }]}
                                             onPress={() => openAttendanceModal(cls)}
                                             activeOpacity={0.8}
                                         >
                                             <Text style={styles.attendanceButtonText}>Asistencia</Text>
                                         </TouchableOpacity>
                                     </View>
-                                </BlurView>
+                                </View>
                             </View>
                         );
                     })

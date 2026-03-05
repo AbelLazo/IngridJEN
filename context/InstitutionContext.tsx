@@ -1,3 +1,4 @@
+import { useAlert } from '@/context/AlertContext';
 import { db } from '@/lib/firebaseConfig';
 import {
     addDoc,
@@ -11,7 +12,6 @@ import {
     updateDoc
 } from 'firebase/firestore';
 import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
-import { Alert } from 'react-native';
 
 export interface Course {
     id: string;
@@ -168,6 +168,7 @@ interface InstitutionContextType {
 const InstitutionContext = createContext<InstitutionContextType | undefined>(undefined);
 
 export function InstitutionProvider({ children }: { children: ReactNode }) {
+    const { showAlert } = useAlert();
     const [academicCycles, setAcademicCycles] = useState<AcademicCycle[]>([]);
 
     // Default current cycle ID (can be updated later based on logic or user preference)
@@ -233,7 +234,7 @@ export function InstitutionProvider({ children }: { children: ReactNode }) {
             await addDoc(collection(db, 'courses'), data);
         } catch (error: any) {
             console.error('Error adding course:', error);
-            Alert.alert('Error', 'No se pudo guardar el curso: ' + error.message);
+            showAlert('Error', 'No se pudo guardar el curso: ' + error.message);
         }
     };
 
@@ -243,7 +244,7 @@ export function InstitutionProvider({ children }: { children: ReactNode }) {
             await updateDoc(doc(db, 'courses', id), data);
         } catch (error: any) {
             console.error('Error updating course:', error);
-            Alert.alert('Error', 'No se pudo actualizar el curso: ' + error.message);
+            showAlert('Error', 'No se pudo actualizar el curso: ' + error.message);
         }
     };
 
@@ -253,7 +254,7 @@ export function InstitutionProvider({ children }: { children: ReactNode }) {
             await addDoc(collection(db, 'students'), data);
         } catch (error: any) {
             console.error('Error adding student:', error);
-            Alert.alert('Error', 'No se pudo guardar el estudiante: ' + error.message);
+            showAlert('Error', 'No se pudo guardar el estudiante: ' + error.message);
         }
     };
 
@@ -263,7 +264,7 @@ export function InstitutionProvider({ children }: { children: ReactNode }) {
             await updateDoc(doc(db, 'students', id), data);
         } catch (error: any) {
             console.error('Error updating student:', error);
-            Alert.alert('Error', 'No se pudo actualizar el estudiante: ' + error.message);
+            showAlert('Error', 'No se pudo actualizar el estudiante: ' + error.message);
         }
     };
 
@@ -273,7 +274,7 @@ export function InstitutionProvider({ children }: { children: ReactNode }) {
             await addDoc(collection(db, 'teachers'), data);
         } catch (error: any) {
             console.error('Error adding teacher:', error);
-            Alert.alert('Error', 'No se pudo guardar el profesor: ' + error.message);
+            showAlert('Error', 'No se pudo guardar el profesor: ' + error.message);
         }
     };
 
@@ -283,7 +284,7 @@ export function InstitutionProvider({ children }: { children: ReactNode }) {
             await updateDoc(doc(db, 'teachers', id), data);
         } catch (error: any) {
             console.error('Error updating teacher:', error);
-            Alert.alert('Error', 'No se pudo actualizar el profesor: ' + error.message);
+            showAlert('Error', 'No se pudo actualizar el profesor: ' + error.message);
         }
     };
 
@@ -293,7 +294,7 @@ export function InstitutionProvider({ children }: { children: ReactNode }) {
             await addDoc(collection(db, 'classes'), data);
         } catch (error: any) {
             console.error('Error adding class:', error);
-            Alert.alert('Error', 'No se pudo guardar la clase: ' + error.message);
+            showAlert('Error', 'No se pudo guardar la clase: ' + error.message);
         }
     };
 
@@ -310,7 +311,7 @@ export function InstitutionProvider({ children }: { children: ReactNode }) {
             await updateDoc(doc(db, 'classes', id), cleanData);
         } catch (error: any) {
             console.error('Error updating class:', error);
-            Alert.alert('Error', 'No se pudo actualizar la clase: ' + error.message);
+            showAlert('Error', 'No se pudo actualizar la clase: ' + error.message);
         }
     };
 
@@ -318,7 +319,7 @@ export function InstitutionProvider({ children }: { children: ReactNode }) {
         try {
             await deleteDoc(doc(db, 'classes', id));
         } catch (error: any) {
-            Alert.alert('Error', 'No se pudo eliminar la clase: ' + error.message);
+            showAlert('Error', 'No se pudo eliminar la clase: ' + error.message);
         }
     };
 
@@ -326,7 +327,7 @@ export function InstitutionProvider({ children }: { children: ReactNode }) {
         try {
             await deleteDoc(doc(db, 'students', id));
         } catch (error: any) {
-            Alert.alert('Error', 'No se pudo eliminar el estudiante: ' + error.message);
+            showAlert('Error', 'No se pudo eliminar el estudiante: ' + error.message);
         }
     };
 
@@ -334,7 +335,7 @@ export function InstitutionProvider({ children }: { children: ReactNode }) {
         try {
             await deleteDoc(doc(db, 'teachers', id));
         } catch (error: any) {
-            Alert.alert('Error', 'No se pudo eliminar el profesor: ' + error.message);
+            showAlert('Error', 'No se pudo eliminar el profesor: ' + error.message);
         }
     };
 
@@ -342,7 +343,7 @@ export function InstitutionProvider({ children }: { children: ReactNode }) {
         try {
             await deleteDoc(doc(db, 'courses', id));
         } catch (error: any) {
-            Alert.alert('Error', 'No se pudo eliminar el curso: ' + error.message);
+            showAlert('Error', 'No se pudo eliminar el curso: ' + error.message);
         }
     };
 
@@ -490,7 +491,7 @@ export function InstitutionProvider({ children }: { children: ReactNode }) {
             }
         } catch (error: any) {
             console.error('Error adding enrollment:', error);
-            Alert.alert('Error', 'No se pudo matricular: ' + error.message);
+            showAlert('Error', 'No se pudo matricular: ' + error.message);
         }
     };
 
@@ -506,7 +507,7 @@ export function InstitutionProvider({ children }: { children: ReactNode }) {
             });
             await updateDoc(doc(db, 'enrollments', id), cleanData);
         } catch (error: any) {
-            Alert.alert('Error', 'No se pudo actualizar la matrícula: ' + error.message);
+            showAlert('Error', 'No se pudo actualizar la matrícula: ' + error.message);
         }
     };
 
@@ -518,7 +519,7 @@ export function InstitutionProvider({ children }: { children: ReactNode }) {
                 await deleteDoc(doc(db, 'installments', inst.id));
             }
         } catch (error: any) {
-            Alert.alert('Error', 'No se pudo eliminar la matrícula: ' + error.message);
+            showAlert('Error', 'No se pudo eliminar la matrícula: ' + error.message);
         }
     };
 
@@ -533,7 +534,7 @@ export function InstitutionProvider({ children }: { children: ReactNode }) {
                 });
             }
         } catch (error: any) {
-            Alert.alert('Error', 'No se pudo registrar el pago: ' + error.message);
+            showAlert('Error', 'No se pudo registrar el pago: ' + error.message);
         }
     };
 
@@ -544,7 +545,7 @@ export function InstitutionProvider({ children }: { children: ReactNode }) {
             await addDoc(collection(db, 'academicCycles'), data);
         } catch (error: any) {
             console.error('Error adding cycle:', error);
-            Alert.alert('Error', 'No se pudo guardar el ciclo: ' + error.message);
+            showAlert('Error', 'No se pudo guardar el ciclo: ' + error.message);
         }
     };
 
@@ -554,7 +555,7 @@ export function InstitutionProvider({ children }: { children: ReactNode }) {
             await updateDoc(doc(db, 'academicCycles', id), data);
         } catch (error: any) {
             console.error('Error updating cycle:', error);
-            Alert.alert('Error', 'No se pudo actualizar el ciclo: ' + error.message);
+            showAlert('Error', 'No se pudo actualizar el ciclo: ' + error.message);
         }
     };
 
@@ -563,7 +564,7 @@ export function InstitutionProvider({ children }: { children: ReactNode }) {
             await deleteDoc(doc(db, 'academicCycles', id));
         } catch (error: any) {
             console.error('Error deleting cycle:', error);
-            Alert.alert('Error', 'No se pudo eliminar el ciclo: ' + error.message);
+            showAlert('Error', 'No se pudo eliminar el ciclo: ' + error.message);
         }
     };
 
@@ -585,7 +586,7 @@ export function InstitutionProvider({ children }: { children: ReactNode }) {
             }
         } catch (error: any) {
             console.error('Error saving attendance:', error);
-            Alert.alert('Error', 'No se pudo guardar la asistencia: ' + error.message);
+            showAlert('Error', 'No se pudo guardar la asistencia: ' + error.message);
         }
     };
 
@@ -687,7 +688,7 @@ export function InstitutionProvider({ children }: { children: ReactNode }) {
                 current.setMonth(current.getMonth() + 1);
             }
         } catch (error: any) {
-            Alert.alert('Error', 'No se pudo actualizar la fecha ni recalcular cuotas: ' + error.message);
+            showAlert('Error', 'No se pudo actualizar la fecha ni recalcular cuotas: ' + error.message);
         }
     };
 

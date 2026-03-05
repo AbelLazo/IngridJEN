@@ -1,9 +1,9 @@
 import { Colors } from '@/constants/theme';
+import { useAlert } from '@/context/AlertContext';
 import { useAuth } from '@/context/AuthContext';
 import { Course, useInstitution } from '@/context/InstitutionContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Picker } from '@react-native-picker/picker';
-import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { Stack, useRouter } from 'expo-router';
 import { AlertCircle, BookOpen, ChevronLeft, Clock, Coins, Edit3, Plus, Search, Trash2, X } from 'lucide-react-native';
@@ -37,6 +37,7 @@ const triggerHaptic = () => {
 };
 
 export default function CoursesScreen() {
+    const { showAlert } = useAlert();
     const { userRole } = useAuth();
     const insets = useSafeAreaInsets();
     const router = useRouter();
@@ -51,7 +52,7 @@ export default function CoursesScreen() {
                 <Text style={{ color: colors.icon, marginTop: 8 }}>Solo los administradores pueden gestionar los cursos.</Text>
                 <TouchableOpacity
                     onPress={() => router.back()}
-                    style={{ marginTop: 24, paddingHorizontal: 20, paddingVertical: 10, backgroundColor: colors.primary, borderRadius: 12 }}
+                    style={{ marginTop: 24, paddingHorizontal: 20, paddingVertical: 10, backgroundColor: colors.tint, borderRadius: 12 }}
                 >
                     <Text style={{ color: '#FFF', fontWeight: 'bold' }}>Volver</Text>
                 </TouchableOpacity>
@@ -125,7 +126,7 @@ export default function CoursesScreen() {
     };
 
     const handleDelete = (item: Course) => {
-        Alert.alert(
+        showAlert(
             "Eliminar Materia",
             `¿Estás seguro de que deseas eliminar la materia ${item.name}?`,
             [
@@ -201,21 +202,18 @@ export default function CoursesScreen() {
         return (
             <GestureDetector gesture={composedGesture}>
                 <Animated.View style={[styles.cardContainer, animatedStyle]}>
-                    <BlurView
-                        intensity={90}
-                        tint={colorScheme === 'light' ? 'light' : 'dark'}
-                        style={[
-                            styles.card,
-                            {
-                                backgroundColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.1)',
-                                borderColor: colorScheme === 'light' ? 'rgba(0, 0, 0, 0.15)' : 'rgba(255, 255, 255, 0.1)',
-                            }
-                        ]}
+                    <View style={[
+                        styles.card,
+                        {
+                            backgroundColor: colorScheme === 'light' ? '#FFFFFF' : '#FFFFFF',
+                            borderColor: colorScheme === 'light' ? '#FCE4EC' : '#FFFFFF',
+                        }
+                    ]}
                     >
 
 
-                        <View style={[styles.iconContainer, { backgroundColor: colors.primary + '15' }]}>
-                            <BookOpen size={24} color={colors.primary} />
+                        <View style={[styles.iconContainer, { backgroundColor: colors.tint + '15' }]}>
+                            <BookOpen size={24} color={colors.tint} />
                         </View>
                         <View style={styles.cardContent}>
                             <Text style={[styles.cardName, { color: colors.text }]}>{item.name}</Text>
@@ -227,20 +225,20 @@ export default function CoursesScreen() {
                                     </Text>
                                 </View>
                                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                    <Coins size={14} color={colors.primary} />
-                                    <Text style={[styles.detailText, { color: colors.primary, fontWeight: 'bold' }]}>
+                                    <Coins size={14} color={colors.tint} />
+                                    <Text style={[styles.detailText, { color: colors.tint, fontWeight: 'bold' }]}>
                                         S/ {item.price}
                                     </Text>
                                 </View>
                             </View>
                         </View>
                         <TouchableOpacity
-                            style={[styles.editCircle, { backgroundColor: colors.primary + '20' }]}
+                            style={[styles.editCircle, { backgroundColor: colors.tint + '20' }]}
                             onPress={() => onEdit(item)}
                         >
-                            <Edit3 size={18} color={colors.primary} />
+                            <Edit3 size={18} color={colors.tint} />
                         </TouchableOpacity>
-                    </BlurView>
+                    </View>
                 </Animated.View>
             </GestureDetector>
         );
@@ -273,12 +271,12 @@ export default function CoursesScreen() {
 
             {/* Header */}
             <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+                <TouchableOpacity onPress={() => router.back()} style={[styles.backButton, { backgroundColor: '#FFF0F5', borderWidth: 1, borderColor: '#FCE4EC' }]}>
                     <ChevronLeft color={colors.text} size={28} />
                 </TouchableOpacity>
                 <Text style={[styles.headerTitle, { color: colors.text }]}>Cursos / Materias</Text>
                 <TouchableOpacity
-                    style={[styles.addButton, { backgroundColor: colors.primary }]}
+                    style={[styles.addButton, { backgroundColor: colors.tint }]}
                     onPress={() => setModalVisible(true)}
                 >
                     <Plus color="#fff" size={24} />
@@ -286,18 +284,15 @@ export default function CoursesScreen() {
             </View>
 
             {/* Search Bar */}
-            <BlurView
-                intensity={40}
-                tint={colorScheme === 'light' ? 'light' : 'dark'}
-                style={[
-                    styles.searchContainer,
-                    {
-                        backgroundColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.05)',
-                        borderColor: colorScheme === 'light' ? 'rgba(0, 0, 0, 0.1)' : 'rgba(255, 255, 255, 0.1)',
-                    }
-                ]}
+            <View style={[
+                styles.searchContainer,
+                {
+                    backgroundColor: colorScheme === 'light' ? '#FFFFFF' : '#FFFFFF',
+                    borderColor: colorScheme === 'light' ? '#FCE4EC' : '#FFFFFF',
+                }
+            ]}
             >
-                <Search color={colorScheme === 'light' ? '#666' : '#AAA'} size={20} />
+                <Search color={colors.tint} size={20} />
                 <TextInput
                     style={[styles.searchInput, { color: colors.text }]}
                     placeholder="Buscar materia..."
@@ -305,7 +300,7 @@ export default function CoursesScreen() {
                     value={searchQuery}
                     onChangeText={setSearchQuery}
                 />
-            </BlurView>
+            </View>
 
             {/* List */}
             <FlatList
@@ -372,7 +367,7 @@ export default function CoursesScreen() {
                                                     if (errors.duration && (v !== '0' || formData.minutes !== '0')) setErrors(prev => ({ ...prev, duration: false }));
                                                 }}
                                                 style={{ color: colors.text, width: '100%', height: 50 }}
-                                                dropdownIconColor={colors.primary}
+                                                dropdownIconColor={colors.tint}
                                             >
                                                 {Array.from({ length: 9 }).map((_, i) => (
                                                     <Picker.Item key={i} label={`${i} h`} value={i.toString()} color="#000" />
@@ -390,7 +385,7 @@ export default function CoursesScreen() {
                                                     if (errors.duration && (formData.hours !== '0' || v !== '0')) setErrors(prev => ({ ...prev, duration: false }));
                                                 }}
                                                 style={{ color: colors.text, width: '100%', height: 50 }}
-                                                dropdownIconColor={colors.primary}
+                                                dropdownIconColor={colors.tint}
                                             >
                                                 {['00', '15', '30', '45'].map(m => (
                                                     <Picker.Item key={m} label={`${m} m`} value={m} color="#000" />
@@ -418,7 +413,7 @@ export default function CoursesScreen() {
                             </View>
 
                             <TouchableOpacity
-                                style={[styles.submitButton, { backgroundColor: colors.primary }]}
+                                style={[styles.submitButton, { backgroundColor: colors.tint }]}
                                 onPress={handleSave}
                             >
                                 <Text style={styles.submitButtonText}>
@@ -453,7 +448,11 @@ const styles = StyleSheet.create({
         paddingVertical: 15,
     },
     backButton: {
-        padding: 5,
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     headerTitle: {
         fontSize: 22,
