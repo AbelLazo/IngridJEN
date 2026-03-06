@@ -142,6 +142,7 @@ export interface Payment {
     amount: string;
     date: string;
     monthYear: string;
+    method?: string;
 }
 
 interface InstitutionContextType {

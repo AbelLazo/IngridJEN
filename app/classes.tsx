@@ -77,6 +77,183 @@ const triggerHaptic = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
 };
 
+export const calculateEndTime = (startTime: string, duration: string) => {
+    const [startHours, startMinutes] = startTime.split(':').map(Number);
+
+    const hoursMatch = duration.match(/(\d+)h/);
+    const minutesMatch = duration.match(/(\d+)m/);
+
+    const durationHours = hoursMatch ? parseInt(hoursMatch[1]) : 0;
+    const durationMinutes = minutesMatch ? parseInt(minutesMatch[1]) : 0;
+
+    let endMinutes = startMinutes + durationMinutes;
+    let endHours = startHours + durationHours + Math.floor(endMinutes / 60);
+
+    endMinutes = endMinutes % 60;
+    endHours = endHours % 24;
+
+    return `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')} `;
+};
+
+const DraggableClassCard = ({
+    item,
+    colors,
+    colorScheme,
+    enrolledCount,
+    isOverflow,
+    isDraggingGlobal,
+    classes,
+    academicCycles,
+    onEdit,
+    onDelete,
+    onEnroll,
+    onDragStart,
+    onConfirmImportState,
+    onRevertMerge,
+    onOpenMergeModal,
+    getValidActiveEnrollments
+}: any) => {
+    const translateX = useSharedValue(0);
+    const translateY = useSharedValue(0);
+    const isDragging = useSharedValue(false);
+
+    const screenHeight = Dimensions.get('window').height;
+
+    const longPressGesture = Gesture.LongPress()
+        .minDuration(1000)
+        .onStart(() => {
+            isDragging.value = true;
+            isDraggingGlobal.value = withSpring(1);
+            if (onDragStart) runOnJS(onDragStart)();
+        });
+
+    const panGesture = Gesture.Pan()
+        .manualActivation(true)
+        .onTouchesMove((event, stateManager) => {
+            if (isDragging.value) {
+                stateManager.activate();
+            } else {
+                stateManager.fail();
+            }
+        })
+        .onUpdate((event) => {
+            translateX.value = event.translationX;
+            translateY.value = event.translationY;
+        })
+        .onEnd((event) => {
+            const absoluteY = event.absoluteY;
+
+            if (absoluteY > screenHeight * 0.8) {
+                runOnJS(onDelete)(item);
+            }
+
+            translateX.value = withSpring(0);
+            translateY.value = withSpring(0);
+            isDragging.value = false;
+            isDraggingGlobal.value = withSpring(0);
+        });
+
+    const composedGesture = Gesture.Simultaneous(longPressGesture, panGesture);
+
+    const animatedStyle = useAnimatedStyle(() => {
+        return {
+            transform: [
+                { translateX: translateX.value },
+                { translateY: translateY.value },
+                { scale: withSpring(isDragging.value ? 1.05 : 1) }
+            ],
+            zIndex: isDragging.value ? 1000 : 1,
+            elevation: isDragging.value ? 10 : 0,
+            opacity: isDragging.value ? 0.9 : 1,
+        };
+    });
+
+    return (
+        <GestureDetector gesture={composedGesture}>
+            <Animated.View style={[styles.cardContainer, animatedStyle]}>
+                <View style={[
+                    styles.card,
+                    {
+                        backgroundColor: colorScheme === 'light' ? '#FFFFFF' : '#FFFFFF',
+                        borderColor: item.color || (colorScheme === 'light' ? '#FCE4EC' : '#FFFFFF'),
+                    }
+                ]}
+                >
+                    <View style={styles.liquidHighlight} />
+
+
+                    <View style={styles.cardMain}>
+                        <View style={[styles.courseIcon, { backgroundColor: item.color + '15' }]}>
+                            <BookOpen size={24} color={item.color} />
+                        </View>
+                        <View style={styles.cardContent}>
+                            <Text style={[styles.courseTitle, { color: colors.text }]}>{item.courseName}</Text>
+                            <View style={styles.infoRow}>
+                                <User size={14} color={colors.icon} />
+                                <Text style={[styles.infoText, { color: colors.icon }]}>{item.teacherName}</Text>
+                            </View>
+
+                            {item.schedules.map((schedule: ClassSchedule, idx: number) => (
+                                <View key={idx} style={styles.infoRow}>
+                                    <Clock size={14} color={colors.icon} />
+                                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                        <Text style={[styles.infoText, { color: colors.icon }]}>{schedule.day}: </Text>
+                                        <Text style={[styles.timeText, { color: item.color }]}>
+                                            {schedule.startTime} - {calculateEndTime(schedule.startTime, item.duration)}
+                                        </Text>
+                                    </View>
+                                </View>
+                            ))}
+
+                            <View style={styles.infoRow}>
+                                <Users size={14} color={isOverflow ? '#ff4d4d' : colors.icon} />
+                                <Text style={[styles.infoText, { color: isOverflow ? '#ff4d4d' : colors.icon, fontWeight: isOverflow ? 'bold' : 'normal' }]}>
+                                    Capacidad: {enrolledCount}/{item.capacity} {isOverflow ? '(Sobrecupo)' : ''}
+                                </Text>
+                            </View>
+                        </View>
+                    </View>
+
+                    <View style={[styles.cardActions, { borderLeftWidth: 1, borderLeftColor: colorScheme === 'light' ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.05)', paddingLeft: 12 }]}>
+                        {classes.some((c: any) => c.mergedToClassId === item.id) && (
+                            <>
+                                <TouchableOpacity
+                                    style={[styles.editCircle, { backgroundColor: '#4CAF5020' }]}
+                                    onPress={() => onConfirmImportState(item)}
+                                >
+                                    <Check size={18} color="#4CAF50" />
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={[styles.editCircle, { backgroundColor: '#ff4d4d20' }]}
+                                    onPress={() => onRevertMerge(item)}
+                                >
+                                    <RefreshCcw size={18} color="#ff4d4d" />
+                                </TouchableOpacity>
+                            </>
+                        )}
+                        {!item.mergedToClassId && !classes.some((c: any) => c.mergedToClassId === item.id) &&
+                            getValidActiveEnrollments(item.id).length === 0 &&
+                            academicCycles.find((ac: any) => ac.id === item.cycleId)?.name.toLowerCase().includes('anual') && (
+                                <TouchableOpacity
+                                    style={[styles.editCircle, { backgroundColor: colors.tint + '20' }]}
+                                    onPress={() => onOpenMergeModal(item.id)}
+                                >
+                                    <Download size={18} color={colors.tint} />
+                                </TouchableOpacity>
+                            )}
+                        <TouchableOpacity
+                            style={[styles.editCircle, { backgroundColor: colors.tint + '10' }]}
+                            onPress={() => onEdit(item)}
+                        >
+                            <Edit3 size={18} color={colors.tint} />
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Animated.View>
+        </GestureDetector>
+    );
+};
+
 export default function ClassesScreen() {
     const { showAlert } = useAlert();
     const { userRole } = useAuth();
@@ -180,24 +357,8 @@ export default function ClassesScreen() {
         return matchesSearch && matchesCycle;
     });
 
-    const calculateEndTime = (startTime: string, duration: string) => {
-        const [startHours, startMinutes] = startTime.split(':').map(Number);
+    // calculateEndTime fue movido al top-level
 
-        // Extract hours and minutes from duration string like "40h 0m" or "1h 30m"
-        const hoursMatch = duration.match(/(\d+)h/);
-        const minutesMatch = duration.match(/(\d+)m/);
-
-        const durationHours = hoursMatch ? parseInt(hoursMatch[1]) : 0;
-        const durationMinutes = minutesMatch ? parseInt(minutesMatch[1]) : 0;
-
-        let endMinutes = startMinutes + durationMinutes;
-        let endHours = startHours + durationHours + Math.floor(endMinutes / 60);
-
-        endMinutes = endMinutes % 60;
-        endHours = endHours % 24; // Handle wrap around if class ends next day
-
-        return `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')} `;
-    };
 
     const checkTimeOverlap = (start1: string, duration1: string, start2: string, duration2: string) => {
         const getMinutes = (time: string) => {
@@ -700,162 +861,36 @@ export default function ClassesScreen() {
         );
     };
 
-    const DraggableClassCard = ({ item, colors, onEdit, onDelete, onEnroll, onDragStart }: any) => {
-        const translateX = useSharedValue(0);
-        const translateY = useSharedValue(0);
-        const isDragging = useSharedValue(false);
-
-        const screenHeight = Dimensions.get('window').height;
-
+    const renderClassCard = ({ item }: { item: ClassItem }) => {
         const enrolledCount = getValidActiveEnrollments(item.id).length;
         const capacityInt = parseInt(item.capacity || '20');
         const isOverflow = enrolledCount > capacityInt;
 
-        const longPressGesture = Gesture.LongPress()
-            .minDuration(1000)
-            .onStart(() => {
-                isDragging.value = true;
-                isDraggingGlobal.value = withSpring(1);
-                if (onDragStart) runOnJS(onDragStart)();
-            });
-
-        const panGesture = Gesture.Pan()
-            .manualActivation(true)
-            .onTouchesMove((event, stateManager) => {
-                if (isDragging.value) {
-                    stateManager.activate();
-                } else {
-                    stateManager.fail();
-                }
-            })
-            .onUpdate((event) => {
-                translateX.value = event.translationX;
-                translateY.value = event.translationY;
-            })
-            .onEnd((event) => {
-                const absoluteY = event.absoluteY;
-
-                if (absoluteY > screenHeight * 0.8) {
-                    runOnJS(onDelete)(item);
-                }
-
-                translateX.value = withSpring(0);
-                translateY.value = withSpring(0);
-                isDragging.value = false;
-                isDraggingGlobal.value = withSpring(0);
-            });
-
-        const composedGesture = Gesture.Simultaneous(longPressGesture, panGesture);
-
-        const animatedStyle = useAnimatedStyle(() => {
-            return {
-                transform: [
-                    { translateX: translateX.value },
-                    { translateY: translateY.value },
-                    { scale: withSpring(isDragging.value ? 1.05 : 1) }
-                ],
-                zIndex: isDragging.value ? 1000 : 1,
-                elevation: isDragging.value ? 10 : 0,
-                opacity: isDragging.value ? 0.9 : 1,
-            };
-        });
-
         return (
-            <GestureDetector gesture={composedGesture}>
-                <Animated.View style={[styles.cardContainer, animatedStyle]}>
-                    <View style={[
-                        styles.card,
-                        {
-                            backgroundColor: colorScheme === 'light' ? '#FFFFFF' : '#FFFFFF',
-                            borderColor: item.color || (colorScheme === 'light' ? '#FCE4EC' : '#FFFFFF'),
-                        }
-                    ]}
-                    >
-                        <View style={styles.liquidHighlight} />
-
-
-                        <View style={styles.cardMain}>
-                            <View style={[styles.courseIcon, { backgroundColor: item.color + '15' }]}>
-                                <BookOpen size={24} color={item.color} />
-                            </View>
-                            <View style={styles.cardContent}>
-                                <Text style={[styles.courseTitle, { color: colors.text }]}>{item.courseName}</Text>
-                                <View style={styles.infoRow}>
-                                    <User size={14} color={colors.icon} />
-                                    <Text style={[styles.infoText, { color: colors.icon }]}>{item.teacherName}</Text>
-                                </View>
-
-                                {item.schedules.map((schedule: ClassSchedule, idx: number) => (
-                                    <View key={idx} style={styles.infoRow}>
-                                        <Clock size={14} color={colors.icon} />
-                                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                            <Text style={[styles.infoText, { color: colors.icon }]}>{schedule.day}: </Text>
-                                            <Text style={[styles.timeText, { color: item.color }]}>
-                                                {schedule.startTime} - {calculateEndTime(schedule.startTime, item.duration)}
-                                            </Text>
-                                        </View>
-                                    </View>
-                                ))}
-
-                                <View style={styles.infoRow}>
-                                    <Users size={14} color={isOverflow ? '#ff4d4d' : colors.icon} />
-                                    <Text style={[styles.infoText, { color: isOverflow ? '#ff4d4d' : colors.icon, fontWeight: isOverflow ? 'bold' : 'normal' }]}>
-                                        Capacidad: {enrolledCount}/{item.capacity} {isOverflow ? '(Sobrecupo)' : ''}
-                                    </Text>
-                                </View>
-                            </View>
-                        </View>
-
-                        <View style={[styles.cardActions, { borderLeftWidth: 1, borderLeftColor: colorScheme === 'light' ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.05)', paddingLeft: 12 }]}>
-                            {classes.some(c => c.mergedToClassId === item.id) && (
-                                <>
-                                    <TouchableOpacity
-                                        style={[styles.editCircle, { backgroundColor: '#4CAF5020' }]}
-                                        onPress={() => handleConfirmImportState(item)}
-                                    >
-                                        <Check size={18} color="#4CAF50" />
-                                    </TouchableOpacity>
-                                    <TouchableOpacity
-                                        style={[styles.editCircle, { backgroundColor: '#ff4d4d20' }]}
-                                        onPress={() => handleRevertMerge(item)}
-                                    >
-                                        <RefreshCcw size={18} color="#ff4d4d" />
-                                    </TouchableOpacity>
-                                </>
-                            )}
-                            {!item.mergedToClassId && !classes.some(c => c.mergedToClassId === item.id) &&
-                                getValidActiveEnrollments(item.id).length === 0 &&
-                                academicCycles.find(ac => ac.id === item.cycleId)?.name.toLowerCase().includes('anual') && (
-                                    <TouchableOpacity
-                                        style={[styles.editCircle, { backgroundColor: colors.tint + '20' }]}
-                                        onPress={() => { setSelectedClassId(item.id); setSelectedSourceClassIds([]); setMergeModalVisible(true); }}
-                                    >
-                                        <Download size={18} color={colors.tint} />
-                                    </TouchableOpacity>
-                                )}
-                            <TouchableOpacity
-                                style={[styles.editCircle, { backgroundColor: colors.tint + '10' }]}
-                                onPress={() => onEdit(item)}
-                            >
-                                <Edit3 size={18} color={colors.tint} />
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-                </Animated.View>
-            </GestureDetector>
+            <DraggableClassCard
+                item={item}
+                colors={colors}
+                colorScheme={colorScheme}
+                enrolledCount={enrolledCount}
+                isOverflow={isOverflow}
+                isDraggingGlobal={isDraggingGlobal}
+                classes={classes}
+                academicCycles={academicCycles}
+                onEdit={handleEditPress}
+                onDelete={handleDeleteClass}
+                onEnroll={openEnrollment}
+                onDragStart={triggerHaptic}
+                onConfirmImportState={handleConfirmImportState}
+                onRevertMerge={handleRevertMerge}
+                onOpenMergeModal={(id: string) => {
+                    setSelectedClassId(id);
+                    setSelectedSourceClassIds([]);
+                    setMergeModalVisible(true);
+                }}
+                getValidActiveEnrollments={getValidActiveEnrollments}
+            />
         );
     };
-
-    const renderClassCard = ({ item }: { item: ClassItem }) => (
-        <DraggableClassCard
-            item={item}
-            colors={colors}
-            onEdit={handleEditPress}
-            onDelete={handleDeleteClass}
-            onEnroll={openEnrollment}
-            onDragStart={triggerHaptic}
-        />
-    );
 
     const trashAnimatedStyle = useAnimatedStyle(() => {
         return {

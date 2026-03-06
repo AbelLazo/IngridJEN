@@ -57,6 +57,120 @@ const triggerHaptic = () => {
     Vibration.vibrate(100);
 };
 
+const DraggableCard = ({ item, colors, colorScheme, type, currentCycleYear, isDraggingGlobal, onEdit, onDelete, onDragStart }: any) => {
+    const translateX = useSharedValue(0);
+    const translateY = useSharedValue(0);
+    const isDragging = useSharedValue(false);
+
+    const screenHeight = Dimensions.get('window').height;
+
+    const longPressGesture = Gesture.LongPress()
+        .minDuration(1000)
+        .onStart(() => {
+            isDragging.value = true;
+            isDraggingGlobal.value = withSpring(1);
+            if (onDragStart) runOnJS(onDragStart)();
+        });
+
+    const panGesture = Gesture.Pan()
+        .manualActivation(true)
+        .onTouchesMove((event, stateManager) => {
+            if (isDragging.value) {
+                stateManager.activate();
+            } else {
+                stateManager.fail();
+            }
+        })
+        .onUpdate((event) => {
+            translateX.value = event.translationX;
+            translateY.value = event.translationY;
+        })
+        .onEnd((event) => {
+            const absoluteY = event.absoluteY;
+
+            if (absoluteY > screenHeight * 0.8) {
+                runOnJS(onDelete)(item);
+            }
+
+            translateX.value = withSpring(0);
+            translateY.value = withSpring(0);
+            isDragging.value = false;
+            isDraggingGlobal.value = withSpring(0);
+        });
+
+    const composedGesture = Gesture.Simultaneous(longPressGesture, panGesture);
+
+    const animatedStyle = useAnimatedStyle(() => {
+        return {
+            transform: [
+                { translateX: translateX.value },
+                { translateY: translateY.value },
+                { scale: withSpring(isDragging.value ? 1.05 : 1) }
+            ],
+            zIndex: isDragging.value ? 1000 : 1,
+            elevation: isDragging.value ? 10 : 0,
+            opacity: isDragging.value ? 0.9 : 1,
+        };
+    });
+
+    const computedStatus = (type === 'student' && item.activeYears)
+        ? (item.activeYears.includes(currentCycleYear) ? 'active' : 'inactive')
+        : item.status;
+
+    return (
+        <GestureDetector gesture={composedGesture}>
+            <Animated.View style={[styles.cardContainer, animatedStyle]}>
+                <View
+                    style={[
+                        styles.card,
+                        {
+                            backgroundColor: colorScheme === 'light' ? '#FFFFFF' : colors.card,
+                            borderColor: colorScheme === 'light' ? '#FCE4EC' : colors.border,
+                        }
+                    ]}
+                >
+                    <View style={[styles.avatar, { backgroundColor: '#FFF0F5' }]}>
+                        <Text style={[styles.avatarText, { color: colors.tint }]}>{item.firstName.charAt(0)}</Text>
+                    </View>
+                    <View style={styles.cardContent}>
+                        <Text style={[
+                            styles.cardName,
+                            { color: colors.text },
+                            computedStatus === 'inactive' && { color: colors.icon, textDecorationLine: 'line-through' as any }
+                        ]}>
+                            {item.firstName} {item.lastName}
+                        </Text>
+                        <View style={styles.cardInfoRow}>
+                            <Phone size={14} color={colors.icon} />
+                            <Text style={[styles.cardSub, { color: colors.icon, marginLeft: 4 }]}>{item.phone}</Text>
+                            {computedStatus === 'inactive' && (
+                                <Text style={{ fontSize: 10, color: '#FF4444', marginLeft: 10, fontWeight: 'bold' }}>
+                                    (Inactivo)
+                                </Text>
+                            )}
+                        </View>
+                        {item.extra && item.extra.length > 0 && (
+                            <View style={styles.specialtyTags}>
+                                {item.extra.split(', ').map((s: string, idx: number) => (
+                                    <View key={idx} style={[styles.miniBadge, { backgroundColor: '#FFF0F5' }]}>
+                                        <Text style={[styles.miniBadgeText, { color: colors.tint }]}>{s}</Text>
+                                    </View>
+                                ))}
+                            </View>
+                        )}
+                    </View>
+                    <TouchableOpacity
+                        style={[styles.editCircle, { backgroundColor: '#FFF0F5' }]}
+                        onPress={() => onEdit(item)}
+                    >
+                        <Edit3 size={18} color={colors.tint} />
+                    </TouchableOpacity>
+                </View>
+            </Animated.View>
+        </GestureDetector>
+    );
+};
+
 export default function ManagementModule({ title, type, placeholderExtra, iconExtra: IconExtra }: ManagementModuleProps) {
     const { showAlert } = useAlert();
     const { userRole } = useAuth();
@@ -239,119 +353,7 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
         );
     };
 
-    const DraggableCard = ({ item, colors, onEdit, onDelete, onDragStart }: any) => {
-        const translateX = useSharedValue(0);
-        const translateY = useSharedValue(0);
-        const isDragging = useSharedValue(false);
 
-        const screenHeight = Dimensions.get('window').height;
-
-        const longPressGesture = Gesture.LongPress()
-            .minDuration(1000)
-            .onStart(() => {
-                isDragging.value = true;
-                isDraggingGlobal.value = withSpring(1);
-                if (onDragStart) runOnJS(onDragStart)();
-            });
-
-        const panGesture = Gesture.Pan()
-            .manualActivation(true)
-            .onTouchesMove((event, stateManager) => {
-                if (isDragging.value) {
-                    stateManager.activate();
-                } else {
-                    stateManager.fail();
-                }
-            })
-            .onUpdate((event) => {
-                translateX.value = event.translationX;
-                translateY.value = event.translationY;
-            })
-            .onEnd((event) => {
-                const absoluteY = event.absoluteY;
-
-                if (absoluteY > screenHeight * 0.8) {
-                    runOnJS(onDelete)(item);
-                }
-
-                translateX.value = withSpring(0);
-                translateY.value = withSpring(0);
-                isDragging.value = false;
-                isDraggingGlobal.value = withSpring(0);
-            });
-
-        const composedGesture = Gesture.Simultaneous(longPressGesture, panGesture);
-
-        const animatedStyle = useAnimatedStyle(() => {
-            return {
-                transform: [
-                    { translateX: translateX.value },
-                    { translateY: translateY.value },
-                    { scale: withSpring(isDragging.value ? 1.05 : 1) }
-                ],
-                zIndex: isDragging.value ? 1000 : 1,
-                elevation: isDragging.value ? 10 : 0,
-                opacity: isDragging.value ? 0.9 : 1,
-            };
-        });
-
-        const computedStatus = (type === 'student' && item.activeYears)
-            ? (item.activeYears.includes(currentCycleYear) ? 'active' : 'inactive')
-            : item.status;
-
-        return (
-            <GestureDetector gesture={composedGesture}>
-                <Animated.View style={[styles.cardContainer, animatedStyle]}>
-                    <View
-                        style={[
-                            styles.card,
-                            {
-                                backgroundColor: colorScheme === 'light' ? '#FFFFFF' : colors.card,
-                                borderColor: colorScheme === 'light' ? '#FCE4EC' : colors.border,
-                            }
-                        ]}
-                    >
-                        <View style={[styles.avatar, { backgroundColor: '#FFF0F5' }]}>
-                            <Text style={[styles.avatarText, { color: colors.tint }]}>{item.firstName.charAt(0)}</Text>
-                        </View>
-                        <View style={styles.cardContent}>
-                            <Text style={[
-                                styles.cardName,
-                                { color: colors.text },
-                                computedStatus === 'inactive' && { color: colors.icon, textDecorationLine: 'line-through' as any }
-                            ]}>
-                                {item.firstName} {item.lastName}
-                            </Text>
-                            <View style={styles.cardInfoRow}>
-                                <Phone size={14} color={colors.icon} />
-                                <Text style={[styles.cardSub, { color: colors.icon, marginLeft: 4 }]}>{item.phone}</Text>
-                                {computedStatus === 'inactive' && (
-                                    <Text style={{ fontSize: 10, color: '#FF4444', marginLeft: 10, fontWeight: 'bold' }}>
-                                        (Inactivo)
-                                    </Text>
-                                )}
-                            </View>
-                            {item.extra && item.extra.length > 0 && (
-                                <View style={styles.specialtyTags}>
-                                    {item.extra.split(', ').map((s: string, idx: number) => (
-                                        <View key={idx} style={[styles.miniBadge, { backgroundColor: '#FFF0F5' }]}>
-                                            <Text style={[styles.miniBadgeText, { color: colors.tint }]}>{s}</Text>
-                                        </View>
-                                    ))}
-                                </View>
-                            )}
-                        </View>
-                        <TouchableOpacity
-                            style={[styles.editCircle, { backgroundColor: '#FFF0F5' }]}
-                            onPress={() => onEdit(item)}
-                        >
-                            <Edit3 size={18} color={colors.tint} />
-                        </TouchableOpacity>
-                    </View>
-                </Animated.View>
-            </GestureDetector>
-        );
-    };
 
     const handleSave = async () => {
         setErrorMsg(null);
@@ -438,8 +440,13 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
         <DraggableCard
             item={item}
             colors={colors}
+            colorScheme={colorScheme}
+            type={type}
+            currentCycleYear={currentCycleYear}
+            isDraggingGlobal={isDraggingGlobal}
             onEdit={handleEditPress}
             onDelete={handleDelete}
+            onDragStart={triggerHaptic}
         />
     );
 

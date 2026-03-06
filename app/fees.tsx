@@ -274,6 +274,7 @@ export default function FeesScreen() {
     const [payData, setPayData] = useState<any>(null);
     const [isDetailVisible, setIsDetailVisible] = useState(false);
     const [detailData, setDetailData] = useState<any>(null);
+    const [paymentMethod, setPaymentMethod] = useState<'contado' | 'yape' | 'transferencia'>('contado');
 
     const selectedMonthYear = useMemo(() => {
         const today = networkTime || new Date();
@@ -653,6 +654,7 @@ export default function FeesScreen() {
                                             <View style={{ flex: 1, marginLeft: 12 }}>
                                                 <Text style={[styles.historyName, { color: colors.text }]}>{student?.firstName} {student?.lastName}</Text>
                                                 <Text style={{ fontSize: 12, color: colors.icon }}>{cls?.courseName} • Período: {item.monthYear}</Text>
+                                                <Text style={{ fontSize: 11, color: colors.tint, textTransform: 'capitalize', marginTop: 2 }}>{item.method || 'Contado'}</Text>
                                             </View>
                                             <View style={{ alignItems: 'flex-end' }}>
                                                 <Text style={[styles.historyAmount, { color: '#40C057' }]}>+ S/ {item.amount}</Text>
@@ -691,6 +693,31 @@ export default function FeesScreen() {
                                 {payData.month.notes ? `\n\n(${payData.month.notes})` : ''}
                             </Text>
                         )}
+
+                        <Text style={{ color: colors.text, fontWeight: 'bold', marginBottom: 10 }}>Método de pago:</Text>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 }}>
+                            {['contado', 'yape', 'transferencia'].map(method => (
+                                <TouchableOpacity
+                                    key={method}
+                                    style={{
+                                        flex: 1,
+                                        paddingVertical: 10,
+                                        marginHorizontal: 4,
+                                        borderRadius: 8,
+                                        borderWidth: 1,
+                                        borderColor: paymentMethod === method ? colors.tint : colors.border,
+                                        backgroundColor: paymentMethod === method ? colors.tint + '15' : 'transparent',
+                                        alignItems: 'center'
+                                    }}
+                                    onPress={() => setPaymentMethod(method as any)}
+                                >
+                                    <Text style={{ color: paymentMethod === method ? colors.tint : colors.icon, textTransform: 'capitalize', fontWeight: paymentMethod === method ? 'bold' : 'normal', fontSize: 12 }}>
+                                        {method}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+
                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 }}>
                             <TouchableOpacity
                                 style={[styles.saveButton, { backgroundColor: colors.border, flex: 1, marginRight: 10 }]}
@@ -710,10 +737,12 @@ export default function FeesScreen() {
                                             installmentId: payData.month.id,
                                             amount: payData.month.amount.toString(),
                                             date: today.toISOString().split('T')[0],
-                                            monthYear: payData.month.monthYearSearch
+                                            monthYear: payData.month.monthYearSearch,
+                                            method: paymentMethod
                                         }, payData.month.id);
                                         setIsPayConfirmVisible(false);
                                         setPayData(null);
+                                        setPaymentMethod('contado'); // Reset after paying
                                     }
                                 }}
                             >
@@ -740,6 +769,7 @@ export default function FeesScreen() {
                                 <Text style={{ color: colors.text, fontSize: 16, marginBottom: 8 }}><Text style={{ fontWeight: 'bold' }}>Curso:</Text> {detailData.courseName}</Text>
                                 <Text style={{ color: colors.text, fontSize: 16, marginBottom: 8 }}><Text style={{ fontWeight: 'bold' }}>Mes:</Text> {detailData.monthName}</Text>
                                 <Text style={{ color: colors.text, fontSize: 16, marginBottom: 8 }}><Text style={{ fontWeight: 'bold' }}>Monto procesado:</Text> S/ {detailData.payment.amount}</Text>
+                                <Text style={{ color: colors.text, fontSize: 16, marginBottom: 8 }}><Text style={{ fontWeight: 'bold' }}>Método de pago:</Text> <Text style={{ textTransform: 'capitalize' }}>{detailData.payment.method || 'contado'}</Text></Text>
                                 <Text style={{ color: colors.text, fontSize: 16, marginBottom: 8 }}><Text style={{ fontWeight: 'bold' }}>Fecha del pago:</Text> {new Date(detailData.payment.date + 'T12:00:00').toLocaleDateString('es-PE')}</Text>
                             </View>
                         )}
