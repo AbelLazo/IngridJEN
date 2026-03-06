@@ -1,15 +1,14 @@
+import ModernPicker from '@/components/ModernPicker';
 import { Colors } from '@/constants/theme';
 import { useAlert } from '@/context/AlertContext';
 import { useAuth } from '@/context/AuthContext';
 import { Course, useInstitution } from '@/context/InstitutionContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { Picker } from '@react-native-picker/picker';
 import * as Haptics from 'expo-haptics';
 import { Stack, useRouter } from 'expo-router';
 import { AlertCircle, BookOpen, ChevronLeft, Clock, Coins, Edit3, Plus, Search, Trash2, X } from 'lucide-react-native';
 import React, { useState } from 'react';
 import {
-    Alert,
     Dimensions,
     FlatList,
     KeyboardAvoidingView,
@@ -359,39 +358,31 @@ export default function CoursesScreen() {
                                 <Text style={[styles.label, { color: colors.text }]}>Duración *</Text>
                                 <View style={styles.durationRow}>
                                     <View style={[styles.durationInputGroup, { flex: 1, marginRight: 10 }]}>
-                                        <View style={[styles.inputWrapper, { borderColor: errors.duration ? '#ff4d4d' : colors.border, paddingHorizontal: 0, backgroundColor: errors.duration ? '#ff4d4d10' : 'transparent' }]}>
-                                            <Picker
-                                                selectedValue={formData.hours || '0'}
-                                                onValueChange={(v) => {
-                                                    setFormData({ ...formData, hours: v });
-                                                    if (errors.duration && (v !== '0' || formData.minutes !== '0')) setErrors(prev => ({ ...prev, duration: false }));
-                                                }}
-                                                style={{ color: colors.text, width: '100%', height: 50 }}
-                                                dropdownIconColor={colors.tint}
-                                            >
-                                                {Array.from({ length: 9 }).map((_, i) => (
-                                                    <Picker.Item key={i} label={`${i} h`} value={i.toString()} color="#000" />
-                                                ))}
-                                            </Picker>
-                                        </View>
+                                        <ModernPicker
+                                            selectedValue={formData.hours || '0'}
+                                            onValueChange={(v) => {
+                                                setFormData({ ...formData, hours: v });
+                                                if (errors.duration && (v !== '0' || formData.minutes !== '0')) setErrors(prev => ({ ...prev, duration: false }));
+                                            }}
+                                            items={Array.from({ length: 9 }).map((_, i) => ({ label: `${i} h`, value: i.toString() }))}
+                                            placeholder="Horas"
+                                            title="Seleccionar Horas"
+                                            colors={colors}
+                                        />
                                     </View>
 
                                     <View style={[styles.durationInputGroup, { flex: 1 }]}>
-                                        <View style={[styles.inputWrapper, { borderColor: errors.duration ? '#ff4d4d' : colors.border, paddingHorizontal: 0, backgroundColor: errors.duration ? '#ff4d4d10' : 'transparent' }]}>
-                                            <Picker
-                                                selectedValue={formData.minutes || '0'}
-                                                onValueChange={(v) => {
-                                                    setFormData({ ...formData, minutes: v });
-                                                    if (errors.duration && (formData.hours !== '0' || v !== '0')) setErrors(prev => ({ ...prev, duration: false }));
-                                                }}
-                                                style={{ color: colors.text, width: '100%', height: 50 }}
-                                                dropdownIconColor={colors.tint}
-                                            >
-                                                {['00', '15', '30', '45'].map(m => (
-                                                    <Picker.Item key={m} label={`${m} m`} value={m} color="#000" />
-                                                ))}
-                                            </Picker>
-                                        </View>
+                                        <ModernPicker
+                                            selectedValue={formData.minutes || '0'}
+                                            onValueChange={(v) => {
+                                                setFormData({ ...formData, minutes: v });
+                                                if (errors.duration && (formData.hours !== '0' || v !== '0')) setErrors(prev => ({ ...prev, duration: false }));
+                                            }}
+                                            items={['00', '15', '30', '45'].map(m => ({ label: `${m} m`, value: m }))}
+                                            placeholder="Minutos"
+                                            title="Seleccionar Minutos"
+                                            colors={colors}
+                                        />
                                     </View>
                                 </View>
                                 {errors.duration && <Text style={styles.errorText}>Especifica una duración válida</Text>}

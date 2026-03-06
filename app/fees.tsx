@@ -1,10 +1,9 @@
 import PeriodHeader from '@/components/PeriodHeader';
-import { useAlert } from '@/context/AlertContext';
 import { Colors } from '@/constants/theme';
+import { useAlert } from '@/context/AlertContext';
 import { useAuth } from '@/context/AuthContext';
 import { useInstitution } from '@/context/InstitutionContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { BlurView } from 'expo-blur';
 import { Stack, useRouter } from 'expo-router';
 import {
     AlertCircle,
@@ -14,15 +13,16 @@ import {
     Coins,
     CreditCard,
     History,
+    Info,
     LayoutList,
     Receipt,
+    RefreshCcw,
     Search,
     User,
     X
 } from 'lucide-react-native';
 import React, { useMemo, useState } from 'react';
 import {
-    Alert,
     FlatList,
     Modal,
     Platform,
@@ -40,9 +40,10 @@ interface EnrollmentItemProps {
     colors: any;
     onPay: (student: any, enrollment: any, month: any) => void;
     onShowDetail: (payment: any, monthName: string, studentName: string, courseName: string) => void;
+    onRecalculate?: (id: string) => void;
 }
 
-const EnrollmentItem = ({ student, detail, colors, onPay, onShowDetail }: EnrollmentItemProps) => {
+const EnrollmentItem = ({ student, detail, colors, onPay, onShowDetail, onRecalculate }: EnrollmentItemProps) => {
     const [expanded, setExpanded] = useState(false);
 
     return (
@@ -82,27 +83,60 @@ const EnrollmentItem = ({ student, detail, colors, onPay, onShowDetail }: Enroll
 
             {expanded && (
                 <View style={styles.expandableContent}>
+                    {onRecalculate && (
+                        <TouchableOpacity
+                            onPress={() => onRecalculate(detail.id)}
+                            style={{
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                paddingVertical: 8,
+                                borderBottomWidth: 1,
+                                borderBottomColor: colors.border + '30',
+                                marginBottom: 4
+                            }}
+                        >
+                            <RefreshCcw size={14} color={colors.tint} />
+                            <Text style={{ marginLeft: 8, color: colors.tint, fontSize: 12, fontWeight: '700' }}>Recalcular Descuentos</Text>
+                        </TouchableOpacity>
+                    )}
                     {detail.allMonths.map((month: any, idx: number) => (
                         <View key={month.id} style={[styles.monthRow, idx === 0 && { borderTopWidth: 0 }]}>
                             <View style={{ flex: 1, paddingRight: 10 }}>
-                                <Text style={[styles.monthName, { color: colors.text, opacity: month.isPaid ? 0.6 : 1 }]}>
-                                    {month.monthName}
-                                </Text>
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <Text style={[styles.monthName, { color: colors.text, opacity: month.isPaid ? 0.6 : 1, flex: 1 }]}>
+                                        {month.monthName}
+                                    </Text>
+                                    <View style={{ alignItems: 'flex-end' }}>
+                                        {month.originalAmount && parseFloat(month.originalAmount) > month.amount && (
+                                            <Text style={{ fontSize: 11, color: colors.icon, textDecorationLine: 'line-through' }}>
+                                                S/ {parseFloat(month.originalAmount).toFixed(2)}
+                                            </Text>
+                                        )}
+                                        <Text style={{ fontSize: 14, fontWeight: '700', color: month.isPaid ? '#40C057' : colors.tint }}>
+                                            S/ {month.amount.toFixed(2)}
+                                        </Text>
+                                    </View>
+                                </View>
                                 <Text style={{
                                     fontSize: 11,
                                     color: month.isPaid ? '#40C057' : (month.isOverdue ? '#ff4d4d' : colors.icon),
                                     fontWeight: (month.isOverdue || month.isPaid) ? 'bold' : 'normal',
-                                    opacity: month.isPaid ? 0.8 : 1
+                                    opacity: month.isPaid ? 0.8 : 1,
+                                    marginTop: 2
                                 }}>
                                     {month.isPaid ? 'PAGADO ✓' : (month.isOverdue ? 'VENCIDO: ' : 'Vence: ') + month.paymentDate}
                                 </Text>
                                 {month.notes && (
-                                    <Text
-                                        style={{ fontSize: 10, color: colors.tint, marginTop: 4, marginBottom: 4, fontStyle: 'italic', opacity: month.isPaid ? 0.6 : 0.8 }}
-                                        numberOfLines={2}
-                                    >
-                                        {month.notes.replace('Descuento automático: ', '🎁 ')}
-                                    </Text>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4, backgroundColor: colors.tint + '10', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, alignSelf: 'flex-start' }}>
+                                        <Info size={10} color={colors.tint} />
+                                        <Text
+                                            style={{ fontSize: 10, color: colors.tint, marginLeft: 4, fontWeight: '600' }}
+                                            numberOfLines={1}
+                                        >
+                                            {month.notes.replace('Descuento automático: ', '').replace('Promoción: ', '🎁 ').replace('Evento: ', '📅 ')}
+                                        </Text>
+                                    </View>
                                 )}
                             </View>
 
@@ -143,21 +177,22 @@ interface StudentCardProps {
     colors: any;
     onPay: (student: any, enrollment: any, month: any) => void;
     onShowDetail: (payment: any, monthName: string, studentName: string, courseName: string) => void;
+    onRecalculate?: (id: string) => void;
 }
 
-const StudentCard = ({ item, colors, onPay, onShowDetail }: StudentCardProps) => {
+const StudentCard = ({ item, colors, onPay, onShowDetail, onRecalculate }: StudentCardProps) => {
     const [isExpanded, setIsExpanded] = useState(false);
     const colorScheme = useColorScheme() ?? 'light';
 
     return (
         <View style={styles.cardContainer}>
             <View style={[
-                    styles.card,
-                    {
-                        backgroundColor: colorScheme === 'light' ? '#FFFFFF' : '#FFFFFF',
-                        borderColor: item.totalDebt > 0 ? '#ff4d4d80' : (colorScheme === 'light' ? '#FCE4EC' : '#FFFFFF'),
-                    }
-                ]}
+                styles.card,
+                {
+                    backgroundColor: colorScheme === 'light' ? '#FFFFFF' : '#FFFFFF',
+                    borderColor: item.totalDebt > 0 ? '#ff4d4d80' : (colorScheme === 'light' ? '#FCE4EC' : '#FFFFFF'),
+                }
+            ]}
             >
                 <View style={styles.liquidHighlight} />
 
@@ -196,7 +231,7 @@ const StudentCard = ({ item, colors, onPay, onShowDetail }: StudentCardProps) =>
                         <View style={styles.detailsList}>
                             <Text style={[styles.sectionTitle, { color: colors.icon }]}>Cursos Matriculados:</Text>
                             {item.enrollmentDetails.map((detail: any) => (
-                                <EnrollmentItem key={detail.id} student={item} detail={detail} colors={colors} onPay={onPay} onShowDetail={onShowDetail} />
+                                <EnrollmentItem key={detail.id} student={item} detail={detail} colors={colors} onPay={onPay} onShowDetail={onShowDetail} onRecalculate={onRecalculate} />
                             ))}
                         </View>
                     </>
@@ -229,7 +264,7 @@ export default function FeesScreen() {
             </View>
         );
     }
-    const { students, enrollments, classes, courses, payments, addPayment, installments, academicCycles, currentCycleId, setCurrentCycleId } = useInstitution();
+    const { students, enrollments, classes, courses, payments, addPayment, installments, academicCycles, currentCycleId, setCurrentCycleId, recalculateEnrollmentInstallments } = useInstitution();
 
     const [searchQuery, setSearchQuery] = useState('');
     const [viewMode, setViewMode] = useState<'pendientes' | 'historial'>('pendientes');
@@ -400,6 +435,23 @@ export default function FeesScreen() {
         setIsDetailVisible(true);
     };
 
+    const handleRecalculate = (id: string) => {
+        showAlert(
+            "Recalcular Cuotas",
+            "Esto borrará las cuotas no pagadas de esta matrícula y las generará nuevamente aplicando las promociones vigentes. ¿Continuar?",
+            [
+                { text: "Cancelar", style: "cancel" },
+                {
+                    text: "Recalcular",
+                    onPress: async () => {
+                        await recalculateEnrollmentInstallments(id);
+                        showAlert("Éxito", "Cuotas recalculadas correctamente.");
+                    }
+                }
+            ]
+        );
+    };
+
     const filteredFees = useMemo(() => {
         return studentFees.filter(item => {
             const matchesSearch = `${item.firstName} ${item.lastName}`.toLowerCase().includes(searchQuery.toLowerCase());
@@ -434,6 +486,7 @@ export default function FeesScreen() {
             colors={colors}
             onPay={handleRegisterPayment}
             onShowDetail={handleShowPaymentDetail}
+            onRecalculate={handleRecalculate}
         />
     );
 
@@ -473,12 +526,12 @@ export default function FeesScreen() {
                 <>
                     <View style={styles.summaryContainer}>
                         <View style={[
-                                styles.summaryItem,
-                                {
-                                    backgroundColor: colorScheme === 'light' ? '#FFFFFF' : '#FFFFFF',
-                                    borderColor: colorScheme === 'light' ? '#FCE4EC' : '#FFFFFF',
-                                }
-                            ]}
+                            styles.summaryItem,
+                            {
+                                backgroundColor: colorScheme === 'light' ? '#FFFFFF' : '#FFFFFF',
+                                borderColor: colorScheme === 'light' ? '#FCE4EC' : '#FFFFFF',
+                            }
+                        ]}
                         >
                             <View style={styles.liquidHighlight} />
 
@@ -494,12 +547,12 @@ export default function FeesScreen() {
 
                     <View style={styles.summaryContainer}>
                         <View style={[
-                                styles.summaryItem,
-                                {
-                                    backgroundColor: colorScheme === 'light' ? '#FFFFFF' : '#FFFFFF',
-                                    borderColor: cycleTotalDebt > 0 ? '#ff4d4d80' : (colorScheme === 'light' ? '#FCE4EC' : '#FFFFFF'),
-                                }
-                            ]}
+                            styles.summaryItem,
+                            {
+                                backgroundColor: colorScheme === 'light' ? '#FFFFFF' : '#FFFFFF',
+                                borderColor: cycleTotalDebt > 0 ? '#ff4d4d80' : (colorScheme === 'light' ? '#FCE4EC' : '#FFFFFF'),
+                            }
+                        ]}
                         >
                             <View style={styles.liquidHighlight} />
 
@@ -515,12 +568,12 @@ export default function FeesScreen() {
 
 
                     <View style={[
-                            styles.searchContainer,
-                            {
-                                backgroundColor: colorScheme === 'light' ? '#FFFFFF' : '#FFFFFF',
-                                borderColor: colorScheme === 'light' ? '#FCE4EC' : '#FFFFFF',
-                            }
-                        ]}
+                        styles.searchContainer,
+                        {
+                            backgroundColor: colorScheme === 'light' ? '#FFFFFF' : '#FFFFFF',
+                            borderColor: colorScheme === 'light' ? '#FCE4EC' : '#FFFFFF',
+                        }
+                    ]}
                     >
                         <View style={styles.liquidHighlight} />
                         <Search color={colors.tint} size={20} />
@@ -549,13 +602,13 @@ export default function FeesScreen() {
             ) : (
                 <>
                     <View style={[
-                            styles.searchContainer,
-                            {
-                                backgroundColor: colorScheme === 'light' ? '#FFFFFF' : '#FFFFFF',
-                                borderColor: colorScheme === 'light' ? '#FCE4EC' : '#FFFFFF',
-                                marginTop: 10
-                            }
-                        ]}
+                        styles.searchContainer,
+                        {
+                            backgroundColor: colorScheme === 'light' ? '#FFFFFF' : '#FFFFFF',
+                            borderColor: colorScheme === 'light' ? '#FCE4EC' : '#FFFFFF',
+                            marginTop: 10
+                        }
+                    ]}
                     >
                         <View style={styles.liquidHighlight} />
                         <Search color={colors.tint} size={20} />
@@ -580,12 +633,12 @@ export default function FeesScreen() {
                             return (
                                 <View style={styles.cardContainer}>
                                     <View style={[
-                                            styles.historyCard,
-                                            {
-                                                backgroundColor: colorScheme === 'light' ? '#FFFFFF' : '#FFFFFF',
-                                                borderColor: colorScheme === 'light' ? '#FCE4EC' : '#FFFFFF',
-                                            }
-                                        ]}
+                                        styles.historyCard,
+                                        {
+                                            backgroundColor: colorScheme === 'light' ? '#FFFFFF' : '#FFFFFF',
+                                            borderColor: colorScheme === 'light' ? '#FCE4EC' : '#FFFFFF',
+                                        }
+                                    ]}
                                     >
                                         <View style={styles.liquidHighlight} />
 

@@ -1,12 +1,11 @@
+import ModernDatePicker from '@/components/ModernDatePicker';
+import ModernPicker from '@/components/ModernPicker';
 import PeriodHeader from '@/components/PeriodHeader';
-import { useAlert } from '@/context/AlertContext';
 import { Colors } from '@/constants/theme';
+import { useAlert } from '@/context/AlertContext';
 import { useAuth } from '@/context/AuthContext';
 import { AcademicCycle, EventDiscount, useInstitution } from '@/context/InstitutionContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import { Picker } from '@react-native-picker/picker';
-import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { Stack, useRouter } from 'expo-router';
 import {
@@ -20,7 +19,6 @@ import {
 } from 'lucide-react-native';
 import React, { useState } from 'react';
 import {
-    Alert,
     Dimensions,
     FlatList,
     KeyboardAvoidingView,
@@ -70,8 +68,8 @@ export default function CyclesScreen() {
 
     const [modalVisible, setModalVisible] = useState(false);
     const [editingCycle, setEditingCycle] = useState<AcademicCycle | null>(null);
-    const [datePickerVisible, setDatePickerVisible] = useState(false);
-    const [datePickerTarget, setDatePickerTarget] = useState<'startDate' | 'endDate' | 'eventStartDate' | 'eventEndDate' | null>(null);
+    const [cycleDatePickerVisible, setCycleDatePickerVisible] = useState(false);
+    const [eventDatePickerVisible, setEventDatePickerVisible] = useState(false);
     const [errors, setErrors] = useState<Record<string, boolean>>({});
     const [formData, setFormData] = useState({
         cycleType: 'Verano',
@@ -114,29 +112,15 @@ export default function CyclesScreen() {
         setModalVisible(true);
     };
 
-    const onDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
-        setDatePickerVisible(false);
-        if (event.type === 'set' && selectedDate && datePickerTarget) {
-            const year = selectedDate.getFullYear();
-            const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
-            const day = String(selectedDate.getDate()).padStart(2, '0');
-            const formattedDate = `${year}-${month}-${day}`;
-
-            if (datePickerTarget === 'startDate' || datePickerTarget === 'endDate') {
-                setFormData(prev => ({ ...prev, [datePickerTarget]: formattedDate }));
-                setErrors(prev => ({ ...prev, [datePickerTarget]: false }));
-            } else if (datePickerTarget === 'eventStartDate') {
-                setNewEvent(prev => ({ ...prev, startDate: formattedDate }));
-            } else if (datePickerTarget === 'eventEndDate') {
-                setNewEvent(prev => ({ ...prev, endDate: formattedDate }));
-            }
-        }
-        setDatePickerTarget(null);
+    const handleCycleDatesConfirm = (start: string, end?: string) => {
+        setFormData(prev => ({ ...prev, startDate: start, endDate: end || '' }));
+        setErrors(prev => ({ ...prev, startDate: false, endDate: false }));
+        setCycleDatePickerVisible(false);
     };
 
-    const showDatePicker = (target: 'startDate' | 'endDate' | 'eventStartDate' | 'eventEndDate') => {
-        setDatePickerTarget(target);
-        setDatePickerVisible(true);
+    const handleEventDatesConfirm = (start: string, end?: string) => {
+        setNewEvent(prev => ({ ...prev, startDate: start, endDate: end || '' }));
+        setEventDatePickerVisible(false);
     };
 
     const handleDeletePress = (cycleId: string, cycleName: string) => {
@@ -352,12 +336,12 @@ export default function CyclesScreen() {
             <GestureDetector gesture={composedGesture}>
                 <Animated.View style={[styles.cardContainer, animatedStyle]}>
                     <View style={[
-                            styles.card,
-                            {
-                                backgroundColor: colorScheme === 'light' ? '#FFFFFF' : '#FFFFFF',
-                                borderColor: colorScheme === 'light' ? '#FCE4EC' : '#FFFFFF',
-                            }
-                        ]}
+                        styles.card,
+                        {
+                            backgroundColor: colorScheme === 'light' ? '#FFFFFF' : '#FFFFFF',
+                            borderColor: colorScheme === 'light' ? '#FCE4EC' : '#FFFFFF',
+                        }
+                    ]}
                     >
 
                         <View style={styles.cardInfo}>
@@ -494,103 +478,71 @@ export default function CyclesScreen() {
                             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 15 }}>
                                 <View style={[styles.formGroup, { flex: 1, marginRight: 10 }]}>
                                     <Text style={[styles.label, { color: colors.text }]}>Tipo *</Text>
-                                    <View style={[styles.inputWrapper, { borderColor: colors.border, paddingHorizontal: 0, height: 50, marginBottom: 0 }]}>
-                                        <Picker
-                                            selectedValue={formData.cycleType}
-                                            onValueChange={(v) => setFormData({ ...formData, cycleType: v })}
-                                            style={{ color: colors.text, width: '100%', height: 50 }}
-                                            dropdownIconColor={colors.tint}
-                                        >
-                                            <Picker.Item label="Verano" value="Verano" />
-                                            <Picker.Item label="Anual" value="Anual" />
-                                        </Picker>
-                                    </View>
+                                    <ModernPicker
+                                        selectedValue={formData.cycleType}
+                                        onValueChange={(v) => setFormData({ ...formData, cycleType: v })}
+                                        items={[
+                                            { label: 'Verano', value: 'Verano' },
+                                            { label: 'Anual', value: 'Anual' },
+                                        ]}
+                                        placeholder="Tipo de ciclo"
+                                        title="Tipo de Ciclo"
+                                        colors={colors}
+                                    />
                                 </View>
                                 <View style={[styles.formGroup, { flex: 1 }]}>
                                     <Text style={[styles.label, { color: colors.text }]}>Año *</Text>
-                                    <View style={[styles.inputWrapper, { borderColor: colors.border, paddingHorizontal: 0, height: 50, marginBottom: 0 }]}>
-                                        <Picker
-                                            selectedValue={formData.cycleYear}
-                                            onValueChange={(v) => setFormData({ ...formData, cycleYear: v })}
-                                            style={{ color: colors.text, width: '100%', height: 50 }}
-                                            dropdownIconColor={colors.tint}
-                                        >
-                                            {[...Array(5)].map((_, i) => {
-                                                const year = (new Date().getFullYear() + i).toString();
-                                                return <Picker.Item key={year} label={year} value={year} />;
-                                            })}
-                                        </Picker>
-                                    </View>
+                                    <ModernPicker
+                                        selectedValue={formData.cycleYear}
+                                        onValueChange={(v) => setFormData({ ...formData, cycleYear: v })}
+                                        items={[...Array(5)].map((_, i) => {
+                                            const year = (new Date().getFullYear() + i).toString();
+                                            return { label: year, value: year };
+                                        })}
+                                        placeholder="Año"
+                                        title="Seleccionar Año"
+                                        colors={colors}
+                                    />
                                 </View>
                             </View>
 
-                            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                                <View style={[styles.formGroup, { flex: 1, marginRight: 10 }]}>
-                                    <Text style={[styles.label, { color: colors.text }]}>Inicio *</Text>
-                                    <TouchableOpacity
-                                        style={[styles.input, { justifyContent: 'center', borderColor: errors.startDate ? '#ff4d4d' : colors.border, backgroundColor: errors.startDate ? '#ff4d4d10' : colors.background }]}
-                                        onPress={() => showDatePicker('startDate')}
-                                    >
-                                        <Text style={{ color: formData.startDate ? colors.text : colors.icon, fontSize: 15 }}>
-                                            {formData.startDate ? formData.startDate.split('-').reverse().join('/') : 'Seleccionar...'}
+                            <View style={styles.formGroup}>
+                                <Text style={[styles.label, { color: colors.text }]}>Periodo del Ciclo *</Text>
+                                <TouchableOpacity
+                                    style={[styles.dateRangeButton, {
+                                        borderColor: (errors.startDate || errors.endDate) ? '#ff4d4d' : colors.border,
+                                        backgroundColor: (errors.startDate || errors.endDate) ? '#ff4d4d10' : colors.background,
+                                    }]}
+                                    onPress={() => setCycleDatePickerVisible(true)}
+                                    activeOpacity={0.7}
+                                >
+                                    <View style={styles.dateRangeItem}>
+                                        <Text style={{ fontSize: 11, color: colors.icon, marginBottom: 2 }}>Inicio</Text>
+                                        <Text style={{ fontSize: 15, fontWeight: '600', color: formData.startDate ? colors.text : colors.icon }}>
+                                            {formData.startDate ? formData.startDate.split('-').reverse().join('/') : 'Seleccionar'}
                                         </Text>
-                                    </TouchableOpacity>
-                                    {errors.startDate && <Text style={styles.errorText}>Dato requerido</Text>}
-                                </View>
-                                <View style={[styles.formGroup, { flex: 1 }]}>
-                                    <Text style={[styles.label, { color: colors.text }]}>Fin *</Text>
-                                    <TouchableOpacity
-                                        style={[styles.input, { justifyContent: 'center', borderColor: errors.endDate ? '#ff4d4d' : colors.border, backgroundColor: errors.endDate ? '#ff4d4d10' : colors.background }]}
-                                        onPress={() => showDatePicker('endDate')}
-                                    >
-                                        <Text style={{ color: formData.endDate ? colors.text : colors.icon, fontSize: 15 }}>
-                                            {formData.endDate ? formData.endDate.split('-').reverse().join('/') : 'Seleccionar...'}
+                                    </View>
+                                    <View style={[styles.dateRangeDivider, { backgroundColor: colors.border }]} />
+                                    <View style={styles.dateRangeItem}>
+                                        <Text style={{ fontSize: 11, color: colors.icon, marginBottom: 2 }}>Fin</Text>
+                                        <Text style={{ fontSize: 15, fontWeight: '600', color: formData.endDate ? colors.text : colors.icon }}>
+                                            {formData.endDate ? formData.endDate.split('-').reverse().join('/') : 'Seleccionar'}
                                         </Text>
-                                    </TouchableOpacity>
-                                    {errors.endDate && <Text style={styles.errorText}>Dato requerido</Text>}
-                                </View>
+                                    </View>
+                                </TouchableOpacity>
+                                {(errors.startDate || errors.endDate) && <Text style={styles.errorText}>Selecciona las fechas de inicio y fin</Text>}
                             </View>
 
-                            {datePickerVisible && Platform.OS !== 'ios' && (
-                                <DateTimePicker
-                                    value={
-                                        (datePickerTarget === 'startDate' || datePickerTarget === 'endDate')
-                                            ? (formData[datePickerTarget] ? new Date(`${formData[datePickerTarget]}T12:00:00`) : new Date())
-                                            : ((datePickerTarget === 'eventStartDate' || datePickerTarget === 'eventEndDate') && newEvent[datePickerTarget === 'eventStartDate' ? 'startDate' : 'endDate'])
-                                                ? new Date(`${newEvent[datePickerTarget === 'eventStartDate' ? 'startDate' : 'endDate']}T12:00:00`)
-                                                : new Date()
-                                    }
-                                    mode="date"
-                                    display="default"
-                                    onChange={onDateChange}
-                                />
-                            )}
-
-                            {datePickerVisible && Platform.OS === 'ios' && (
-                                <Modal visible={true} transparent animationType="fade">
-                                    <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.3)' }}>
-                                        <View style={{ backgroundColor: colors.card, padding: 20, borderTopLeftRadius: 20, borderTopRightRadius: 20 }}>
-                                            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 10 }}>
-                                                <TouchableOpacity onPress={() => setDatePickerVisible(false)}>
-                                                    <Text style={{ color: colors.tint, fontWeight: 'bold', fontSize: 16 }}>Listo</Text>
-                                                </TouchableOpacity>
-                                            </View>
-                                            <DateTimePicker
-                                                value={
-                                                    (datePickerTarget === 'startDate' || datePickerTarget === 'endDate')
-                                                        ? (formData[datePickerTarget] ? new Date(`${formData[datePickerTarget]}T12:00:00`) : new Date())
-                                                        : ((datePickerTarget === 'eventStartDate' || datePickerTarget === 'eventEndDate') && newEvent[datePickerTarget === 'eventStartDate' ? 'startDate' : 'endDate'])
-                                                            ? new Date(`${newEvent[datePickerTarget === 'eventStartDate' ? 'startDate' : 'endDate']}T12:00:00`)
-                                                            : new Date()
-                                                }
-                                                mode="date"
-                                                display="spinner"
-                                                onChange={(e, d) => onDateChange(e, d)}
-                                            />
-                                        </View>
-                                    </View>
-                                </Modal>
-                            )}
+                            <ModernDatePicker
+                                visible={cycleDatePickerVisible}
+                                mode="range"
+                                startDate={formData.startDate}
+                                endDate={formData.endDate}
+                                onConfirm={handleCycleDatesConfirm}
+                                onCancel={() => setCycleDatePickerVisible(false)}
+                                title="Periodo del Ciclo"
+                                colors={colors}
+                            />
 
                             {/* --- Eventos y Descuentos Section --- */}
                             <View style={{ marginBottom: 20 }}>
@@ -632,20 +584,17 @@ export default function CyclesScreen() {
                                         <View style={{ flexDirection: 'row', gap: 10, marginBottom: 12 }}>
                                             <TouchableOpacity
                                                 style={[styles.input, { flex: 1, justifyContent: 'center' }]}
-                                                onPress={() => showDatePicker('eventStartDate')}
+                                                onPress={() => setEventDatePickerVisible(true)}
                                             >
-                                                <Text style={{ color: newEvent.startDate ? colors.text : colors.icon }}>{newEvent.startDate ? newEvent.startDate : 'Inicio'}</Text>
-                                            </TouchableOpacity>
-
-                                            <TouchableOpacity
-                                                style={[styles.input, { flex: 1, justifyContent: 'center' }]}
-                                                onPress={() => showDatePicker('eventEndDate')}
-                                            >
-                                                <Text style={{ color: newEvent.endDate ? colors.text : colors.icon }}>{newEvent.endDate ? newEvent.endDate : 'Fin'}</Text>
+                                                <Text style={{ color: (newEvent.startDate && newEvent.endDate) ? colors.text : colors.icon, fontSize: 13 }}>
+                                                    {(newEvent.startDate && newEvent.endDate)
+                                                        ? `${newEvent.startDate.split('-').reverse().join('/')} - ${newEvent.endDate.split('-').reverse().join('/')}`
+                                                        : 'Fechas del evento...'}
+                                                </Text>
                                             </TouchableOpacity>
 
                                             <TextInput
-                                                style={[styles.input, { flex: 0.8, color: colors.text, borderColor: colors.border, height: 44 }]}
+                                                style={[styles.input, { flex: 0.6, color: colors.text, borderColor: colors.border, height: 44 }]}
                                                 placeholder="% Desc."
                                                 placeholderTextColor={colors.icon}
                                                 keyboardType="numeric"
@@ -653,6 +602,17 @@ export default function CyclesScreen() {
                                                 onChangeText={t => setNewEvent(p => ({ ...p, discountPercentage: t }))}
                                             />
                                         </View>
+
+                                        <ModernDatePicker
+                                            visible={eventDatePickerVisible}
+                                            mode="range"
+                                            startDate={newEvent.startDate}
+                                            endDate={newEvent.endDate}
+                                            onConfirm={handleEventDatesConfirm}
+                                            onCancel={() => setEventDatePickerVisible(false)}
+                                            title="Fechas del Evento"
+                                            colors={colors}
+                                        />
                                         <View style={{ flexDirection: 'row', gap: 10 }}>
                                             <TouchableOpacity
                                                 style={{ flex: 1, height: 40, justifyContent: 'center', alignItems: 'center', borderRadius: 10, backgroundColor: colors.border }}
@@ -685,9 +645,9 @@ export default function CyclesScreen() {
                             </TouchableOpacity>
                         </ScrollView>
                     </View>
-                </KeyboardAvoidingView>
-            </Modal>
-        </View>
+                </KeyboardAvoidingView >
+            </Modal >
+        </View >
     );
 }
 
@@ -884,5 +844,23 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         marginTop: 8,
         fontSize: 14,
-    }
+    },
+    dateRangeButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderRadius: 14,
+        paddingVertical: 14,
+        paddingHorizontal: 18,
+    },
+    dateRangeItem: {
+        flex: 1,
+        alignItems: 'center',
+    },
+    dateRangeDivider: {
+        width: 24,
+        height: 2,
+        borderRadius: 1,
+        marginHorizontal: 12,
+    },
 });

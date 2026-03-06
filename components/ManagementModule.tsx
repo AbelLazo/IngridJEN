@@ -1,10 +1,10 @@
+import ModernPicker from '@/components/ModernPicker';
 import { Colors } from '@/constants/theme';
 import { useAlert } from '@/context/AlertContext';
 import { useAuth } from '@/context/AuthContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { Picker } from '@react-native-picker/picker';
 import { Stack, useRouter } from 'expo-router';
-import { AlertCircle, ChevronLeft, Edit3, Mail, Phone, Plus, Search, Trash2, UserPlus, X } from 'lucide-react-native';
+import { AlertCircle, Check, ChevronLeft, Edit3, Mail, Phone, Plus, Search, Trash2, UserPlus, X } from 'lucide-react-native';
 import React, { useState } from 'react';
 import {
     Dimensions,
@@ -94,7 +94,8 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
         status: 'active' as 'active' | 'inactive',
         activeYears: [new Date().getFullYear().toString()] as string[],
         selectedSpecialties: [] as string[],
-        email: ''
+        email: '',
+        familyId: ''
     });
     const [errors, setErrors] = useState<Record<string, boolean>>({});
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -107,7 +108,8 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
             status: 'active',
             activeYears: [currentCycleYear],
             selectedSpecialties: [],
-            email: ''
+            email: '',
+            familyId: ''
         });
         setEditingEntityId(null);
         setErrorMsg(null);
@@ -290,7 +292,7 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
         });
 
         const computedStatus = (type === 'student' && item.activeYears)
-            ? (item.status === 'active' && item.activeYears.includes(currentCycleYear) ? 'active' : 'inactive')
+            ? (item.activeYears.includes(currentCycleYear) ? 'active' : 'inactive')
             : item.status;
 
         return (
@@ -369,7 +371,8 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
                 lastName: formData.lastName,
                 phone: formData.phone,
                 status: formData.status,
-                type
+                type,
+                familyId: formData.familyId || ''
             };
 
             if (type === 'teacher') {
@@ -390,14 +393,8 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
                     await addTeacher(entityData);
                 }
             } else {
-                if (editingEntityId && formData.status === 'inactive') {
-                    const hasActiveEnrollments = enrollments.some(e => e.studentId === editingEntityId);
-                    if (hasActiveEnrollments) {
-                        setErrorMsg("❌ No se puede inactivar globalmente: El estudiante posee historial de matrículas. Para retirar un alumno, desmatrículalo primero o remueve su etiqueta de año actual correspondiente.");
-                        return;
-                    }
-                }
-
+                // For students, status is derived from activeYears
+                entityData.status = formData.activeYears.includes(currentCycleYear) ? 'active' : 'inactive';
                 entityData.activeYears = formData.activeYears;
                 if (editingEntityId) {
                     await updateStudent(entityData);
@@ -421,7 +418,8 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
             status: item.status || 'active',
             activeYears: (item as any).activeYears || [currentCycleYear],
             selectedSpecialties: item.extra ? item.extra.split(', ') : [],
-            email: type === 'teacher' ? (item as any).email || '' : '' // Add email for teacher
+            email: type === 'teacher' ? (item as any).email || '' : '',
+            familyId: (item as any).familyId || ''
         });
         setErrors({});
         setEditingEntityId(item.id);
@@ -605,89 +603,160 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
                                 </View>
                             )}
 
-                            <View style={styles.formGroup}>
-                                <Text style={[styles.label, { color: colors.text }]}>Estado en la Institución</Text>
-                                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                                    <View style={[styles.inputWrapper, { borderColor: colors.border, paddingHorizontal: 0, flex: 1, marginRight: (type === 'student' && formData.status === 'active') ? 10 : 0 }]}>
-                                        <Picker
-                                            selectedValue={formData.status}
-                                            onValueChange={(v) => setFormData({ ...formData, status: v })}
-                                            style={{ color: colors.text, width: '100%', height: 50 }}
-                                            dropdownIconColor={colors.tint}
-                                        >
-                                            <Picker.Item label="Activo" value="active" />
-                                            <Picker.Item label="Inactivo" value="inactive" />
-                                        </Picker>
+                            {type === 'student' && (
+                                <View style={styles.formGroup}>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                                        <Text style={[styles.label, { color: colors.text, marginBottom: 0 }]}>Grupo Familiar (Opcional)</Text>
+                                        {formData.familyId ? (
+                                            <TouchableOpacity onPress={() => setFormData(prev => ({ ...prev, familyId: '' }))}>
+                                                <Text style={{ fontSize: 12, color: '#FF4444', fontWeight: '600' }}>Remover grupo</Text>
+                                            </TouchableOpacity>
+                                        ) : null}
                                     </View>
-
-                                    {type === 'student' && (
-                                        <View style={[styles.inputWrapper, { borderColor: colors.border, paddingHorizontal: 0, flex: 0.8 }]}>
-                                            <Picker
-                                                selectedValue=""
-                                                onValueChange={(v) => handleAddYear(v)}
-                                                style={{ color: colors.text, width: '100%', height: 50 }}
-                                                dropdownIconColor={colors.tint}
-                                            >
-                                                <Picker.Item label="Añadir..." value="" />
-                                                {[...Array(3)].map((_, i) => {
-                                                    const year = (new Date().getFullYear() + i).toString();
-                                                    return <Picker.Item key={year} label={`Año ${year}`} value={year} />;
-                                                })}
-                                            </Picker>
+                                    <ModernPicker
+                                        selectedValue={formData.familyId}
+                                        onValueChange={(v) => setFormData(prev => ({ ...prev, familyId: v }))}
+                                        items={(() => {
+                                            const existingFamilies = Array.from(new Set(students.filter(s => s.familyId).map(s => s.familyId))).map(fid => {
+                                                const rep = students.find(s => s.familyId === fid);
+                                                return { label: `Familia ${rep?.lastName || fid}`, value: fid || '' };
+                                            });
+                                            if (formData.familyId && !existingFamilies.some(f => f.value === formData.familyId)) {
+                                                existingFamilies.unshift({ label: `Nueva Familia (${formData.lastName || 'Asignada'})`, value: formData.familyId });
+                                            }
+                                            return [
+                                                { label: '--- Ninguno / Sin Familia ---', value: '' },
+                                                ...existingFamilies
+                                            ];
+                                        })()}
+                                        placeholder="Seleccionar familia existente..."
+                                        title="Asignar Grupo Familiar"
+                                        searchable={true}
+                                        colors={colors}
+                                    />
+                                    {formData.familyId && formData.familyId.startsWith('FAM-') && !students.some(s => s.familyId === formData.familyId) && (
+                                        <View style={{ marginTop: 8, padding: 8, backgroundColor: '#4CAF5010', borderRadius: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+                                            <Check size={14} color="#4CAF50" />
+                                            <Text style={{ color: '#4CAF50', fontSize: 12, fontWeight: '700', marginLeft: 6 }}>Grupo Familiar Creado (Temporal hasta guardar)</Text>
                                         </View>
                                     )}
+                                    {!formData.familyId && (
+                                        <TouchableOpacity
+                                            onPress={() => setFormData(prev => ({ ...prev, familyId: `FAM-${Date.now()}` }))}
+                                            style={{ marginTop: 8, padding: 12, backgroundColor: colors.tint + '10', borderRadius: 12, alignItems: 'center', borderWidth: 1, borderColor: colors.tint + '30', borderStyle: 'dashed' }}
+                                        >
+                                            <Text style={{ color: colors.tint, fontSize: 13, fontWeight: '700' }}>+ Crear nuevo grupo familiar para este estudiante</Text>
+                                        </TouchableOpacity>
+                                    )}
+                                    <Text style={{ fontSize: 11, color: colors.icon, marginTop: 4, marginLeft: 4 }}>
+                                        Agrupar estudiantes permite aplicar descuentos por familiar inscrito.
+                                    </Text>
                                 </View>
+                            )}
 
-                                {/* Selected Active Years Display */}
-                                {type === 'student' && formData.activeYears.length > 0 && (
-                                    <View style={[styles.specialtiesSelector, { marginTop: 12 }]}>
-                                        {formData.activeYears.map((year, idx) => {
-                                            const isPastYear = parseInt(year) < parseInt(currentCycleYear);
-                                            // Ocultamiento visual del historial inactivo tal y como solicitó el usuario, para la limpia del Form
-                                            if (isPastYear) return null;
+                            <View style={styles.formGroup}>
+                                <Text style={[styles.label, { color: colors.text }]}>
+                                    {type === 'teacher' ? 'Estado en la Institución' : 'Años de Actividad'}
+                                </Text>
 
-                                            return (
-                                                <TouchableOpacity
-                                                    key={idx}
-                                                    onPress={() => handleRemoveYear(year)}
-                                                    style={[styles.specialtyChip, {
-                                                        backgroundColor: colors.tint,
-                                                        borderColor: colors.tint,
-                                                        flexDirection: 'row',
-                                                        alignItems: 'center'
-                                                    }]}
-                                                >
-                                                    <Text style={[styles.specialtyChipText, { color: '#fff', marginRight: 5 }]}>{year}</Text>
-                                                    <X size={14} color="#fff" />
-                                                </TouchableOpacity>
-                                            )
-                                        })}
+                                {type === 'teacher' ? (
+                                    /* Teachers keep the status picker */
+                                    <ModernPicker
+                                        selectedValue={formData.status}
+                                        onValueChange={(v) => setFormData({ ...formData, status: v as 'active' | 'inactive' })}
+                                        items={[
+                                            { label: 'Activo', value: 'active' },
+                                            { label: 'Inactivo', value: 'inactive' },
+                                        ]}
+                                        placeholder="Estado"
+                                        title="Estado en la Institución"
+                                        colors={colors}
+                                    />
+                                ) : (
+                                    /* Students: year tags + add picker */
+                                    <View>
+                                        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+                                            <View style={{ flex: 1 }}>
+                                                <ModernPicker
+                                                    selectedValue=""
+                                                    onValueChange={(v) => handleAddYear(v)}
+                                                    items={[...Array(3)].map((_, i) => {
+                                                        const year = (new Date().getFullYear() + i).toString();
+                                                        return { label: `Año ${year}`, value: year };
+                                                    })}
+                                                    placeholder="Añadir año..."
+                                                    title="Añadir Año de Actividad"
+                                                    colors={colors}
+                                                />
+                                            </View>
+                                        </View>
+
+                                        {/* Active status indicator */}
+                                        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                                            <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: formData.activeYears.includes(currentCycleYear) ? '#4CAF50' : '#FF4444', marginRight: 8 }} />
+                                            <Text style={{ fontSize: 13, color: formData.activeYears.includes(currentCycleYear) ? '#4CAF50' : '#FF4444', fontWeight: '600' }}>
+                                                {formData.activeYears.includes(currentCycleYear) ? 'Activo en el periodo actual' : 'Inactivo en el periodo actual'}
+                                            </Text>
+                                        </View>
+
+                                        {/* Year tags - compact scrollable row */}
+                                        {formData.activeYears.length > 0 && (
+                                            <ScrollView
+                                                horizontal
+                                                showsHorizontalScrollIndicator={false}
+                                                contentContainerStyle={{ gap: 8, paddingVertical: 4 }}
+                                            >
+                                                {formData.activeYears
+                                                    .filter(year => parseInt(year) >= parseInt(currentCycleYear))
+                                                    .sort((a, b) => parseInt(a) - parseInt(b))
+                                                    .map((year, idx) => (
+                                                        <TouchableOpacity
+                                                            key={idx}
+                                                            onPress={() => handleRemoveYear(year)}
+                                                            style={{
+                                                                flexDirection: 'row',
+                                                                alignItems: 'center',
+                                                                backgroundColor: year === currentCycleYear ? colors.tint : colors.tint + '20',
+                                                                paddingHorizontal: 14,
+                                                                paddingVertical: 8,
+                                                                borderRadius: 20,
+                                                            }}
+                                                        >
+                                                            <Text style={{
+                                                                fontSize: 13,
+                                                                fontWeight: '600',
+                                                                color: year === currentCycleYear ? '#fff' : colors.tint,
+                                                                marginRight: 6
+                                                            }}>
+                                                                {year}
+                                                            </Text>
+                                                            <X size={12} color={year === currentCycleYear ? '#fff' : colors.tint} />
+                                                        </TouchableOpacity>
+                                                    ))}
+                                            </ScrollView>
+                                        )}
                                     </View>
                                 )}
 
-                                <Text style={{ fontSize: 11, color: colors.icon, marginTop: 4, marginLeft: 4 }}>
+                                <Text style={{ fontSize: 11, color: colors.icon, marginTop: 6, marginLeft: 4 }}>
                                     {type === 'teacher'
                                         ? "* Solo los profesores activos podrán ser asignados a nuevos cursos y horarios."
-                                        : "* Solo figurará como activo para matricularse en los periodos de los años listados arriba."}
+                                        : "* El estudiante solo podrá matricularse en los periodos de los años listados. Toca una etiqueta para removerla."}
                                 </Text>
                             </View>
 
                             {type === 'teacher' && (
                                 <View style={styles.formGroup}>
                                     <Text style={[styles.label, { color: colors.text }]}>Especialidades (Cursos)</Text>
-                                    <View style={[styles.inputWrapper, { borderColor: colors.border, paddingHorizontal: 0 }]}>
-                                        <Picker
-                                            selectedValue=""
-                                            onValueChange={(itemValue) => handleAddSpecialty(itemValue)}
-                                            style={{ color: colors.text, width: '100%', height: 50 }}
-                                            dropdownIconColor={colors.tint}
-                                        >
-                                            <Picker.Item label="Selecciona para añadir..." value="" color={colors.icon} />
-                                            {courses.map(course => (
-                                                <Picker.Item key={course.id} label={course.name} value={course.name} />
-                                            ))}
-                                        </Picker>
-                                    </View>
+                                    <ModernPicker
+                                        selectedValue=""
+                                        onValueChange={(itemValue) => handleAddSpecialty(itemValue)}
+                                        items={courses.map(course => ({ label: course.name, value: course.name }))}
+                                        placeholder="Selecciona para añadir..."
+                                        title="Añadir Especialidad"
+                                        searchable={true}
+                                        colors={colors}
+                                    />
 
                                     {/* Selected Specialties Display */}
                                     {formData.selectedSpecialties.length > 0 && (

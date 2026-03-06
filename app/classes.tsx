@@ -1,11 +1,11 @@
+import ModernDatePicker from '@/components/ModernDatePicker';
+import ModernPicker from '@/components/ModernPicker';
 import PeriodHeader from '@/components/PeriodHeader';
-import { useAlert } from '@/context/AlertContext';
 import { Colors } from '@/constants/theme';
+import { useAlert } from '@/context/AlertContext';
 import { useAuth } from '@/context/AuthContext';
 import { Student } from '@/context/InstitutionContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import { Picker } from '@react-native-picker/picker';
 import { Stack, useRouter } from 'expo-router';
 import {
     AlertCircle,
@@ -31,7 +31,6 @@ import {
 import * as Haptics from 'expo-haptics';
 import React, { useState } from 'react';
 import {
-    Alert,
     Dimensions,
     FlatList,
     KeyboardAvoidingView,
@@ -1054,42 +1053,29 @@ export default function ClassesScreen() {
                         <ScrollView showsVerticalScrollIndicator={false}>
                             <View style={styles.formGroup}>
                                 <Text style={[styles.label, { color: colors.text }]}>Seleccionar Materia / Curso</Text>
-                                <View style={[styles.inputWrapper, { borderColor: colors.border, paddingHorizontal: 0 }]}>
-                                    <Picker
-                                        selectedValue={formData.courseId}
-                                        onValueChange={(itemValue) => handleCourseSelect(itemValue)}
-                                        style={{ color: colors.text, width: '100%', height: 50 }}
-                                        dropdownIconColor={colors.tint}
-                                    >
-                                        <Picker.Item label="Selecciona una materia..." value="" color="#666" />
-                                        {courses.map(course => (
-                                            <Picker.Item key={course.id} label={course.name} value={course.id} color="#000000" />
-                                        ))}
-                                    </Picker>
-                                </View>
+                                <ModernPicker
+                                    selectedValue={formData.courseId}
+                                    onValueChange={(itemValue) => handleCourseSelect(itemValue)}
+                                    items={courses.map(course => ({ label: course.name, value: course.id }))}
+                                    placeholder="Selecciona una materia..."
+                                    title="Seleccionar Materia"
+                                    searchable={true}
+                                    colors={colors}
+                                />
                             </View>
 
 
                             <View style={styles.formGroup}>
                                 <Text style={[styles.label, { color: colors.text }]}>Seleccionar Profesor</Text>
-                                <View style={[styles.inputWrapper, { borderColor: colors.border, paddingHorizontal: 0 }]}>
-                                    <Picker
-                                        selectedValue={formData.teacherId}
-                                        onValueChange={(itemValue) => setFormData({ ...formData, teacherId: itemValue })}
-                                        style={{ color: colors.text, width: '100%', height: 50 }}
-                                        dropdownIconColor={colors.tint}
-                                    >
-                                        <Picker.Item label="Selecciona un profesor..." value="" color="#666" />
-                                        {teachers.map(teacher => (
-                                            <Picker.Item
-                                                key={teacher.id}
-                                                label={`${teacher.firstName} ${teacher.lastName} `}
-                                                value={teacher.id}
-                                                color="#000000"
-                                            />
-                                        ))}
-                                    </Picker>
-                                </View>
+                                <ModernPicker
+                                    selectedValue={formData.teacherId}
+                                    onValueChange={(itemValue) => setFormData({ ...formData, teacherId: itemValue })}
+                                    items={teachers.map(teacher => ({ label: `${teacher.firstName} ${teacher.lastName}`, value: teacher.id }))}
+                                    placeholder="Selecciona un profesor..."
+                                    title="Seleccionar Profesor"
+                                    searchable={true}
+                                    colors={colors}
+                                />
                             </View>
 
 
@@ -1116,44 +1102,37 @@ export default function ClassesScreen() {
                                             )}
                                         </View>
 
-                                        <View style={[styles.inputWrapper, { borderColor: colors.border, paddingHorizontal: 0, marginBottom: 10 }]}>
-                                            <Picker
+                                        <View style={{ marginBottom: 10 }}>
+                                            <ModernPicker
                                                 selectedValue={schedule.day}
                                                 onValueChange={(v) => updateScheduleSlot(index, 'day', v)}
-                                                style={{ color: colors.text, width: '100%', height: 50 }}
-                                                dropdownIconColor={colors.tint}
-                                            >
-                                                <Picker.Item label="Selecciona el día..." value="" color="#666" />
-                                                {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'].map(d => (
-                                                    <Picker.Item key={d} label={d} value={d} color="#000000" />
-                                                ))}
-                                            </Picker>
+                                                items={['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'].map(d => ({ label: d, value: d }))}
+                                                placeholder="Selecciona el día..."
+                                                title="Seleccionar Día"
+                                                colors={colors}
+                                            />
                                         </View>
 
                                         <View style={styles.row}>
-                                            <View style={[styles.inputWrapper, { flex: 1, marginRight: 10, borderColor: colors.border }]}>
-                                                <Picker
+                                            <View style={{ flex: 1, marginRight: 10 }}>
+                                                <ModernPicker
                                                     selectedValue={schedule.startHours}
                                                     onValueChange={(v) => updateScheduleSlot(index, 'startHours', v)}
-                                                    style={{ color: colors.text, width: '100%', height: 50 }}
-                                                    dropdownIconColor={colors.tint}
-                                                >
-                                                    {Array.from({ length: 24 }).map((_, i) => (
-                                                        <Picker.Item key={i} label={i.toString().padStart(2, '0')} value={i.toString().padStart(2, '0')} color="#000" />
-                                                    ))}
-                                                </Picker>
+                                                    items={Array.from({ length: 24 }).map((_, i) => ({ label: i.toString().padStart(2, '0'), value: i.toString().padStart(2, '0') }))}
+                                                    placeholder="Hora"
+                                                    title="Seleccionar Hora"
+                                                    colors={colors}
+                                                />
                                             </View>
-                                            <View style={[styles.inputWrapper, { flex: 1, borderColor: colors.border }]}>
-                                                <Picker
+                                            <View style={{ flex: 1 }}>
+                                                <ModernPicker
                                                     selectedValue={schedule.startMinutes}
                                                     onValueChange={(v) => updateScheduleSlot(index, 'startMinutes', v)}
-                                                    style={{ color: colors.text, width: '100%', height: 50 }}
-                                                    dropdownIconColor={colors.tint}
-                                                >
-                                                    {['00', '15', '30', '45'].map(m => (
-                                                        <Picker.Item key={m} label={m} value={m} color="#000" />
-                                                    ))}
-                                                </Picker>
+                                                    items={['00', '15', '30', '45'].map(m => ({ label: m, value: m }))}
+                                                    placeholder="Min"
+                                                    title="Seleccionar Minutos"
+                                                    colors={colors}
+                                                />
                                             </View>
                                         </View>
                                     </View>
@@ -1583,50 +1562,28 @@ export default function ClassesScreen() {
 
                         <View style={styles.formGroup}>
                             <Text style={[styles.label, { color: colors.text }]}>Fecha efectiva de inscripción:</Text>
-                            {Platform.OS === 'web' ? (
-                                React.createElement('input', {
-                                    type: 'date',
-                                    value: enrollDate.toISOString().split('T')[0],
-                                    onChange: (e: any) => {
-                                        if (e.target.value) setEnrollDate(new Date(`${e.target.value}T12:00:00`));
-                                    },
-                                    style: { padding: '10px', borderRadius: '10px', border: `1px solid ${colors.border}`, color: colors.text, backgroundColor: 'transparent', outline: 'none', fontSize: '16px' }
-                                })
-                            ) : Platform.OS === 'ios' ? (
-                                <DateTimePicker
-                                    value={enrollDate}
-                                    mode="date"
-                                    display="spinner"
-                                    onChange={(event: any, selectedDate?: Date) => {
-                                        if (selectedDate) setEnrollDate(selectedDate);
-                                    }}
-                                    textColor={colors.text}
-                                    style={{ height: 120 }}
-                                />
-                            ) : (
-                                <>
-                                    <TouchableOpacity
-                                        style={[styles.inputWrapper, { borderColor: colors.border }]}
-                                        onPress={() => setShowEnrollDatePicker(true)}
-                                    >
-                                        <CalendarDays color={colors.text} size={20} />
-                                        <Text style={[styles.input, { color: colors.text }]}>
-                                            {enrollDate.toLocaleDateString()}
-                                        </Text>
-                                    </TouchableOpacity>
-                                    {showEnrollDatePicker && (
-                                        <DateTimePicker
-                                            value={enrollDate}
-                                            mode="date"
-                                            display="default"
-                                            onChange={(event: any, selectedDate?: Date) => {
-                                                setShowEnrollDatePicker(false);
-                                                if (selectedDate) setEnrollDate(selectedDate);
-                                            }}
-                                        />
-                                    )}
-                                </>
-                            )}
+                            <TouchableOpacity
+                                style={[styles.inputWrapper, { borderColor: colors.border }]}
+                                onPress={() => setShowEnrollDatePicker(true)}
+                            >
+                                <CalendarDays color={colors.text} size={20} />
+                                <Text style={[styles.input, { color: colors.text }]}>
+                                    {enrollDate.toLocaleDateString()}
+                                </Text>
+                            </TouchableOpacity>
+
+                            <ModernDatePicker
+                                visible={showEnrollDatePicker}
+                                mode="single"
+                                selectedDate={enrollDate.toISOString().split('T')[0]}
+                                onConfirm={(date) => {
+                                    setEnrollDate(new Date(`${date}T12:00:00`));
+                                    setShowEnrollDatePicker(false);
+                                }}
+                                onCancel={() => setShowEnrollDatePicker(false)}
+                                title="Fecha de Inscripción"
+                                colors={colors}
+                            />
                         </View>
 
                         <View style={styles.row}>
@@ -1689,50 +1646,28 @@ export default function ClassesScreen() {
 
                         <View style={styles.formGroup}>
                             <Text style={[styles.label, { color: colors.text }]}>Fecha efectiva de traslado:</Text>
-                            {Platform.OS === 'web' ? (
-                                React.createElement('input', {
-                                    type: 'date',
-                                    value: moveDate.toISOString().split('T')[0],
-                                    onChange: (e: any) => {
-                                        if (e.target.value) setMoveDate(new Date(`${e.target.value}T12:00:00`));
-                                    },
-                                    style: { padding: '10px', borderRadius: '10px', border: `1px solid ${colors.border}`, color: colors.text, backgroundColor: 'transparent', outline: 'none', fontSize: '16px' }
-                                })
-                            ) : Platform.OS === 'ios' ? (
-                                <DateTimePicker
-                                    value={moveDate}
-                                    mode="date"
-                                    display="spinner"
-                                    onChange={(event: any, selectedDate?: Date) => {
-                                        if (selectedDate) setMoveDate(selectedDate);
-                                    }}
-                                    textColor={colors.text}
-                                    style={{ height: 120 }}
-                                />
-                            ) : (
-                                <>
-                                    <TouchableOpacity
-                                        style={[styles.inputWrapper, { borderColor: colors.border }]}
-                                        onPress={() => setShowMoveDatePicker(true)}
-                                    >
-                                        <CalendarDays color={colors.text} size={20} />
-                                        <Text style={[styles.input, { color: colors.text }]}>
-                                            {moveDate.toLocaleDateString()}
-                                        </Text>
-                                    </TouchableOpacity>
-                                    {showMoveDatePicker && (
-                                        <DateTimePicker
-                                            value={moveDate}
-                                            mode="date"
-                                            display="default"
-                                            onChange={(event: any, selectedDate?: Date) => {
-                                                setShowMoveDatePicker(false);
-                                                if (selectedDate) setMoveDate(selectedDate);
-                                            }}
-                                        />
-                                    )}
-                                </>
-                            )}
+                            <TouchableOpacity
+                                style={[styles.inputWrapper, { borderColor: colors.border }]}
+                                onPress={() => setShowMoveDatePicker(true)}
+                            >
+                                <CalendarDays color={colors.text} size={20} />
+                                <Text style={[styles.input, { color: colors.text }]}>
+                                    {moveDate.toLocaleDateString()}
+                                </Text>
+                            </TouchableOpacity>
+
+                            <ModernDatePicker
+                                visible={showMoveDatePicker}
+                                mode="single"
+                                selectedDate={moveDate.toISOString().split('T')[0]}
+                                onConfirm={(date) => {
+                                    setMoveDate(new Date(`${date}T12:00:00`));
+                                    setShowMoveDatePicker(false);
+                                }}
+                                onCancel={() => setShowMoveDatePicker(false)}
+                                title="Fecha de Traslado"
+                                colors={colors}
+                            />
                         </View>
 
                         <View style={styles.row}>
@@ -1818,50 +1753,28 @@ export default function ClassesScreen() {
 
                         <View style={styles.formGroup}>
                             <Text style={[styles.label, { color: colors.text }]}>Nueva Fecha de Matrícula:</Text>
-                            {Platform.OS === 'web' ? (
-                                React.createElement('input', {
-                                    type: 'date',
-                                    value: editDate.toISOString().split('T')[0],
-                                    onChange: (e: any) => {
-                                        if (e.target.value) setEditDate(new Date(`${e.target.value}T12:00:00`));
-                                    },
-                                    style: { padding: '10px', borderRadius: '10px', border: `1px solid ${colors.border}`, color: colors.text, backgroundColor: 'transparent', outline: 'none', fontSize: '16px' }
-                                })
-                            ) : Platform.OS === 'ios' ? (
-                                <DateTimePicker
-                                    value={editDate}
-                                    mode="date"
-                                    display="spinner"
-                                    onChange={(event: any, selectedDate?: Date) => {
-                                        if (selectedDate) setEditDate(selectedDate);
-                                    }}
-                                    textColor={colors.text}
-                                    style={{ height: 120 }}
-                                />
-                            ) : (
-                                <>
-                                    <TouchableOpacity
-                                        style={[styles.inputWrapper, { borderColor: colors.border }]}
-                                        onPress={() => setShowEditDatePicker(true)}
-                                    >
-                                        <CalendarDays color={colors.text} size={20} />
-                                        <Text style={[styles.input, { color: colors.text }]}>
-                                            {editDate.toLocaleDateString()}
-                                        </Text>
-                                    </TouchableOpacity>
-                                    {showEditDatePicker && (
-                                        <DateTimePicker
-                                            value={editDate}
-                                            mode="date"
-                                            display="default"
-                                            onChange={(event: any, selectedDate?: Date) => {
-                                                setShowEditDatePicker(false);
-                                                if (selectedDate) setEditDate(selectedDate);
-                                            }}
-                                        />
-                                    )}
-                                </>
-                            )}
+                            <TouchableOpacity
+                                style={[styles.inputWrapper, { borderColor: colors.border }]}
+                                onPress={() => setShowEditDatePicker(true)}
+                            >
+                                <CalendarDays color={colors.text} size={20} />
+                                <Text style={[styles.input, { color: colors.text }]}>
+                                    {editDate.toLocaleDateString()}
+                                </Text>
+                            </TouchableOpacity>
+
+                            <ModernDatePicker
+                                visible={showEditDatePicker}
+                                mode="single"
+                                selectedDate={editDate.toISOString().split('T')[0]}
+                                onConfirm={(date) => {
+                                    setEditDate(new Date(`${date}T12:00:00`));
+                                    setShowEditDatePicker(false);
+                                }}
+                                onCancel={() => setShowEditDatePicker(false)}
+                                title="Editar Fecha de Clase"
+                                colors={colors}
+                            />
                         </View>
 
                         <View style={styles.row}>

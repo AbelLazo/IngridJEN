@@ -28,7 +28,19 @@ export interface Student {
     phone: string;
     status: 'active' | 'inactive';
     activeYears?: string[]; // e.g. ["2024", "2025", "2026"]
+    familyId?: string;
     type: 'student';
+}
+
+export type PromotionType = 'multi_course' | 'family' | 'fixed';
+
+export interface PromotionRule {
+    id: string;
+    name: string;
+    type: PromotionType;
+    minQuantity?: number; // Para multi_course (ej. 2 cursos)
+    discountAmount: number;
+    active: boolean;
 }
 
 export interface Teacher {
@@ -105,6 +117,7 @@ export interface Enrollment {
     withdrawalDate?: string;
     isImported?: boolean;
     originalImportedClassId?: string;
+    paymentDay?: number;
 }
 
 export interface Installment {
@@ -150,7 +163,6 @@ interface InstitutionContextType {
     enrollments: Enrollment[];
     addEnrollment: (enrollment: Enrollment) => void;
     updateEnrollment: (enrollment: Enrollment) => void;
-    updateEnrollmentDate: (enrollmentId: string, newDate: string) => Promise<void>;
     removeEnrollment: (id: string) => void;
     payments: Payment[];
     addPayment: (payment: Payment, installmentId?: string) => void;
@@ -163,6 +175,12 @@ interface InstitutionContextType {
     installments: Installment[];
     attendances: AttendanceRecord[];
     saveAttendance: (record: AttendanceRecord) => Promise<void>;
+    updateEnrollmentDate: (enrollmentId: string, newDate: string) => Promise<void>;
+    promotions: PromotionRule[];
+    addPromotion: (promo: PromotionRule) => Promise<void>;
+    updatePromotion: (promo: PromotionRule) => Promise<void>;
+    deletePromotion: (id: string) => Promise<void>;
+    recalculateEnrollmentInstallments: (enrollmentId: string) => Promise<void>;
 }
 
 const InstitutionContext = createContext<InstitutionContextType | undefined>(undefined);
@@ -183,6 +201,7 @@ export function InstitutionProvider({ children }: { children: ReactNode }) {
     const [installments, setInstallments] = useState<Installment[]>([]);
     const [payments, setPayments] = useState<Payment[]>([]);
     const [attendances, setAttendances] = useState<AttendanceRecord[]>([]);
+    const [promotions, setPromotions] = useState<PromotionRule[]>([]);
 
     // Subscribe to collections
     useEffect(() => {
@@ -218,11 +237,14 @@ export function InstitutionProvider({ children }: { children: ReactNode }) {
         const unsubAttendances = onSnapshot(collection(db, 'attendances'), (shot) => {
             setAttendances(shot.docs.map(d => ({ id: d.id, ...d.data() } as AttendanceRecord)));
         });
+        const unsubPromotions = onSnapshot(collection(db, 'promotions'), (shot) => {
+            setPromotions(shot.docs.map(d => ({ id: d.id, ...d.data() } as PromotionRule)));
+        });
 
         return () => {
             unsubCycles(); unsubCourses(); unsubStudents(); unsubTeachers();
             unsubClasses(); unsubEnrollments(); unsubInstallments(); unsubPayments();
-            unsubAttendances();
+            unsubAttendances(); unsubPromotions();
         };
     }, []);
 
@@ -391,6 +413,7 @@ export function InstitutionProvider({ children }: { children: ReactNode }) {
                     let finalAmount = parseFloat(course.price);
                     let finalNotes = '';
 
+                    // 4. Monthly Events (Cycle specific)
                     if (cycle.events && cycle.events.length > 0) {
                         const monthEvents = cycle.events.filter(e => {
                             let evtTarget = e.targetMonthYear;
@@ -399,19 +422,66 @@ export function InstitutionProvider({ children }: { children: ReactNode }) {
                             return evtTarget === monthYear;
                         });
                         if (monthEvents.length > 0) {
-                            let totalDiscountPercentage = 0;
+                            let eventDiscount = 0;
                             const eventNames: string[] = [];
-
                             monthEvents.forEach(e => {
-                                totalDiscountPercentage += e.discountPercentage;
+                                eventDiscount += e.discountPercentage;
                                 eventNames.push(`${e.name} (${e.discountPercentage}%)`);
                             });
+                            const discountAmount = finalAmount * (Math.min(eventDiscount, 100) / 100);
+                            finalAmount -= discountAmount;
+                            finalNotes = `Evento: ${eventNames.join(', ')}`;
+                        }
+                    }
 
-                            if (totalDiscountPercentage > 100) totalDiscountPercentage = 100;
+                    // 5. Dynamic Promotions (Multi-course & Family)
+                    if (promotions && promotions.length > 0) {
+                        const activePromos = promotions.filter(p => p.active);
+                        // Collect all qualifying promotions
+                        const qualifyingPromos: { name: string, discount: number }[] = [];
 
-                            const discountAmount = finalAmount * (totalDiscountPercentage / 100);
-                            finalAmount = finalAmount - discountAmount;
-                            finalNotes = `Descuento automático: ${eventNames.join(', ')}`;
+                        // 1. Multi-course Check
+                        const studentEnrollmentsInCycle = enrollments.filter(e => {
+                            if (e.studentId !== enrollment.studentId) return false;
+                            const otherCls = classes.find(c => c.id === e.classId);
+                            return otherCls?.cycleId === cycle.id;
+                        });
+                        const currentCourseCount = studentEnrollmentsInCycle.length + 1; // +1 for the new one
+                        const multiCoursePromo = activePromos.find(p => p.type === 'multi_course' && currentCourseCount >= (p.minQuantity || 2));
+                        if (multiCoursePromo) {
+                            qualifyingPromos.push({ name: multiCoursePromo.name, discount: multiCoursePromo.discountAmount });
+                        }
+
+                        // 2. Family Check
+                        const student = students.find(s => s.id === enrollment.studentId);
+                        if (student?.familyId) {
+                            const familyMembers = students.filter(s => s.familyId === student.familyId && s.id !== student.id);
+                            const familyEnrollments = enrollments.filter(e => {
+                                const isMember = familyMembers.some(m => m.id === e.studentId);
+                                if (!isMember) return false;
+                                const otherCls = classes.find(c => c.id === e.classId);
+                                return otherCls?.cycleId === cycle.id;
+                            });
+                            if (familyEnrollments.length > 0) {
+                                const familyPromo = activePromos.find(p => p.type === 'family');
+                                if (familyPromo) {
+                                    qualifyingPromos.push({ name: familyPromo.name, discount: familyPromo.discountAmount });
+                                }
+                            }
+                        }
+
+                        // 3. Fixed Promo Check
+                        const fixedPromo = activePromos.find(p => p.type === 'fixed');
+                        if (fixedPromo) {
+                            qualifyingPromos.push({ name: fixedPromo.name, discount: fixedPromo.discountAmount });
+                        }
+
+                        if (qualifyingPromos.length > 0) {
+                            // Pick the best discount (highest SOL amount)
+                            const bestPromo = qualifyingPromos.sort((a, b) => b.discount - a.discount)[0];
+                            finalAmount -= Math.min(bestPromo.discount, finalAmount);
+                            const promoNote = `Promoción: ${bestPromo.name} (S/ ${bestPromo.discount.toFixed(2)})`;
+                            finalNotes = finalNotes ? `${finalNotes} | ${promoNote}` : promoNote;
                         }
                     }
 
@@ -452,27 +522,51 @@ export function InstitutionProvider({ children }: { children: ReactNode }) {
                     let finalAmount = parseFloat(course.price);
                     let finalNotes = '';
 
-                    if (cycle.events && cycle.events.length > 0) {
-                        const monthEvents = cycle.events.filter(e => {
-                            let evtTarget = e.targetMonthYear;
-                            const parts = evtTarget.split('-');
-                            if (parts.length === 2) evtTarget = `${parts[0]}-${parts[1].padStart(2, '0')}`;
-                            return evtTarget === normalizedMonthYear;
+                    if (promotions && promotions.length > 0) {
+                        const activePromos = promotions.filter(p => p.active);
+                        const qualifyingPromos: { name: string, discount: number }[] = [];
+
+                        // 1. Multi-course Check
+                        const studentEnrollmentsInCycle = enrollments.filter(e => {
+                            if (e.studentId !== enrollment.studentId) return false;
+                            const otherCls = classes.find(c => c.id === e.classId);
+                            return otherCls?.cycleId === cycle.id;
                         });
-                        if (monthEvents.length > 0) {
-                            let totalDiscountPercentage = 0;
-                            const eventNames: string[] = [];
+                        const currentCourseCount = studentEnrollmentsInCycle.length + 1;
+                        const multiCoursePromo = activePromos.find(p => p.type === 'multi_course' && currentCourseCount >= (p.minQuantity || 2));
+                        if (multiCoursePromo) {
+                            qualifyingPromos.push({ name: multiCoursePromo.name, discount: multiCoursePromo.discountAmount });
+                        }
 
-                            monthEvents.forEach(e => {
-                                totalDiscountPercentage += e.discountPercentage;
-                                eventNames.push(`${e.name} (${e.discountPercentage}%)`);
+                        // 2. Family Check
+                        const student = students.find(s => s.id === enrollment.studentId);
+                        if (student?.familyId) {
+                            const familyMembers = students.filter(s => s.familyId === student.familyId && s.id !== student.id);
+                            const familyEnrollments = enrollments.filter(e => {
+                                const isMember = familyMembers.some(m => m.id === e.studentId);
+                                if (!isMember) return false;
+                                const otherCls = classes.find(c => c.id === e.classId);
+                                return otherCls?.cycleId === cycle.id;
                             });
+                            if (familyEnrollments.length > 0) {
+                                const familyPromo = activePromos.find(p => p.type === 'family');
+                                if (familyPromo) {
+                                    qualifyingPromos.push({ name: familyPromo.name, discount: familyPromo.discountAmount });
+                                }
+                            }
+                        }
 
-                            if (totalDiscountPercentage > 100) totalDiscountPercentage = 100;
+                        // 3. Fixed Promo Check
+                        const fixedPromo = activePromos.find(p => p.type === 'fixed');
+                        if (fixedPromo) {
+                            qualifyingPromos.push({ name: fixedPromo.name, discount: fixedPromo.discountAmount });
+                        }
 
-                            const discountAmount = finalAmount * (totalDiscountPercentage / 100);
-                            finalAmount = finalAmount - discountAmount;
-                            finalNotes = `Descuento automático: ${eventNames.join(', ')}`;
+                        if (qualifyingPromos.length > 0) {
+                            const bestPromo = qualifyingPromos.sort((a, b) => b.discount - a.discount)[0];
+                            finalAmount -= Math.min(bestPromo.discount, finalAmount);
+                            const promoNote = `Promoción: ${bestPromo.name} (S/ ${bestPromo.discount.toFixed(2)})`;
+                            finalNotes = finalNotes ? `${finalNotes} | ${promoNote}` : promoNote;
                         }
                     }
 
@@ -692,6 +786,139 @@ export function InstitutionProvider({ children }: { children: ReactNode }) {
         }
     };
 
+    // Promotions CRUD
+    const addPromotion = async (promo: PromotionRule) => {
+        try {
+            const { id, ...data } = promo;
+            await addDoc(collection(db, 'promotions'), data);
+        } catch (error: any) {
+            showAlert('Error', 'No se pudo guardar la promoción: ' + error.message);
+        }
+    };
+
+    const updatePromotion = async (promo: PromotionRule) => {
+        try {
+            const { id, ...data } = promo;
+            await updateDoc(doc(db, 'promotions', id), data);
+        } catch (error: any) {
+            showAlert('Error', 'No se pudo actualizar la promoción: ' + error.message);
+        }
+    };
+
+    const deletePromotion = async (id: string) => {
+        try {
+            await deleteDoc(doc(db, 'promotions', id));
+        } catch (error: any) {
+            showAlert('Error', 'No se pudo eliminar la promoción: ' + error.message);
+        }
+    };
+
+    const recalculateEnrollmentInstallments = async (enrollmentId: string) => {
+        try {
+            const enrollment = enrollments.find(e => e.id === enrollmentId);
+            if (!enrollment) return;
+
+            const academicCls = classes.find(c => c.id === enrollment.classId);
+            const course = courses.find(c => c.id === academicCls?.courseId);
+            const cycle = academicCycles.find(c => c.id === academicCls?.cycleId);
+
+            if (!course || !cycle) return;
+
+            // Delete unpaid installments
+            const relatedInsts = installments.filter(inst => inst.enrollmentId === enrollmentId && !inst.isPaid);
+            for (const inst of relatedInsts) {
+                await deleteDoc(doc(db, 'installments', inst.id));
+            }
+
+            // Re-generate
+            const paymentDay = enrollment.paymentDay || 10;
+            const cycleStart = cycle.startDate ? new Date(cycle.startDate) : null;
+            const cycleEnd = cycle.endDate ? new Date(cycle.endDate) : null;
+
+            if (cycleStart && cycleEnd) {
+                const startMonthObj = new Date(cycleStart.getFullYear(), cycleStart.getMonth(), 1);
+                const endMonthObj = new Date(cycleEnd.getFullYear(), cycleEnd.getMonth(), 1);
+                let current = new Date(startMonthObj);
+
+                while (current <= endMonthObj) {
+                    const year = current.getFullYear();
+                    const month = current.getMonth();
+                    const monthYear = `${year}-${(month + 1).toString().padStart(2, '0')}`;
+
+                    const alreadyPaid = installments.find(inst => inst.enrollmentId === enrollmentId && inst.monthYear === monthYear && inst.isPaid);
+                    if (alreadyPaid) {
+                        current.setMonth(current.getMonth() + 1);
+                        continue;
+                    }
+
+                    const lastDayOfMonth = new Date(year, month + 1, 0).getDate();
+                    const safePaymentDay = Math.min(paymentDay, lastDayOfMonth);
+                    const calculatedDueDate = `${year}-${(month + 1).toString().padStart(2, '0')}-${safePaymentDay.toString().padStart(2, '0')}`;
+
+                    let finalAmount = parseFloat(course.price);
+                    let finalNotes = '';
+
+                    const activePromos = promotions.filter(p => p.active);
+                    const qualifyingPromos: { name: string, discount: number }[] = [];
+
+                    // Multi-course
+                    const studentEnrols = enrollments.filter(e => e.studentId === enrollment.studentId);
+                    const inCycle = studentEnrols.filter(e => {
+                        const cls = classes.find(c => c.id === e.classId);
+                        return cls?.cycleId === cycle.id;
+                    });
+                    const multiPromo = activePromos.find(p => p.type === 'multi_course' && inCycle.length >= (p.minQuantity || 2));
+                    if (multiPromo) {
+                        qualifyingPromos.push({ name: multiPromo.name, discount: multiPromo.discountAmount });
+                    }
+
+                    // Family
+                    const student = students.find(s => s.id === enrollment.studentId);
+                    if (student?.familyId) {
+                        const familyMembers = students.filter(s => s.familyId === student.familyId && s.id !== student.id);
+                        const memberEnrols = enrollments.filter(e => {
+                            if (!familyMembers.some(m => m.id === e.studentId)) return false;
+                            const cls = classes.find(c => c.id === e.classId);
+                            return cls?.cycleId === cycle.id;
+                        });
+                        if (memberEnrols.length > 0) {
+                            const familyPromo = activePromos.find(p => p.type === 'family');
+                            if (familyPromo) {
+                                qualifyingPromos.push({ name: familyPromo.name, discount: familyPromo.discountAmount });
+                            }
+                        }
+                    }
+
+                    // Fixed
+                    const fixedPromo = activePromos.find(p => p.type === 'fixed');
+                    if (fixedPromo) {
+                        qualifyingPromos.push({ name: fixedPromo.name, discount: fixedPromo.discountAmount });
+                    }
+
+                    if (qualifyingPromos.length > 0) {
+                        const bestPromo = qualifyingPromos.sort((a, b) => b.discount - a.discount)[0];
+                        finalAmount -= Math.min(bestPromo.discount, finalAmount);
+                        finalNotes = `Promoción: ${bestPromo.name} (S/ ${bestPromo.discount.toFixed(2)})`;
+                    }
+
+                    await addDoc(collection(db, 'installments'), {
+                        enrollmentId,
+                        studentId: enrollment.studentId,
+                        monthYear,
+                        amount: finalAmount.toFixed(2).toString(),
+                        originalAmount: course.price,
+                        isPaid: false,
+                        dueDate: calculatedDueDate,
+                        ...(finalNotes ? { notes: finalNotes } : {})
+                    });
+                    current.setMonth(current.getMonth() + 1);
+                }
+            }
+        } catch (error: any) {
+            showAlert('Error', 'Error al recalcular: ' + error.message);
+        }
+    };
+
     return (
         <InstitutionContext.Provider value={{
             courses, addCourse, updateCourse,
@@ -704,7 +931,9 @@ export function InstitutionProvider({ children }: { children: ReactNode }) {
             academicCycles, currentCycleId, setCurrentCycleId, addCycle, updateCycle, deleteCycle,
             installments,
             attendances, saveAttendance,
-            updateEnrollmentDate
+            updateEnrollmentDate,
+            promotions, addPromotion, updatePromotion, deletePromotion,
+            recalculateEnrollmentInstallments
         }}>
             {children}
         </InstitutionContext.Provider>

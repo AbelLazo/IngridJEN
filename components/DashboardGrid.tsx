@@ -8,6 +8,7 @@ import {
     GraduationCap,
     LayoutDashboard,
     Presentation,
+    Tag,
     Users,
     Wallet
 } from 'lucide-react-native';
@@ -25,6 +26,7 @@ const MENU_ITEMS = [
     { id: 'classes', label: 'Clases', icon: Presentation, route: '/classes' },
     { id: 'schedule', label: 'Horario', icon: Calendar, route: '/schedule' },
     { id: 'tuition', label: 'Mensualidad', icon: Wallet, route: '/fees' },
+    { id: 'promotions', label: 'Promociones', icon: Tag, route: '/promotions' },
     { id: 'cycles', label: 'Ciclos', icon: Calendar, route: '/cycles' },
     { id: 'admin-users', label: 'Usuarios', icon: Users, route: '/users' },
 ];
