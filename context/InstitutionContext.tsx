@@ -63,6 +63,7 @@ export interface ClassItem {
     id: string;
     courseId: string;
     courseName: string;
+    teacherId?: string;
     teacherName: string;
     schedules: ClassSchedule[];
     duration: string;

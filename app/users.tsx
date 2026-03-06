@@ -8,7 +8,7 @@ import { createUserWithEmailAndPassword, getAuth, sendPasswordResetEmail, signOu
 import { collection, doc, onSnapshot, query, setDoc, updateDoc } from 'firebase/firestore';
 import { AlertCircle, Check, ChevronDown, ChevronLeft, Clock, Eye, EyeOff, Plus, ShieldAlert, ShieldCheck, User as UserIcon, X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { Alert, FlatList, Modal, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { FlatList, Modal, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColorScheme } from '../hooks/use-color-scheme';
 
@@ -257,24 +257,34 @@ export default function UsersScreen() {
 
     return (
         <View style={[styles.container, { backgroundColor: colors.background, paddingTop: Math.max(insets.top, 16) }]}>
-            {/* Header */}
             <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()} style={[styles.backButton, { backgroundColor: '#FFF0F5', borderWidth: 1, borderColor: '#FCE4EC' }]}>
-                    <ChevronLeft size={24} color={colors.text} />
-                </TouchableOpacity>
-                <Text style={[styles.headerTitle, { color: colors.text }]}>Gestión de Usuarios</Text>
-                <TouchableOpacity
-                    style={[styles.addButton, { backgroundColor: colors.tint }]}
-                    onPress={() => {
-                        setNewUserEmail('');
-                        setNewUserPassword('');
-                        setNewUserRole(null);
-                        setAddModalVisible(true);
-                    }}
-                    activeOpacity={0.8}
-                >
-                    <Plus size={24} color="#fff" />
-                </TouchableOpacity>
+                <View style={styles.headerTop}>
+                    <TouchableOpacity
+                        onPress={() => router.back()}
+                        style={[styles.backButton, { backgroundColor: colorScheme === 'light' ? '#FFF0F5' : '#FFFFFF20', borderWidth: 1, borderColor: colorScheme === 'light' ? '#FCE4EC' : '#FFFFFF40' }]}
+                    >
+                        <ChevronLeft size={24} color={colors.text} />
+                    </TouchableOpacity>
+                    <View style={{ flex: 1, marginLeft: 15 }}>
+                        <Text style={[styles.greeting, { color: colors.text }]}>Usuarios</Text>
+                        <View style={[styles.infoChip, { backgroundColor: colorScheme === 'light' ? '#FFF0F5' : '#FFFFFF15' }]}>
+                            <ShieldCheck size={14} color={colors.tint} />
+                            <Text style={[styles.infoChipText, { color: colors.text }]}>Control de Acceso</Text>
+                        </View>
+                    </View>
+                    <TouchableOpacity
+                        style={[styles.addButton, { backgroundColor: colors.tint }]}
+                        onPress={() => {
+                            setNewUserEmail('');
+                            setNewUserPassword('');
+                            setNewUserRole(null);
+                            setAddModalVisible(true);
+                        }}
+                        activeOpacity={0.8}
+                    >
+                        <Plus size={24} color="#fff" />
+                    </TouchableOpacity>
+                </View>
             </View>
 
             {/* List */}
@@ -675,34 +685,13 @@ export default function UsersScreen() {
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-    },
-    header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 20,
-        paddingVertical: 15,
-    },
-    backButton: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    headerTitleContainer: {
-        flex: 1,
-    },
-    headerTitle: {
-        fontSize: 22,
-        fontWeight: 'bold',
-    },
-    headerSubtitle: {
-        fontSize: 14,
-        marginTop: 2,
-    },
+    container: { flex: 1 },
+    header: { paddingHorizontal: 20, paddingTop: 10, marginBottom: 20 },
+    headerTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+    greeting: { fontSize: 28, fontWeight: '800', letterSpacing: -0.5 },
+    infoChip: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12, marginTop: 10 },
+    infoChipText: { fontSize: 13, fontWeight: '700', marginLeft: 6 },
+    backButton: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
     addButton: {
         width: 44,
         height: 44,

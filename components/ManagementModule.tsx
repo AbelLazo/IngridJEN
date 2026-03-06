@@ -4,7 +4,7 @@ import { useAlert } from '@/context/AlertContext';
 import { useAuth } from '@/context/AuthContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Stack, useRouter } from 'expo-router';
-import { AlertCircle, Check, ChevronLeft, Edit3, Mail, Phone, Plus, Search, Trash2, UserPlus, X } from 'lucide-react-native';
+import { AlertCircle, Check, ChevronLeft, Edit3, Mail, Phone, Plus, Search, Trash2, UserPlus, Users, X } from 'lucide-react-native';
 import React, { useState } from 'react';
 import {
     Dimensions,
@@ -207,7 +207,11 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
                 return;
             }
         } else {
-            const hasClasses = classes.some(c => `${item.firstName} ${item.lastName}` === c.teacherName);
+            const fullName = `${item.firstName} ${item.lastName}`.trim().toLowerCase();
+            const hasClasses = classes.some(c =>
+                (c.teacherId === item.id) ||
+                (c.teacherName && c.teacherName.trim().toLowerCase() === fullName)
+            );
             if (hasClasses) {
                 showAlert("Acción Denegada", "No se puede eliminar a este profesor porque tiene clases asignadas.");
                 return;
@@ -377,8 +381,11 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
 
             if (type === 'teacher') {
                 if (editingEntityId && formData.status === 'inactive') {
-                    const teacherName = `${formData.firstName} ${formData.lastName}`;
-                    const activeClasses = classes.some(c => c.teacherName === teacherName && c.cycleId === currentCycleId);
+                    const normTeacherName = `${formData.firstName} ${formData.lastName}`.trim().toLowerCase();
+                    const activeClasses = classes.some(c =>
+                        (c.teacherId === editingEntityId || (c.teacherName && c.teacherName.trim().toLowerCase() === normTeacherName)) &&
+                        c.cycleId === currentCycleId
+                    );
                     if (activeClasses) {
                         setErrorMsg("❌ No se puede inactivar: El profesor está asignado a clases en el ciclo actual.");
                         return;
@@ -451,19 +458,29 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
         <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]} >
             <Stack.Screen options={{ headerShown: false }} />
 
-            {/* Header */}
-            <View style={styles.header} >
-                <TouchableOpacity onPress={() => router.back()} style={[styles.backButton, { backgroundColor: '#FFF0F5', borderWidth: 1, borderColor: '#FCE4EC' }]}>
-                    <ChevronLeft color={colors.text} size={24} />
-                </TouchableOpacity>
-                <Text style={[styles.headerTitle, { color: colors.text }]}>{title}</Text>
-                <TouchableOpacity
-                    style={[styles.addButton, { backgroundColor: colors.tint }]}
-                    onPress={() => { resetForm(); setModalVisible(true); }}
-                >
-                    <Plus color="#fff" size={24} />
-                </TouchableOpacity>
-            </View >
+            <View style={styles.header}>
+                <View style={styles.headerTop}>
+                    <TouchableOpacity
+                        onPress={() => router.back()}
+                        style={[styles.backButton, { backgroundColor: colorScheme === 'light' ? '#FFF0F5' : '#FFFFFF20', borderWidth: 1, borderColor: colorScheme === 'light' ? '#FCE4EC' : '#FFFFFF40' }]}
+                    >
+                        <ChevronLeft size={24} color={colors.text} />
+                    </TouchableOpacity>
+                    <View style={{ flex: 1, marginLeft: 15 }}>
+                        <Text style={[styles.greeting, { color: colors.text }]}>{title}</Text>
+                        <View style={[styles.infoChip, { backgroundColor: colorScheme === 'light' ? '#FFF0F5' : '#FFFFFF15' }]}>
+                            <Users size={14} color={colors.tint} />
+                            <Text style={[styles.infoChipText, { color: colors.text }]}>Administración</Text>
+                        </View>
+                    </View>
+                    <TouchableOpacity
+                        style={[styles.addButton, { backgroundColor: colors.tint }]}
+                        onPress={() => { resetForm(); setModalVisible(true); }}
+                    >
+                        <Plus color="#fff" size={24} />
+                    </TouchableOpacity>
+                </View>
+            </View>
 
             {/* Search Bar - Principal focus for simple management */}
             <View
@@ -813,27 +830,13 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
     );
 }
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-    },
-    header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 20,
-        paddingVertical: 15,
-    },
-    backButton: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    headerTitle: {
-        fontSize: 22,
-        fontWeight: 'bold',
-    },
+    container: { flex: 1 },
+    header: { paddingHorizontal: 20, paddingTop: 10, marginBottom: 5 },
+    headerTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+    backButton: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
+    greeting: { fontSize: 28, fontWeight: '800', letterSpacing: -0.5 },
+    infoChip: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12, marginTop: 10 },
+    infoChipText: { fontSize: 13, fontWeight: '700', marginLeft: 6 },
     addButton: {
         width: 44,
         height: 44,

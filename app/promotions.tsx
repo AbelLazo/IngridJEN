@@ -2,7 +2,7 @@ import ModernPicker from '@/components/ModernPicker';
 import { Colors } from '@/constants/theme';
 import { useAlert } from '@/context/AlertContext';
 import { useAuth } from '@/context/AuthContext';
-import { PromotionRule, useInstitution } from '@/context/InstitutionContext';
+import { PromotionRule, PromotionType, useInstitution } from '@/context/InstitutionContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Stack, useRouter } from 'expo-router';
 import { AlertCircle, ChevronLeft, Info, Plus, Save, Trash2, X } from 'lucide-react-native';
@@ -176,6 +176,12 @@ export default function PromotionsScreen() {
                             <Text style={[styles.infoChipText, { color: colors.text }]}>Reglas de Descuento</Text>
                         </View>
                     </View>
+                    <TouchableOpacity
+                        style={[styles.addButton, { backgroundColor: colors.tint }]}
+                        onPress={() => { resetForm(); setModalVisible(true); }}
+                    >
+                        <Plus color="#fff" size={24} />
+                    </TouchableOpacity>
                 </View>
             </View>
 
@@ -192,12 +198,7 @@ export default function PromotionsScreen() {
                 }
             />
 
-            <TouchableOpacity
-                style={[styles.fab, { backgroundColor: colors.tint, bottom: insets.bottom + 20 }]}
-                onPress={() => { resetForm(); setModalVisible(true); }}
-            >
-                <Plus color="#FFF" size={30} />
-            </TouchableOpacity>
+
 
             <Modal
                 visible={modalVisible}
@@ -236,8 +237,8 @@ export default function PromotionsScreen() {
                             <View style={styles.formGroup}>
                                 <Text style={[styles.label, { color: colors.text }]}>Tipo de Regla</Text>
                                 <ModernPicker
-                                    selectedValue={formData.type}
-                                    onValueChange={(v) => setFormData(prev => ({ ...prev, type: v as any }))}
+                                    selectedValue={formData.type || 'multi_course'}
+                                    onValueChange={(v) => setFormData(prev => ({ ...prev, type: v as PromotionType }))}
                                     items={[
                                         { label: 'Multi-Curso (Por volumen)', value: 'multi_course' },
                                         { label: 'Familiar (Hermanos/Parientes)', value: 'family' },
@@ -310,8 +311,20 @@ export default function PromotionsScreen() {
 const styles = StyleSheet.create({
     container: { flex: 1 },
     header: { paddingHorizontal: 20, paddingTop: 10, marginBottom: 20 },
-    headerTop: { flexDirection: 'row', alignItems: 'center' },
+    headerTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
     backButton: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
+    addButton: {
+        width: 44,
+        height: 44,
+        borderRadius: 14,
+        justifyContent: 'center',
+        alignItems: 'center',
+        shadowColor: '#EC4899',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.25,
+        shadowRadius: 12,
+        elevation: Platform.OS === 'android' ? 4 : 6,
+    },
     greeting: { fontSize: 28, fontWeight: '800', letterSpacing: -0.5 },
     infoChip: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12, marginTop: 10 },
     infoChipText: { fontSize: 13, fontWeight: '700', marginLeft: 6 },
@@ -338,20 +351,7 @@ const styles = StyleSheet.create({
     statusDot: { width: 8, height: 8, borderRadius: 4, marginRight: 8 },
     statusText: { fontSize: 12, fontWeight: '600' },
     deleteButton: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
-    fab: {
-        position: 'absolute',
-        right: 20,
-        width: 65,
-        height: 65,
-        borderRadius: 32.5,
-        justifyContent: 'center',
-        alignItems: 'center',
-        elevation: 8,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-    },
+
     emptyState: { padding: 60, alignItems: 'center', justifyContent: 'center' },
     modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
     modalContent: { borderTopLeftRadius: 32, borderTopRightRadius: 32, padding: 24, minHeight: '60%', maxHeight: '90%' },

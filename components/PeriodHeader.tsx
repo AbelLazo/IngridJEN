@@ -31,44 +31,34 @@ export default function PeriodHeader({ title, onBack, rightAction }: PeriodHeade
         <View style={[styles.header, { backgroundColor: colors.background, paddingTop: insets.top + 10 }]}>
             <View style={styles.topRow}>
                 {onBack && (
-                    <TouchableOpacity onPress={onBack} style={[styles.backButton, { backgroundColor: '#FFF0F5', borderWidth: 1, borderColor: '#FCE4EC' }]}>
-                        <ChevronLeft size={28} color={colors.text} />
+                    <TouchableOpacity onPress={onBack} style={[styles.backButton, { backgroundColor: colorScheme === 'light' ? '#FFF0F5' : '#FFFFFF20', borderWidth: 1, borderColor: colorScheme === 'light' ? '#FCE4EC' : '#FFFFFF40' }]}>
+                        <ChevronLeft size={24} color={colors.text} />
                     </TouchableOpacity>
                 )}
 
-                <TouchableOpacity
-                    style={styles.centerContainer}
-                    onPress={() => setIsMenuVisible(true)}
-                    activeOpacity={0.7}
-                >
-                    <Text style={[styles.headerTitle, { color: colors.text }]}>{title}</Text>
+                <View style={[styles.contentContainer, { marginLeft: onBack ? 15 : 0 }]}>
+                    <Text style={[styles.greeting, { color: colors.text }]}>{title}</Text>
 
-                    <BlurView
-                        intensity={60}
-                        tint={colorScheme === 'light' ? 'light' : 'dark'}
-                        style={[
-                            styles.glassChip,
-                            {
-                                backgroundColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.4)' : 'rgba(255, 255, 255, 0.05)',
-                                borderColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.8)' : 'rgba(255, 255, 255, 0.2)',
-                            }
-                        ]}
+                    <TouchableOpacity
+                        style={[styles.infoChip, { backgroundColor: colorScheme === 'light' ? '#FFF0F5' : '#FFFFFF15' }]}
+                        onPress={() => setIsMenuVisible(true)}
+                        activeOpacity={0.7}
                     >
-                        <View style={styles.glassChipContent}>
-                            <Calendar size={14} color={colors.tint} />
-                            <Text style={[styles.periodText, { color: colors.text }]}>
-                                {currentCycle?.name || 'Seleccionar Período'}
-                            </Text>
-                            <View style={[styles.badgeArrow, { backgroundColor: colors.tint + '15' }]}>
-                                <ChevronDown size={14} color={colors.tint} />
-                            </View>
+                        <Calendar size={14} color={colors.tint} />
+                        <Text style={[styles.infoChipText, { color: colors.text }]}>
+                            {currentCycle?.name || 'Seleccionar Período'}
+                        </Text>
+                        <View style={[styles.badgeArrow, { backgroundColor: colors.tint + '15' }]}>
+                            <ChevronDown size={14} color={colors.tint} />
                         </View>
-                    </BlurView>
-                </TouchableOpacity>
-
-                <View style={styles.rightActionContainer}>
-                    {rightAction}
+                    </TouchableOpacity>
                 </View>
+
+                {rightAction && (
+                    <View style={styles.rightActionContainer}>
+                        {rightAction}
+                    </View>
+                )}
             </View>
 
             {/* Dropdown Menu Modal */}
@@ -164,50 +154,42 @@ const styles = StyleSheet.create({
     topRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'space-between',
     },
     backButton: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
+        width: 44,
+        height: 44,
+        borderRadius: 22,
         justifyContent: 'center',
         alignItems: 'center',
     },
-    centerContainer: {
+    contentContainer: {
         flex: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
     },
-    headerTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        marginBottom: 2,
+    greeting: {
+        fontSize: 24,
+        fontWeight: '800',
+        letterSpacing: -0.5,
     },
-    glassChip: {
-        borderRadius: 20,
-        borderWidth: 0.5,
-        marginTop: 4,
-        overflow: 'hidden',
-    },
-    glassChipContent: {
+    infoChip: {
         flexDirection: 'row',
         alignItems: 'center',
+        alignSelf: 'flex-start',
         paddingHorizontal: 12,
         paddingVertical: 6,
+        borderRadius: 12,
+        marginTop: 6,
         gap: 8,
     },
-    badgeArrow: {
-        padding: 3,
-        borderRadius: 6,
-        marginLeft: 4,
-    },
-    periodText: {
+    infoChipText: {
         fontSize: 13,
         fontWeight: '700',
     },
+    badgeArrow: {
+        padding: 2,
+        borderRadius: 4,
+    },
     rightActionContainer: {
-        width: 40,
-        alignItems: 'flex-end',
+        marginLeft: 10,
     },
     modalOverlay: {
         flex: 1,

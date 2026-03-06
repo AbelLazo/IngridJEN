@@ -63,6 +63,7 @@ interface ClassItem {
     id: string;
     courseId: string;
     courseName: string;
+    teacherId?: string;
     teacherName: string;
     schedules: ClassSchedule[];
     duration: string;
@@ -646,7 +647,8 @@ export default function ClassesScreen() {
                 id: editingClassId || Date.now().toString(),
                 courseId: selectedCourse.id,
                 courseName: selectedCourse.name,
-                teacherName: `${selectedTeacher.firstName} ${selectedTeacher.lastName} `,
+                teacherId: selectedTeacher.id,
+                teacherName: `${selectedTeacher.firstName} ${selectedTeacher.lastName}`,
                 schedules: formData.schedules.map(s => ({
                     day: s.day,
                     startTime: `${s.startHours}:${s.startMinutes} `
@@ -1575,7 +1577,7 @@ export default function ClassesScreen() {
                             <ModernDatePicker
                                 visible={showEnrollDatePicker}
                                 mode="single"
-                                selectedDate={enrollDate.toISOString().split('T')[0]}
+                                startDate={enrollDate.toISOString().split('T')[0]}
                                 onConfirm={(date) => {
                                     setEnrollDate(new Date(`${date}T12:00:00`));
                                     setShowEnrollDatePicker(false);
@@ -1659,7 +1661,7 @@ export default function ClassesScreen() {
                             <ModernDatePicker
                                 visible={showMoveDatePicker}
                                 mode="single"
-                                selectedDate={moveDate.toISOString().split('T')[0]}
+                                startDate={moveDate.toISOString().split('T')[0]}
                                 onConfirm={(date) => {
                                     setMoveDate(new Date(`${date}T12:00:00`));
                                     setShowMoveDatePicker(false);
@@ -1766,7 +1768,7 @@ export default function ClassesScreen() {
                             <ModernDatePicker
                                 visible={showEditDatePicker}
                                 mode="single"
-                                selectedDate={editDate.toISOString().split('T')[0]}
+                                startDate={editDate.toISOString().split('T')[0]}
                                 onConfirm={(date) => {
                                     setEditDate(new Date(`${date}T12:00:00`));
                                     setShowEditDatePicker(false);
