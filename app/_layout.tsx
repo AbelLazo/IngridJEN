@@ -3,7 +3,7 @@ import * as NavigationBar from 'expo-navigation-bar';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as Updates from 'expo-updates';
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
@@ -16,7 +16,19 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { auth } from '@/lib/firebaseConfig';
 import { useRouter, useSegments } from 'expo-router';
 import { signOut } from 'firebase/auth';
-import { ActivityIndicator, Alert, View } from 'react-native';
+import { ActivityIndicator, Alert, Text, TextInput, View } from 'react-native';
+
+// Disable default font scaling globally to prevent UI breakage
+// if users have drastically increased font sizes in system Accessibility settings.
+if ((Text as any).defaultProps == null) {
+  (Text as any).defaultProps = {};
+}
+(Text as any).defaultProps.allowFontScaling = false;
+
+if ((TextInput as any).defaultProps == null) {
+  (TextInput as any).defaultProps = {};
+}
+(TextInput as any).defaultProps.allowFontScaling = false;
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -112,7 +124,16 @@ function RootLayoutNav() {
     }
   }, [user, userRole, isLoading, segments]);
 
-  if (isLoading) {
+  const [isNavigationReady, setIsNavigationReady] = useState(false);
+
+  useEffect(() => {
+    if (!isLoading) {
+      // Give the router state a tiny delay to process the redirect before rendering children
+      setTimeout(() => setIsNavigationReady(true), 10);
+    }
+  }, [isLoading]);
+
+  if (isLoading || !isNavigationReady) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colorScheme === 'dark' ? '#111827' : '#FFFFFF' }}>
         <ActivityIndicator size="large" color="#3B82F6" />

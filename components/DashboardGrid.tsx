@@ -80,10 +80,11 @@ export default function DashboardGrid() {
                                 styles.label,
                                 {
                                     color: colors.text,
-                                    fontSize: width > 600 ? 15 : 14,
+                                    fontSize: width > 600 ? 15 : 13,
+                                    flexShrink: 1,
                                 }
                             ]}
-                            numberOfLines={1}
+                            numberOfLines={2}
                         >
                             {item.label}
                         </Text>
@@ -109,7 +110,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 14,
+        gap: 10,
         borderWidth: 1,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 6 },
@@ -118,8 +119,8 @@ const styles = StyleSheet.create({
         elevation: Platform.OS === 'android' ? 2 : 4,
     },
     iconContainer: {
-        width: 46,
-        height: 46,
+        width: 44,
+        height: 44,
         borderRadius: 15,
         justifyContent: 'center',
         alignItems: 'center',
