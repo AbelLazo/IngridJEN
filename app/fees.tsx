@@ -1,3 +1,4 @@
+import ModernDatePicker from '@/components/ModernDatePicker';
 import PeriodHeader from '@/components/PeriodHeader';
 import { Colors } from '@/constants/theme';
 import { useAlert } from '@/context/AlertContext';
@@ -275,6 +276,8 @@ export default function FeesScreen() {
     const [isDetailVisible, setIsDetailVisible] = useState(false);
     const [detailData, setDetailData] = useState<any>(null);
     const [paymentMethod, setPaymentMethod] = useState<'contado' | 'yape' | 'transferencia'>('contado');
+    const [paymentDate, setPaymentDate] = useState('');
+    const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
 
     const selectedMonthYear = useMemo(() => {
         const today = networkTime || new Date();
@@ -424,6 +427,8 @@ export default function FeesScreen() {
 
     const handleRegisterPayment = (student: any, enrollment: any, month: any) => {
         setPayData({ student, enrollment, month });
+        const today = networkTime || new Date();
+        setPaymentDate(today.toISOString().split('T')[0]);
         setIsPayConfirmVisible(true);
     };
 
@@ -625,7 +630,12 @@ export default function FeesScreen() {
                         data={payments.filter(p => {
                             const student = students.find(s => s.id === p.studentId);
                             const fullName = `${student?.firstName} ${student?.lastName}`.toLowerCase();
-                            return fullName.includes(searchQuery.toLowerCase());
+                            const matchesSearch = fullName.includes(searchQuery.toLowerCase());
+                            // Filter by selected cycle
+                            const enrollment = enrollments.find(e => e.id === p.enrollmentId);
+                            const cls = enrollment ? classes.find(c => c.id === enrollment.classId) : null;
+                            const matchesCycle = cls?.cycleId === currentCycleId;
+                            return matchesSearch && matchesCycle;
                         }).sort((a, b) => b.id.localeCompare(a.id))}
                         renderItem={({ item }) => {
                             const student = students.find(s => s.id === item.studentId);
@@ -694,6 +704,28 @@ export default function FeesScreen() {
                             </Text>
                         )}
 
+                        <Text style={{ color: colors.text, fontWeight: 'bold', marginBottom: 10 }}>Fecha del pago:</Text>
+                        <TouchableOpacity
+                            onPress={() => setIsDatePickerVisible(true)}
+                            style={{
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                paddingVertical: 12,
+                                paddingHorizontal: 14,
+                                borderRadius: 10,
+                                borderWidth: 1,
+                                borderColor: colors.border,
+                                backgroundColor: colors.tint + '08',
+                                marginBottom: 16
+                            }}
+                        >
+                            <Calendar size={18} color={colors.tint} />
+                            <Text style={{ color: colors.text, fontSize: 15, fontWeight: '600', marginLeft: 10 }}>
+                                {paymentDate ? paymentDate.split('-').reverse().join('/') : 'Seleccionar fecha'}
+                            </Text>
+                            <Text style={{ color: colors.icon, fontSize: 11, marginLeft: 'auto' }}>Cambiar</Text>
+                        </TouchableOpacity>
+
                         <Text style={{ color: colors.text, fontWeight: 'bold', marginBottom: 10 }}>Método de pago:</Text>
                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 }}>
                             {['contado', 'yape', 'transferencia'].map(method => (
@@ -729,14 +761,13 @@ export default function FeesScreen() {
                                 style={[styles.saveButton, { backgroundColor: colors.tint, flex: 1, marginLeft: 10 }]}
                                 onPress={() => {
                                     if (payData) {
-                                        const today = networkTime || new Date();
                                         addPayment({
                                             id: Date.now().toString(),
                                             studentId: payData.student.id,
                                             enrollmentId: payData.enrollment.id,
                                             installmentId: payData.month.id,
                                             amount: payData.month.amount.toString(),
-                                            date: today.toISOString().split('T')[0],
+                                            date: paymentDate,
                                             monthYear: payData.month.monthYearSearch,
                                             method: paymentMethod
                                         }, payData.month.id);
@@ -752,6 +783,19 @@ export default function FeesScreen() {
                     </View>
                 </View>
             </Modal>
+
+            {/* Date Picker for Payment Date */}
+            <ModernDatePicker
+                mode="single"
+                visible={isDatePickerVisible}
+                startDate={paymentDate}
+                title="Fecha del Pago"
+                onConfirm={(date) => {
+                    setPaymentDate(date);
+                    setIsDatePickerVisible(false);
+                }}
+                onCancel={() => setIsDatePickerVisible(false)}
+            />
 
             {/* Modal Detalles de Pago */}
             <Modal visible={isDetailVisible} transparent animationType="slide">

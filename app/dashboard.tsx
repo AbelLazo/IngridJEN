@@ -1,9 +1,10 @@
+import PeriodHeader from '@/components/PeriodHeader';
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { useInstitution } from '@/context/InstitutionContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useRouter } from 'expo-router';
-import { AlertCircle, Award, Calendar, ChevronLeft, DollarSign, TrendingUp, Users } from 'lucide-react-native';
+import { AlertCircle, Award, DollarSign, TrendingUp, Users } from 'lucide-react-native';
 import React, { useMemo } from 'react';
 import { Dimensions, Platform, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { BarChart, PieChart } from 'react-native-gifted-charts';
@@ -65,7 +66,7 @@ export default function DashboardScreen() {
         return validCount;
     }, [enrollments, classes, currentCycleId, students, activeCycle]);
 
-    // Financial Metrics with Retroactive Discount logic
+    // Financial Metrics: collected from actual payments, debt from unpaid installments
     const { totalCollected, totalDebt, monthlyData, maxValue } = useMemo(() => {
         let collected = 0;
         let debt = 0;
@@ -74,6 +75,25 @@ export default function DashboardScreen() {
 
         const cycleEnrollments = enrollments.filter(e =>
             classes.some(c => c.id === e.classId && c.cycleId === currentCycleId)
+        );
+        const cycleEnrollmentIds = new Set(cycleEnrollments.map(e => e.id));
+
+        // 1. Calculate COLLECTED from actual payment records (source of truth)
+        const cyclePayments = payments.filter(p => cycleEnrollmentIds.has(p.enrollmentId));
+        cyclePayments.forEach(p => {
+            const amount = parseFloat(p.amount);
+            collected += amount;
+            const my = p.monthYear;
+            allMonthsSet.add(my);
+            monthlyCollectedMap[my] = (monthlyCollectedMap[my] || 0) + amount;
+        });
+
+        // 2. Calculate DEBT: installments without a real payment record are debt
+        // Build set of installment IDs that have actual payment records
+        const paidInstallmentIds = new Set(
+            cyclePayments
+                .filter(p => p.installmentId)
+                .map(p => p.installmentId)
         );
 
         cycleEnrollments.forEach(enrol => {
@@ -93,12 +113,12 @@ export default function DashboardScreen() {
                 if (isAfterWithdrawal) return;
 
                 allMonthsSet.add(inst.monthYear);
-                let finalAmount = parseFloat(inst.amount);
 
-                if (inst.isPaid) {
-                    collected += finalAmount;
-                    monthlyCollectedMap[inst.monthYear] = (monthlyCollectedMap[inst.monthYear] || 0) + finalAmount;
-                } else {
+                // An installment is truly paid ONLY if a real payment record exists for it
+                const hasRealPayment = paidInstallmentIds.has(inst.id);
+
+                if (!hasRealPayment) {
+                    let finalAmount = parseFloat(inst.amount);
                     // Recalculate if discount was missed
                     if (activeCycle && activeCycle.events && activeCycle.events.length > 0) {
                         const monthEvents = activeCycle.events.filter(e => {
@@ -128,7 +148,7 @@ export default function DashboardScreen() {
             });
         });
 
-        // Completar meses intermedios (incluso con 0 ingresos)
+        // Build chart months range (fill intermediate months with 0)
         const uniqueMonths = Array.from(allMonthsSet).sort();
         let chartMonths: string[] = [];
 
@@ -155,13 +175,10 @@ export default function DashboardScreen() {
 
         const MONTH_NAMES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 
-        // Formato para react-native-gifted-charts
-        // Calculamos el valor máximo para estimar la altura en pantalla de cada barra
         let maxValue = chartMonths.length > 0 ? Math.max(...chartMonths.map(m => monthlyCollectedMap[m] || 0)) : 0;
-        if (maxValue === 0) maxValue = 1; // Prevenir división por cero
+        if (maxValue === 0) maxValue = 1;
         const chartHeight = 220;
 
-        // Formato para react-native-gifted-charts
         return {
             totalCollected: collected,
             totalDebt: debt,
@@ -178,7 +195,6 @@ export default function DashboardScreen() {
                     value: val,
                     label,
                     topLabelComponent: val > 0 ? () => {
-                        // Desplazar el label hacia la mitad de la barra visual (+ offset)
                         const barHeightPixels = (val / (maxValue * 1.2)) * chartHeight;
                         return (
                             <View style={{ position: 'absolute', top: barHeightPixels / 2, width: 35, alignItems: 'center', zIndex: 10, transform: [{ rotate: '-90deg' }] }}>
@@ -190,7 +206,7 @@ export default function DashboardScreen() {
                     } : undefined
                 };
             }) : [{ value: 0, label: 'S/D' }],
-            maxValue: maxValue * 1.2 // Añadir 20% de holgura superior
+            maxValue: maxValue * 1.2
         };
     }, [enrollments, classes, currentCycleId, installments, payments, activeCycle, courses]);
 
@@ -247,23 +263,15 @@ export default function DashboardScreen() {
     return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
             <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} translucent backgroundColor="transparent" />
-            <View style={{ height: insets.top }} />
+
+            <PeriodHeader
+                title="Dashboard de Negocio"
+                onBack={() => router.back()}
+            />
 
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 80 }]}>
                 <View style={{ overflow: 'hidden' }}>
                     <View style={[styles.header, isTablet && styles.headerTablet]}>
-                        <View style={styles.headerTop}>
-                            <TouchableOpacity onPress={() => router.back()} style={[styles.backButton, { backgroundColor: '#FFF0F5', borderWidth: 1, borderColor: '#FCE4EC' }]}>
-                                <ChevronLeft size={24} color={colors.text} />
-                            </TouchableOpacity>
-                            <View style={{ flex: 1, marginLeft: 15 }}>
-                                <Text style={[styles.greeting, { fontSize: isTablet ? 32 : 24, color: colors.text }]}>Dashboard de Negocio</Text>
-                                <View style={[styles.cycleBadge, { backgroundColor: colorScheme === 'dark' ? '#FFFFFF' : '#FFF0F5' }]}>
-                                    <Calendar size={14} color={colors.tint} />
-                                    <Text style={[styles.cycleBadgeText, { color: colors.text }]}>Ciclo: {activeCycle?.name || 'Cargando...'}</Text>
-                                </View>
-                            </View>
-                        </View>
 
                         {/* 4 KPIs Row */}
                         <ScrollView
@@ -329,7 +337,7 @@ export default function DashboardScreen() {
                 </View>
 
                 <View style={[styles.content, isTablet && styles.contentTablet]}>
-                    <Text style={[styles.sectionTitle, { color: colors.text, fontSize: isTablet ? 24 : 18 }]}>Salud Financiera (Ciclo Actual)</Text>
+                    <Text style={[styles.sectionTitle, { color: colors.text, fontSize: isTablet ? 24 : 18 }]}>Salud Financiera ({activeCycle?.name || 'Ciclo Actual'})</Text>
 
                     <View style={[styles.chartCard, {
                         backgroundColor: colorScheme === 'light' ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.1)',
@@ -490,17 +498,6 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20, paddingTop: 10, paddingBottom: 30,
     },
     headerTablet: { paddingHorizontal: 40, paddingTop: 20, paddingBottom: 40 },
-    headerTop: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
-    backButton: {
-        width: 40, height: 40, borderRadius: 20,
-        justifyContent: 'center', alignItems: 'center'
-    },
-    greeting: { fontWeight: '800', letterSpacing: -0.5 },
-    cycleBadge: {
-        flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start',
-        paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12, marginTop: 10,
-    },
-    cycleBadgeText: { fontSize: 13, fontWeight: '700', marginLeft: 6 },
     kpiScrollView: {
         marginHorizontal: -20,
     },

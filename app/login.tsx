@@ -12,6 +12,7 @@ import { doc, setDoc } from 'firebase/firestore';
 import { Eye, EyeOff, Lock, Mail } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Video, ResizeMode } from 'expo-av';
 import { Colors } from '../constants/theme';
 import { useColorScheme } from '../hooks/use-color-scheme';
 import { auth, db } from '../lib/firebaseConfig';
@@ -264,7 +265,15 @@ export default function LoginScreen() {
     const colors = Colors[colorScheme as keyof typeof Colors];
 
     return (
-        <View style={[styles.backgroundImage, { backgroundColor: colors.background }]}>
+        <View style={styles.backgroundImage}>
+            <Video
+                source={require('../assets/videos/Explosion-colors.mp4')}
+                style={StyleSheet.absoluteFillObject}
+                resizeMode={ResizeMode.COVER}
+                shouldPlay
+                isMuted
+            />
+            <View style={[StyleSheet.absoluteFillObject, { backgroundColor: 'rgba(0,0,0,0.15)' }]} />
             <KeyboardAvoidingView
                 style={{ flex: 1 }}
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -283,13 +292,13 @@ export default function LoginScreen() {
                         </View>
 
                         <BlurView
-                            intensity={90}
-                            tint={colorScheme === 'light' ? 'light' : 'dark'}
+                            intensity={40}
+                            tint={'dark'}
                             style={[
                                 styles.card,
                                 {
-                                    backgroundColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 0.85)' : 'rgba(255, 255, 255, 0.05)',
-                                    borderColor: colorScheme === 'light' ? 'rgba(255, 255, 255, 1)' : 'rgba(255, 255, 255, 0.1)',
+                                    backgroundColor: 'rgba(0, 0, 0, 0.15)',
+                                    borderColor: 'rgba(255, 255, 255, 0.15)',
                                     overflow: 'hidden'
                                 }
                             ]}
@@ -297,13 +306,13 @@ export default function LoginScreen() {
 
 
                             <View style={styles.inputContainer}>
-                                <Text style={[styles.label, { color: colors.text }]}>Correo Electrónico</Text>
-                                <View style={[styles.inputWrapper, { backgroundColor: colorScheme === 'light' ? 'rgba(0, 0, 0, 0.04)' : 'rgba(255, 255, 255, 0.03)', borderColor: colorScheme === 'light' ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.08)' }]}>
-                                    <Mail color={colors.text} size={20} style={styles.inputIcon} />
+                                <Text style={[styles.label, { color: '#FFFFFF' }]}>Correo Electrónico</Text>
+                                <View style={[styles.inputWrapper, { backgroundColor: 'rgba(255, 255, 255, 0.1)', borderColor: 'rgba(255, 255, 255, 0.2)' }]}>
+                                    <Mail color={'#FFFFFF'} size={20} style={styles.inputIcon} />
                                     <TextInput
-                                        style={[styles.input, { color: colors.text }]}
+                                        style={[styles.input, { color: '#FFFFFF' }]}
                                         placeholder="admin@ingridjen.edu"
-                                        placeholderTextColor={colors.text + '60'}
+                                        placeholderTextColor={'rgba(255,255,255,0.5)'}
                                         value={email}
                                         onChangeText={setEmail}
                                         keyboardType="email-address"
@@ -317,14 +326,14 @@ export default function LoginScreen() {
                             </View>
 
                             <View style={styles.inputContainer}>
-                                <Text style={[styles.label, { color: colors.text }]}>Contraseña</Text>
-                                <View style={[styles.inputWrapper, { backgroundColor: colorScheme === 'light' ? 'rgba(0, 0, 0, 0.04)' : 'rgba(255, 255, 255, 0.03)', borderColor: colorScheme === 'light' ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.08)' }]}>
-                                    <Lock color={colors.text} size={20} style={styles.inputIcon} />
+                                <Text style={[styles.label, { color: '#FFFFFF' }]}>Contraseña</Text>
+                                <View style={[styles.inputWrapper, { backgroundColor: 'rgba(255, 255, 255, 0.1)', borderColor: 'rgba(255, 255, 255, 0.2)' }]}>
+                                    <Lock color={'#FFFFFF'} size={20} style={styles.inputIcon} />
                                     <TextInput
                                         ref={passwordInputRef}
-                                        style={[styles.input, { color: colors.text }]}
+                                        style={[styles.input, { color: '#FFFFFF' }]}
                                         placeholder="••••••••"
-                                        placeholderTextColor={colors.text + '60'}
+                                        placeholderTextColor={'rgba(255,255,255,0.5)'}
                                         value={password}
                                         onChangeText={setPassword}
                                         secureTextEntry={!showPassword}
@@ -332,11 +341,11 @@ export default function LoginScreen() {
                                         onSubmitEditing={handleLogin}
                                     />
                                     <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={{ padding: 8 }}>
-                                        {showPassword ? <EyeOff size={20} color={colors.text + '80'} /> : <Eye size={20} color={colors.text + '80'} />}
+                                        {showPassword ? <EyeOff size={20} color={'rgba(255,255,255,0.7)'} /> : <Eye size={20} color={'rgba(255,255,255,0.7)'} />}
                                     </TouchableOpacity>
                                 </View>
                                 <TouchableOpacity onPress={handleResetPassword} style={{ marginTop: 10, alignSelf: 'flex-end', marginRight: 4 }}>
-                                    <Text style={{ color: colors.tint, fontSize: 13, fontWeight: '600' }}>¿Olvidaste tu contraseña?</Text>
+                                    <Text style={{ color: '#FFB6C1', fontSize: 13, fontWeight: '600' }}>¿Olvidaste tu contraseña?</Text>
                                 </TouchableOpacity>
                             </View>
 
@@ -352,26 +361,26 @@ export default function LoginScreen() {
                                 disabled={isLoading}
                             >
                                 {isLoading ? (
-                                    <ActivityIndicator color={colorScheme === 'dark' ? '#2D2621' : '#FFFFFF'} />
+                                    <ActivityIndicator color={'#FFFFFF'} />
                                 ) : (
-                                    <Text style={[styles.buttonText, { color: colorScheme === 'dark' ? '#2D2621' : '#FFFFFF' }]}>Entrar al Estudio</Text>
+                                    <Text style={[styles.buttonText, { color: '#FFFFFF' }]}>Entrar al Estudio</Text>
                                 )}
                             </TouchableOpacity>
 
                             <View style={styles.dividerContainer}>
-                                <View style={[styles.dividerLine, { backgroundColor: colors.text, opacity: 0.1 }]} />
-                                <Text style={[styles.dividerText, { color: colors.text, opacity: 0.6 }]}>O</Text>
-                                <View style={[styles.dividerLine, { backgroundColor: colors.text, opacity: 0.1 }]} />
+                                <View style={[styles.dividerLine, { backgroundColor: '#FFFFFF', opacity: 0.2 }]} />
+                                <Text style={[styles.dividerText, { color: '#FFFFFF', opacity: 0.7 }]}>O</Text>
+                                <View style={[styles.dividerLine, { backgroundColor: '#FFFFFF', opacity: 0.2 }]} />
                             </View>
 
                             <TouchableOpacity
-                                style={[styles.googleButton, { borderColor: colors.text + '20', backgroundColor: 'transparent' }]}
+                                style={[styles.googleButton, { borderColor: 'rgba(255,255,255,0.3)', backgroundColor: 'rgba(255,255,255,0.1)' }]}
                                 onPress={() => promptAsync()}
                                 disabled={!request}
                             >
                                 <View style={styles.googleButtonContent}>
-                                    <FontAwesome name="google" size={20} color={colors.text} style={styles.googleIcon} />
-                                    <Text style={[styles.googleButtonText, { color: colors.text }]}>Acceder con Google</Text>
+                                    <FontAwesome name="google" size={20} color={'#FFFFFF'} style={styles.googleIcon} />
+                                    <Text style={[styles.googleButtonText, { color: '#FFFFFF' }]}>Acceder con Google</Text>
                                 </View>
                             </TouchableOpacity>
 

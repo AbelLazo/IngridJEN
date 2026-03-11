@@ -81,7 +81,7 @@ export default function CoursesScreen() {
 
     const filteredCourses = courses.filter(item =>
         item.name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    ).sort((a, b) => a.name.localeCompare(b.name));
 
     const handleSave = () => {
         const newErrors: Record<string, boolean> = {};

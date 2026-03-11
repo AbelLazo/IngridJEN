@@ -70,7 +70,6 @@ export interface ClassItem {
     capacity: string;
     color: string;
     cycleId: string;
-    mergedToClassId?: string;
 }
 
 export type AttendanceStatus = 'present' | 'absent' | 'late' | 'excused';
@@ -116,8 +115,6 @@ export interface Enrollment {
     date: string;
     status?: 'active' | 'withdrawn';
     withdrawalDate?: string;
-    isImported?: boolean;
-    originalImportedClassId?: string;
     paymentDay?: number;
 }
 

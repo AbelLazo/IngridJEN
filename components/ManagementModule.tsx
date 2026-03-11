@@ -310,7 +310,8 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
         const isBEnrolled = type === 'student' && enrollments.some(e => e.studentId === b.id && classes.find(c => c.id === e.classId)?.cycleId === currentCycleId);
         if (isAEnrolled && !isBEnrolled) return -1;
         if (!isAEnrolled && isBEnrolled) return 1;
-        return 0;
+        // Alphabetical within each group
+        return `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`);
     });
 
     const handleDelete = (item: Entity) => {

@@ -12,14 +12,11 @@ import {
     ArrowRight,
     BookOpen,
     CalendarDays,
-    Check,
     Clock,
-    Download,
     Edit3,
     List,
     Minus,
     Plus,
-    RefreshCcw,
     Search,
     Trash2,
     User,
@@ -77,6 +74,13 @@ const triggerHaptic = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
 };
 
+export const format24to12 = (time24: string): string => {
+    const [h, m] = time24.split(':').map(s => parseInt(s.trim()));
+    const period = h >= 12 ? 'PM' : 'AM';
+    const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+    return `${h12}:${(m || 0).toString().padStart(2, '0')} ${period}`;
+};
+
 export const calculateEndTime = (startTime: string, duration: string) => {
     const [startHours, startMinutes] = startTime.split(':').map(Number);
 
@@ -92,7 +96,8 @@ export const calculateEndTime = (startTime: string, duration: string) => {
     endMinutes = endMinutes % 60;
     endHours = endHours % 24;
 
-    return `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')} `;
+    const end24 = `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`;
+    return format24to12(end24);
 };
 
 const DraggableClassCard = ({
@@ -107,11 +112,7 @@ const DraggableClassCard = ({
     onEdit,
     onDelete,
     onEnroll,
-    onDragStart,
-    onConfirmImportState,
-    onRevertMerge,
-    onOpenMergeModal,
-    getValidActiveEnrollments
+    onDragStart
 }: any) => {
     const translateX = useSharedValue(0);
     const translateY = useSharedValue(0);
@@ -199,7 +200,7 @@ const DraggableClassCard = ({
                                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                                         <Text style={[styles.infoText, { color: colors.icon }]}>{schedule.day}: </Text>
                                         <Text style={[styles.timeText, { color: item.color }]}>
-                                            {schedule.startTime} - {calculateEndTime(schedule.startTime, item.duration)}
+                                            {format24to12(schedule.startTime)} - {calculateEndTime(schedule.startTime, item.duration)}
                                         </Text>
                                     </View>
                                 </View>
@@ -215,32 +216,6 @@ const DraggableClassCard = ({
                     </View>
 
                     <View style={[styles.cardActions, { borderLeftWidth: 1, borderLeftColor: colorScheme === 'light' ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.05)', paddingLeft: 12 }]}>
-                        {classes.some((c: any) => c.mergedToClassId === item.id) && (
-                            <>
-                                <TouchableOpacity
-                                    style={[styles.editCircle, { backgroundColor: '#4CAF5020' }]}
-                                    onPress={() => onConfirmImportState(item)}
-                                >
-                                    <Check size={18} color="#4CAF50" />
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                    style={[styles.editCircle, { backgroundColor: '#ff4d4d20' }]}
-                                    onPress={() => onRevertMerge(item)}
-                                >
-                                    <RefreshCcw size={18} color="#ff4d4d" />
-                                </TouchableOpacity>
-                            </>
-                        )}
-                        {!item.mergedToClassId && !classes.some((c: any) => c.mergedToClassId === item.id) &&
-                            getValidActiveEnrollments(item.id).length === 0 &&
-                            academicCycles.find((ac: any) => ac.id === item.cycleId)?.name.toLowerCase().includes('anual') && (
-                                <TouchableOpacity
-                                    style={[styles.editCircle, { backgroundColor: colors.tint + '20' }]}
-                                    onPress={() => onOpenMergeModal(item.id)}
-                                >
-                                    <Download size={18} color={colors.tint} />
-                                </TouchableOpacity>
-                            )}
                         <TouchableOpacity
                             style={[styles.editCircle, { backgroundColor: colors.tint + '10' }]}
                             onPress={() => onEdit(item)}
@@ -311,14 +286,13 @@ export default function ClassesScreen() {
         capacity: '20',
         color: CLASS_COLORS[0],
         cycleId: currentCycleId,
-        schedules: [{ day: '', startHours: '08', startMinutes: '00' }]
+        schedules: [{ day: '', startHours: '', startMinutes: '', startPeriod: '' }]
     });
 
     const [enrolledInSelected, setEnrolledInSelected] = useState<string[]>([]);
 
     // Additional modals
-    const [mergeModalVisible, setMergeModalVisible] = useState(false);
-    const [selectedSourceClassIds, setSelectedSourceClassIds] = useState<string[]>([]);
+
     const [moveStudentId, setMoveStudentId] = useState<string | null>(null);
     const [targetMoveClassId, setTargetMoveClassId] = useState<string | null>(null);
 
@@ -355,7 +329,7 @@ export default function ClassesScreen() {
             item.teacherName.toLowerCase().includes(searchQuery.toLowerCase());
         const matchesCycle = item.cycleId === currentCycleId;
         return matchesSearch && matchesCycle;
-    });
+    }).sort((a: any, b: any) => a.courseName.localeCompare(b.courseName));
 
     // calculateEndTime fue movido al top-level
 
@@ -401,11 +375,10 @@ export default function ClassesScreen() {
 
     const handleEditPress = (cls: ClassItem) => {
         const course = courses.find(c => c.id === cls.courseId);
-        const teacher = teachers.find(t => `${t.firstName} ${t.lastName} ` === cls.teacherName);
 
         setFormData({
             courseId: cls.courseId,
-            teacherId: teacher?.id || '',
+            teacherId: cls.teacherId || '',
             hours: course?.hours || '',
             minutes: course?.minutes || '',
             capacity: cls.capacity || '20',
@@ -413,7 +386,10 @@ export default function ClassesScreen() {
             cycleId: cls.cycleId || currentCycleId,
             schedules: cls.schedules.map(s => {
                 const [h, m] = s.startTime.split(':');
-                return { day: s.day, startHours: h, startMinutes: m };
+                const hInt = parseInt(h);
+                const h12 = hInt === 0 ? 12 : hInt > 12 ? hInt - 12 : hInt;
+                const period = hInt >= 12 ? 'PM' : 'AM';
+                return { day: s.day, startHours: h12.toString().padStart(2, '0'), startMinutes: m.trim(), startPeriod: period };
             })
         });
         setEditingClassId(cls.id);
@@ -423,7 +399,7 @@ export default function ClassesScreen() {
     const addScheduleSlot = () => {
         setFormData(prev => ({
             ...prev,
-            schedules: [...prev.schedules, { day: '', startHours: '08', startMinutes: '00' }]
+            schedules: [...prev.schedules, { day: '', startHours: '', startMinutes: '', startPeriod: '' }]
         }));
     };
 
@@ -566,7 +542,6 @@ export default function ClassesScreen() {
             // Muestra Modal de Confirmación de Fecha de Traslado
             setMoveDate(new Date());
             setIsMoveConfirmVisible(true);
-            setMergeModalVisible(false); // Cierra el modal de selección de origen
         };
 
         if (targetEnrolledCount >= targetCapacity) {
@@ -579,184 +554,7 @@ export default function ClassesScreen() {
         }
     };
 
-    const handleRevertMerge = (targetClass: ClassItem) => {
-        const sourceClasses = classes.filter(c => c.mergedToClassId === targetClass.id);
 
-        if (sourceClasses.length === 0) {
-            showAlert("Error", "No se encontraron clases de origen vinculadas a esta importación.");
-            return;
-        }
-
-        showAlert(
-            "Deshacer Importación",
-            `¿Estás seguro que deseas deshacer la importación masiva ? Esta acción retirará a todos los alumnos importados de la clase actual("${targetClass.courseName}") y de cualquier otra a la que hayan sido movidos posteriormente, además eliminará el vínculo de fusión de las clases de origen.`,
-            [
-                { text: "Cancelar", style: "cancel" },
-                {
-                    text: "Deshacer Importación",
-                    style: "destructive",
-                    onPress: () => {
-                        const importedEnrollments = enrollments.filter(e => {
-                            const isImportedFlag = e.isImported === true;
-                            const isDirectImport = e.classId === targetClass.id && !e.originalImportedClassId;
-                            const isTrackedImport = e.originalImportedClassId === targetClass.id;
-                            return isImportedFlag && (isDirectImport || isTrackedImport);
-                        });
-
-                        importedEnrollments.forEach(e => {
-                            removeEnrollment(e.id);
-                        });
-
-                        sourceClasses.forEach(sourceClass => {
-                            const updatedSourceClass = { ...sourceClass };
-                            delete updatedSourceClass.mergedToClassId;
-                            updateClass({ ...updatedSourceClass, mergedToClassId: null } as any);
-                        });
-
-                        showAlert("Éxito", "La importación ha sido deshecha exitosamente.");
-                    }
-                }
-            ]
-        );
-    };
-
-    const handleConfirmImportState = (targetClass: ClassItem) => {
-        const sourceClasses = classes.filter(c => c.mergedToClassId === targetClass.id);
-
-        if (sourceClasses.length === 0) {
-            showAlert("Error", "No se encontraron clases de origen vinculadas a esta importación.");
-            return;
-        }
-
-        showAlert(
-            "Confirmar Importación",
-            `¿Estás seguro que deseas confirmar la importación masiva ? Esta acción consolidará permanentemente a los alumnos importados en la clase actual("${targetClass.courseName}") y no se podrá deshacer masivamente.`,
-            [
-                { text: "Cancelar", style: "cancel" },
-                {
-                    text: "Confirmar y Consolidar",
-                    onPress: () => {
-                        sourceClasses.forEach(sourceClass => {
-                            updateClass({
-                                ...sourceClass,
-                                mergedToClassId: undefined
-                            });
-                        });
-                        showAlert("Éxito", "Las importaciones han sido confirmadas.");
-                    }
-                }
-            ]
-        );
-    };
-
-    const handleConfirmMerge = () => {
-        if (!selectedClassId || selectedSourceClassIds.length === 0) return;
-
-        const targetClass = classes.find(c => c.id === selectedClassId);
-        if (!targetClass) return;
-
-        const sourceStudents = enrollments
-            .filter(e => selectedSourceClassIds.includes(e.classId) && e.status === 'active')
-            .filter(e => {
-                const s = students.find(st => st.id === e.studentId);
-                if (!s || s.status !== 'active') return false;
-                const currentCycle = academicCycles.find(ac => ac.id === currentCycleId);
-                const cycleYear = currentCycle?.name.match(/\d{4}/)?.[0];
-                return cycleYear ? s.activeYears?.includes(cycleYear) : false;
-            })
-            .map(e => e.studentId);
-
-        const uniqueSourceStudents = Array.from(new Set(sourceStudents));
-
-        const alreadyEnrolled = selectedClassId ? getValidActiveEnrollments(selectedClassId).map(e => e.studentId) : [];
-
-        const studentsToImport = uniqueSourceStudents.filter(id => !alreadyEnrolled.includes(id));
-
-        if (studentsToImport.length === 0) {
-            showAlert("Atención", "Todos los estudiantes de las clases origen ya están en la clase destino.");
-            setMergeModalVisible(false);
-            setSelectedSourceClassIds([]);
-            return;
-        }
-
-        const targetCapacity = parseInt(targetClass.capacity) || 20;
-        const potentialTotal = alreadyEnrolled.length + studentsToImport.length;
-
-        const proceedMerge = () => {
-            let conflictFound = false;
-            let conflictMsg = '';
-
-            for (const studentId of studentsToImport) {
-                const studentActiveClasses = enrollments
-                    .filter(e => e.studentId === studentId && e.status === 'active' && e.classId !== selectedClassId)
-                    .map(e => classes.find(c => c.id === e.classId && c.cycleId === currentCycleId))
-                    .filter(c => c !== undefined) as ClassItem[];
-
-                for (const existingClass of studentActiveClasses) {
-                    for (const existingSchedule of existingClass.schedules) {
-                        for (const targetSchedule of targetClass.schedules) {
-                            if (existingSchedule.day === targetSchedule.day) {
-                                if (checkTimeOverlap(targetSchedule.startTime, targetClass.duration, existingSchedule.startTime, existingClass.duration)) {
-                                    conflictFound = true;
-                                    const student = students.find(s => s.id === studentId);
-                                    conflictMsg = `El alumno ${student?.firstName} ya tiene la clase "${existingClass.courseName}" en este horario.Importación cancelada.`;
-                                    break;
-                                }
-                            }
-                        }
-                        if (conflictFound) break;
-                    }
-                    if (conflictFound) break;
-                }
-                if (conflictFound) break;
-            }
-
-            if (conflictFound) {
-                showAlert("Conflicto de Horario", conflictMsg);
-                return;
-            }
-
-            studentsToImport.forEach(studentId => {
-                addEnrollment({
-                    id: `${studentId} -${selectedClassId} -${Date.now()} -${Math.random()} `,
-                    studentId: studentId,
-                    classId: selectedClassId,
-                    date: new Date().toISOString().split('T')[0],
-                    status: 'active',
-                    isImported: true,
-                    originalImportedClassId: selectedClassId
-                });
-            });
-
-            selectedSourceClassIds.forEach(sourceId => {
-                const sourceClass = classes.find(c => c.id === sourceId);
-                if (sourceClass) {
-                    updateClass({
-                        ...sourceClass,
-                        mergedToClassId: selectedClassId
-                    });
-                }
-            });
-
-            setMergeModalVisible(false);
-            setSelectedSourceClassIds([]);
-            setEnrollModalVisible(false);
-            showAlert("Éxito", `Se han importado ${studentsToImport.length} alumnos correctamente.`);
-        };
-
-        if (potentialTotal > targetCapacity) {
-            showAlert(
-                "Aforo Excedido en Destino",
-                `La importación sumará un total de ${potentialTotal} alumnos, superando el límite de ${targetCapacity}.`,
-                [
-                    { text: "Cancelar", style: "cancel" },
-                    { text: "Continuar (Importar)", onPress: proceedMerge }
-                ]
-            );
-        } else {
-            proceedMerge();
-        }
-    };
 
     const closeEnrollModal = () => {
         setEnrollModalVisible(false);
@@ -768,10 +566,11 @@ export default function ClassesScreen() {
         const selectedCourse = courses.find(c => c.id === formData.courseId);
         const selectedTeacher = teachers.find(t => t.id === formData.teacherId);
 
-        // Validate all schedules have a day selected
+        // Validate all schedules have a day and time selected
         const allDaysSelected = formData.schedules.every(s => s.day !== '');
+        const allTimesSelected = formData.schedules.every(s => s.startHours !== '' && s.startMinutes !== '' && s.startPeriod !== '');
 
-        if (selectedCourse && selectedTeacher && allDaysSelected) {
+        if (selectedCourse && selectedTeacher && allDaysSelected && allTimesSelected) {
             const newDuration = `${formData.hours || '0'}h ${formData.minutes || '0'} m`;
 
             // Validate General Schedule Overlap (Single Environment)
@@ -786,10 +585,13 @@ export default function ClassesScreen() {
                 for (const existingSchedule of existingClass.schedules) {
                     for (const targetSchedule of formData.schedules) {
                         if (existingSchedule.day === targetSchedule.day) {
-                            const newStart = `${targetSchedule.startHours}:${targetSchedule.startMinutes} `;
+                            const h12 = parseInt(targetSchedule.startHours);
+                            const isPM = targetSchedule.startPeriod === 'PM';
+                            const h24 = isPM ? (h12 === 12 ? 12 : h12 + 12) : (h12 === 12 ? 0 : h12);
+                            const newStart = `${h24.toString().padStart(2, '0')}:${targetSchedule.startMinutes} `;
                             if (checkTimeOverlap(existingSchedule.startTime, existingClass.duration, newStart, newDuration)) {
                                 conflictFound = true;
-                                conflictMsg = `Ya existe la clase "${existingClass.courseName}" dictada por ${existingClass.teacherName} el ${existingSchedule.day} a las ${existingSchedule.startTime}. Todo opera en el mismo ambiente.`;
+                                conflictMsg = `Ya existe la clase "${existingClass.courseName}" dictada por ${existingClass.teacherName} el ${existingSchedule.day} a las ${format24to12(existingSchedule.startTime)}. Todo opera en el mismo ambiente.`;
                                 break;
                             }
                         }
@@ -810,10 +612,15 @@ export default function ClassesScreen() {
                 courseName: selectedCourse.name,
                 teacherId: selectedTeacher.id,
                 teacherName: `${selectedTeacher.firstName} ${selectedTeacher.lastName}`,
-                schedules: formData.schedules.map(s => ({
-                    day: s.day,
-                    startTime: `${s.startHours}:${s.startMinutes} `
-                })),
+                schedules: formData.schedules.map(s => {
+                    const h12 = parseInt(s.startHours);
+                    const isPM = s.startPeriod === 'PM';
+                    const h24 = isPM ? (h12 === 12 ? 12 : h12 + 12) : (h12 === 12 ? 0 : h12);
+                    return {
+                        day: s.day,
+                        startTime: `${h24.toString().padStart(2, '0')}:${s.startMinutes} `
+                    };
+                }),
                 duration: `${formData.hours || '0'}h ${formData.minutes || '0'} m`,
                 capacity: formData.capacity || '20',
                 color: formData.color,
@@ -828,8 +635,8 @@ export default function ClassesScreen() {
 
             resetForm();
             setModalVisible(false);
-        } else if (!allDaysSelected) {
-            showAlert("Error", "Por favor selecciona el día para todos los horarios");
+        } else if (!allDaysSelected || !allTimesSelected) {
+            showAlert("Error", "Por favor selecciona el día y hora para todos los horarios");
         }
     };
 
@@ -880,14 +687,7 @@ export default function ClassesScreen() {
                 onDelete={handleDeleteClass}
                 onEnroll={openEnrollment}
                 onDragStart={triggerHaptic}
-                onConfirmImportState={handleConfirmImportState}
-                onRevertMerge={handleRevertMerge}
-                onOpenMergeModal={(id: string) => {
-                    setSelectedClassId(id);
-                    setSelectedSourceClassIds([]);
-                    setMergeModalVisible(true);
-                }}
-                getValidActiveEnrollments={getValidActiveEnrollments}
+
             />
         );
     };
@@ -912,7 +712,7 @@ export default function ClassesScreen() {
             capacity: '20',
             color: CLASS_COLORS[0],
             cycleId: currentCycleId,
-            schedules: [{ day: '', startHours: '08', startMinutes: '00' }]
+            schedules: [{ day: '', startHours: '', startMinutes: '', startPeriod: '' }]
         });
         setEditingClassId(null);
     };
@@ -966,7 +766,7 @@ export default function ClassesScreen() {
                                                 <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2 }}>
                                                     <Clock size={10} color={c.color} />
                                                     <Text style={[styles.scheduleTime, { color: c.color, marginLeft: 4 }]}>
-                                                        {c.currentStartTime} - {calculateEndTime(c.currentStartTime, c.duration)}
+                                                        {format24to12(c.currentStartTime)} - {calculateEndTime(c.currentStartTime, c.duration)}
                                                     </Text>
                                                 </View>
                                                 <Text style={[styles.scheduleName, { color: colors.text }]} numberOfLines={2}>{c.courseName}</Text>
@@ -1151,23 +951,36 @@ export default function ClassesScreen() {
                                         </View>
 
                                         <View style={styles.row}>
-                                            <View style={{ flex: 1, marginRight: 10 }}>
+                                            <View style={{ flex: 1, marginRight: 6 }}>
                                                 <ModernPicker
                                                     selectedValue={schedule.startHours}
                                                     onValueChange={(v) => updateScheduleSlot(index, 'startHours', v)}
-                                                    items={Array.from({ length: 24 }).map((_, i) => ({ label: i.toString().padStart(2, '0'), value: i.toString().padStart(2, '0') }))}
-                                                    placeholder="Hora"
+                                                    items={Array.from({ length: 12 }).map((_, i) => {
+                                                        const h = i + 1;
+                                                        return { label: h.toString().padStart(2, '0'), value: h.toString().padStart(2, '0') };
+                                                    })}
+                                                    placeholder="Hrs"
                                                     title="Seleccionar Hora"
                                                     colors={colors}
                                                 />
                                             </View>
-                                            <View style={{ flex: 1 }}>
+                                            <View style={{ flex: 1, marginRight: 6 }}>
                                                 <ModernPicker
                                                     selectedValue={schedule.startMinutes}
                                                     onValueChange={(v) => updateScheduleSlot(index, 'startMinutes', v)}
                                                     items={['00', '15', '30', '45'].map(m => ({ label: m, value: m }))}
                                                     placeholder="Min"
                                                     title="Seleccionar Minutos"
+                                                    colors={colors}
+                                                />
+                                            </View>
+                                            <View style={{ flex: 1 }}>
+                                                <ModernPicker
+                                                    selectedValue={schedule.startPeriod}
+                                                    onValueChange={(v) => updateScheduleSlot(index, 'startPeriod', v)}
+                                                    items={[{ label: 'AM', value: 'AM' }, { label: 'PM', value: 'PM' }]}
+                                                    placeholder="A/P"
+                                                    title="AM / PM"
                                                     colors={colors}
                                                 />
                                             </View>
@@ -1462,7 +1275,7 @@ export default function ClassesScreen() {
                                                 <Text style={{ color: colors.text, fontWeight: 'bold' }}>{c.courseName}</Text>
                                                 <Text style={{ color: colors.icon, fontSize: 12 }}>{c.teacherName}</Text>
                                                 <Text style={{ color: colors.icon, fontSize: 12 }}>
-                                                    {c.schedules.map(s => `${s.day} ${s.startTime} `).join(', ')}
+                                                    {c.schedules.map(s => `${s.day} ${format24to12(s.startTime)} `).join(', ')}
                                                 </Text>
                                             </View>
                                             <View style={{
@@ -1491,89 +1304,7 @@ export default function ClassesScreen() {
                 </View>
             </Modal>
 
-            {/* Merge Class / Import Students Modal */}
-            <Modal visible={mergeModalVisible} transparent animationType="slide">
-                <View style={[styles.modalOverlay, { justifyContent: 'center', padding: 20 }]}>
-                    <View style={[styles.modalContent, { backgroundColor: colors.modal, maxHeight: '80%', borderRadius: 24 }]}>
-                        <View style={styles.modalHeader}>
-                            <Text style={[styles.modalTitle, { color: colors.text }]}>Importar Alumnos</Text>
-                            <TouchableOpacity onPress={() => { setMergeModalVisible(false); setSelectedSourceClassIds([]); }}>
-                                <X color={colors.text} size={24} />
-                            </TouchableOpacity>
-                        </View>
-                        <Text style={{ color: colors.text, marginBottom: 15 }}>
-                            Selecciona una o más clases de origen para importar a sus alumnos:
-                        </Text>
-                        <ScrollView style={{ maxHeight: 300 }}>
-                            {classes
-                                .filter((c: any) => {
-                                    if (c.id === selectedClassId || c.mergedToClassId) return false;
-                                    const sourceCycle = academicCycles.find((ac: any) => ac.id === c.cycleId);
-                                    const targetClass = classes.find((tc: any) => tc.id === selectedClassId);
-                                    const targetCycle = academicCycles.find((ac: any) => ac.id === targetClass?.cycleId);
 
-                                    if (!sourceCycle || !targetCycle) return false;
-
-                                    const sourceYear = sourceCycle.name.match(/\d{4}/)?.[0];
-                                    const targetYear = targetCycle.name.match(/\d{4}/)?.[0];
-
-                                    return sourceCycle.name.toLowerCase().includes('verano') && sourceYear === targetYear;
-                                })
-                                .map((c: any) => {
-                                    const cycleName = academicCycles.find((ac: any) => ac.id === c.cycleId)?.name || 'Ciclo Desconocido';
-                                    const sourceEnrolled = enrollments.filter((e: any) => e.classId === c.id && e.status === 'active').length;
-                                    const isSelected = selectedSourceClassIds.includes(c.id);
-                                    return (
-                                        <TouchableOpacity
-                                            key={c.id}
-                                            style={[
-                                                styles.studentItem,
-                                                { backgroundColor: colors.background, borderColor: isSelected ? colors.tint : colors.border, marginBottom: 10 }
-                                            ]}
-                                            onPress={() => {
-                                                if (isSelected) {
-                                                    setSelectedSourceClassIds(prev => prev.filter((id: string) => id !== c.id));
-                                                } else {
-                                                    setSelectedSourceClassIds(prev => [...prev, c.id]);
-                                                }
-                                            }}
-                                        >
-                                            <View style={{ flex: 1 }}>
-                                                <Text style={{ color: colors.text, fontWeight: 'bold' }}>{c.courseName}</Text>
-                                                <Text style={{ color: colors.icon, fontSize: 12 }}>{cycleName} - {c.teacherName}</Text>
-                                                <View style={{ marginTop: 2 }}>
-                                                    {c.schedules.map((s: any, idx: number) => (
-                                                        <Text key={idx} style={{ color: colors.icon, fontSize: 11 }}>
-                                                            {s.day}: <Text style={{ color: c.color || colors.tint, fontWeight: '500' }}>{s.startTime} - {calculateEndTime(s.startTime, c.duration)}</Text>
-                                                        </Text>
-                                                    ))}
-                                                </View>
-                                                <Text style={{ color: colors.tint, fontSize: 11, marginTop: 4, fontWeight: 'bold' }}>
-                                                    {sourceEnrolled} alumnos activos
-                                                </Text>
-                                            </View>
-                                            <View style={{
-                                                width: 24, height: 24, borderRadius: 12,
-                                                borderWidth: 2, borderColor: isSelected ? colors.tint : colors.icon,
-                                                justifyContent: 'center', alignItems: 'center'
-                                            }}>
-                                                {isSelected && <Check size={14} color={colors.tint} />}
-                                            </View>
-                                        </TouchableOpacity>
-                                    );
-                                })}
-                        </ScrollView>
-
-                        <TouchableOpacity
-                            style={[styles.saveButton, { backgroundColor: selectedSourceClassIds.length > 0 ? colors.tint : colors.icon, marginTop: 20, marginBottom: 0 }]}
-                            disabled={selectedSourceClassIds.length === 0}
-                            onPress={handleConfirmMerge}
-                        >
-                            <Text style={styles.saveText}>Importar de {selectedSourceClassIds.length} {selectedSourceClassIds.length === 1 ? 'clase' : 'clases'}</Text>
-                        </TouchableOpacity>
-                    </View>
-                </View>
-            </Modal>
             {/* Deletion Trash Zone */}
             <Animated.View style={[styles.trashZone, trashAnimatedStyle]}>
                 <View style={[styles.trashCircle, { backgroundColor: '#FF4444' }]}>
@@ -1651,7 +1382,7 @@ export default function ClassesScreen() {
                                                 classId: selectedClassId,
                                                 date: dateStr,
                                                 status: 'active',
-                                                isImported: false
+
                                             });
                                         }
                                         setEnrolledInSelected(prev => [...prev, studentToEnroll.id]);
@@ -1735,29 +1466,22 @@ export default function ClassesScreen() {
 
                                     // 2. Enroll in target
                                     const withdrawnTarget = enrollments.find((e: any) => e.studentId === moveStudentId && e.classId === targetMoveClassId && e.status === 'withdrawn');
-                                    const isImportedFlag = currentEnrollment.isImported;
-                                    const originalImportId = currentEnrollment.originalImportedClassId || (isImportedFlag ? selectedClassId : null);
 
                                     if (withdrawnTarget) {
                                         updateEnrollment({
                                             ...withdrawnTarget,
                                             status: 'active',
                                             date: dateStr,
-                                            withdrawalDate: null as any,
-                                            isImported: isImportedFlag,
-                                            originalImportedClassId: originalImportId ?? null
+                                            withdrawalDate: null as any
                                         } as any);
                                     } else {
-                                        const newEnrollment: any = {
+                                        addEnrollment({
                                             id: `${moveStudentId} -${targetMoveClassId} -${Date.now()} `,
                                             studentId: moveStudentId!,
                                             classId: targetMoveClassId!,
                                             date: dateStr,
                                             status: 'active',
-                                        };
-                                        if (isImportedFlag) newEnrollment.isImported = true;
-                                        if (originalImportId) newEnrollment.originalImportedClassId = originalImportId;
-                                        addEnrollment(newEnrollment);
+                                        });
                                     }
 
                                     setEnrolledInSelected(prev => prev.filter((id: string) => id !== moveStudentId));

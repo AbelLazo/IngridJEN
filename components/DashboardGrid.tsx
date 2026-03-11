@@ -19,15 +19,15 @@ const GAP = 14;
 
 // All items use harmonious soft pink tones
 const MENU_ITEMS = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, route: '/dashboard' },
-    { id: 'students', label: 'Estudiantes', icon: Users, route: '/students' },
-    { id: 'teachers', label: 'Profesores', icon: GraduationCap, route: '/teachers' },
+    { id: 'cycles', label: 'Ciclos', icon: Calendar, route: '/cycles' },
     { id: 'courses', label: 'Cursos', icon: BookOpen, route: '/courses' },
+    { id: 'teachers', label: 'Profesores', icon: GraduationCap, route: '/teachers' },
+    { id: 'students', label: 'Estudiantes', icon: Users, route: '/students' },
     { id: 'classes', label: 'Clases', icon: Presentation, route: '/classes' },
     { id: 'schedule', label: 'Horario', icon: Calendar, route: '/schedule' },
     { id: 'tuition', label: 'Mensualidad', icon: Wallet, route: '/fees' },
     { id: 'promotions', label: 'Promociones', icon: Tag, route: '/promotions' },
-    { id: 'cycles', label: 'Ciclos', icon: Calendar, route: '/cycles' },
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, route: '/dashboard' },
     { id: 'admin-users', label: 'Usuarios', icon: Users, route: '/users' },
 ];
 

@@ -187,7 +187,7 @@ export default function PromotionsScreen() {
 
 
             <FlatList
-                data={promotions}
+                data={[...promotions].sort((a, b) => a.name.localeCompare(b.name))}
                 renderItem={renderPromoItem}
                 keyExtractor={item => item.id}
                 contentContainerStyle={styles.listContainer}
