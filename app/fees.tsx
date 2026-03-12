@@ -498,6 +498,16 @@ export default function FeesScreen() {
 
     return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
+            {/* ─── Ambient Background Glows ─── */}
+            <View style={[
+                styles.glowTopRight,
+                { backgroundColor: colorScheme === 'dark' ? 'rgba(139, 92, 246, 0.15)' : 'rgba(236, 72, 153, 0.08)' }
+            ]} />
+            <View style={[
+                styles.glowBottomLeft,
+                { backgroundColor: colorScheme === 'dark' ? 'rgba(56, 189, 248, 0.1)' : 'rgba(56, 189, 248, 0.05)' }
+            ]} />
+
             <Stack.Screen options={{ headerShown: false }} />
 
             <PeriodHeader
@@ -534,12 +544,11 @@ export default function FeesScreen() {
                         <View style={[
                             styles.summaryItem,
                             {
-                                backgroundColor: colorScheme === 'light' ? '#FFFFFF' : '#FFFFFF',
-                                borderColor: colorScheme === 'light' ? '#FCE4EC' : '#FFFFFF',
+                                backgroundColor: colorScheme === 'light' ? '#FFFFFF' : colors.card,
+                                borderColor: colorScheme === 'light' ? '#FCE4EC' : colors.border,
                             }
                         ]}
                         >
-                            <View style={styles.liquidHighlight} />
 
                             <View style={[styles.avatarBox, { backgroundColor: '#40C05715' }]}>
                                 <Receipt size={24} color="#40C057" />
@@ -555,12 +564,11 @@ export default function FeesScreen() {
                         <View style={[
                             styles.summaryItem,
                             {
-                                backgroundColor: colorScheme === 'light' ? '#FFFFFF' : '#FFFFFF',
-                                borderColor: cycleTotalDebt > 0 ? '#ff4d4d80' : (colorScheme === 'light' ? '#FCE4EC' : '#FFFFFF'),
+                                backgroundColor: colorScheme === 'light' ? '#FFFFFF' : colors.card,
+                                borderColor: cycleTotalDebt > 0 ? '#ff4d4d80' : (colorScheme === 'light' ? '#FCE4EC' : colors.border),
                             }
                         ]}
                         >
-                            <View style={styles.liquidHighlight} />
 
                             <View style={[styles.avatarBox, { backgroundColor: '#ff4d4d15' }]}>
                                 <Coins size={24} color="#ff4d4d" />
@@ -576,8 +584,8 @@ export default function FeesScreen() {
                     <View style={[
                         styles.searchContainer,
                         {
-                            backgroundColor: colorScheme === 'light' ? '#FFFFFF' : '#FFFFFF',
-                            borderColor: colorScheme === 'light' ? '#FCE4EC' : '#FFFFFF',
+                            backgroundColor: colorScheme === 'light' ? '#FFFFFF' : colors.card,
+                            borderColor: colorScheme === 'light' ? '#FCE4EC' : colors.border,
                         }
                     ]}
                     >
@@ -832,18 +840,38 @@ export default function FeesScreen() {
 
 const styles = StyleSheet.create({
     modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20 },
-    modalContent: { borderRadius: 32, padding: 24, shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.1, shadowRadius: 20, elevation: Platform.OS === 'android' ? 0 : 10 },
+    modalContent: { borderRadius: 24, padding: 24, shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.1, shadowRadius: 20, elevation: Platform.OS === 'android' ? 0 : 10 },
     modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-    modalTitle: { fontSize: 22, fontWeight: '800', letterSpacing: -0.5 },
-    saveButton: { height: 56, borderRadius: 20, justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 6 },
-    saveText: { color: '#FFF', fontSize: 16, fontWeight: '800', letterSpacing: 0.5 },
+    modalTitle: { fontSize: 20, fontWeight: '800' },
+    saveButton: { height: 50, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
+    saveText: { color: '#FFF', fontSize: 16, fontWeight: 'bold' },
     container: { flex: 1 },
+    glowTopRight: {
+        position: 'absolute',
+        top: -100,
+        right: -100,
+        width: 300,
+        height: 300,
+        borderRadius: 150,
+        opacity: 0.6,
+        pointerEvents: 'none',
+    },
+    glowBottomLeft: {
+        position: 'absolute',
+        bottom: -100,
+        left: -100,
+        width: 250,
+        height: 250,
+        borderRadius: 125,
+        opacity: 0.5,
+        pointerEvents: 'none',
+    },
     header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 15 },
     backButton: { padding: 5 },
-    headerTitle: { fontSize: 22, fontWeight: '800' },
+    headerTitle: { fontSize: 22, fontWeight: 'bold' },
     placeholder: { width: 38 },
     summaryContainer: { paddingHorizontal: 20, marginBottom: 15 },
-    summaryItem: { flexDirection: 'row', alignItems: 'center', padding: 15, borderRadius: 24, borderWidth: 1.5, overflow: 'hidden' },
+    summaryItem: { flexDirection: 'row', alignItems: 'center', padding: 15, borderRadius: 32, borderWidth: 1.5, overflow: 'hidden' },
     summaryInfo: { marginLeft: 15 },
     summaryLabel: { fontSize: 13, marginBottom: 2 },
     summaryValue: { fontSize: 20, fontWeight: '800' },
@@ -865,7 +893,7 @@ const styles = StyleSheet.create({
         marginHorizontal: 20,
         paddingHorizontal: 15,
         height: 52,
-        borderRadius: 24,
+        borderRadius: 32,
         borderWidth: 1,
         marginBottom: 15,
         overflow: 'hidden',
@@ -878,22 +906,18 @@ const styles = StyleSheet.create({
     },
     listContent: { paddingHorizontal: 20 },
     cardContainer: {
-        marginBottom: 16,
-        marginHorizontal: 4,
-        borderRadius: 24,
-        overflow: 'hidden',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.08,
-        shadowRadius: 12,
-        elevation: Platform.OS === 'android' ? 0 : 4,
+        marginBottom: 18,
     },
     card: {
-        flexDirection: 'row',
-        padding: 20,
-        borderRadius: 24,
+        borderRadius: 20,
+        padding: 16,
         borderWidth: 1,
-        overflow: 'hidden',
+        // Layered shadows for depth
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.06,
+        shadowRadius: 14,
+        elevation: Platform.OS === 'android' ? 3 : 5,
     },
 
     cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 15 },
@@ -960,7 +984,7 @@ const styles = StyleSheet.create({
     toggleContainer: { flexDirection: 'row', marginHorizontal: 20, borderRadius: 12, padding: 4, marginBottom: 20 },
     toggleButton: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 8, borderRadius: 10 },
     toggleLabel: { marginLeft: 8, fontWeight: '600', fontSize: 14 },
-    historyCard: { flexDirection: 'row', alignItems: 'center', padding: 15, borderRadius: 24, marginBottom: 12, borderWidth: 1 },
+    historyCard: { flexDirection: 'row', alignItems: 'center', padding: 15, borderRadius: 32, marginBottom: 12, borderWidth: 1 },
     historyName: { fontSize: 15, fontWeight: 'bold', marginBottom: 2 },
     historyAmount: { fontSize: 16, fontWeight: '800' },
     liquidHighlight: {
@@ -969,8 +993,8 @@ const styles = StyleSheet.create({
         left: 0,
         right: 0,
         height: '50%',
-        backgroundColor: 'rgba(255, 255, 255, 0.05)',
-        borderTopLeftRadius: 24,
-        borderTopRightRadius: 24,
+        backgroundColor: '#FFFFFF',
+        borderTopLeftRadius: 32,
+        borderTopRightRadius: 32,
     },
 });

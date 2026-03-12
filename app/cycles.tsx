@@ -335,64 +335,60 @@ export default function CyclesScreen() {
         return (
             <GestureDetector gesture={composedGesture}>
                 <Animated.View style={[styles.cardContainer, animatedStyle]}>
-                        <View style={[
-                            styles.card,
-                            {
-                                backgroundColor: colorScheme === 'light' ? '#FFFFFF' : '#FFFFFF',
-                                borderColor: colorScheme === 'light' ? '#FCE4EC' : '#FFFFFF',
-                            }
-                        ]}>
-                            <View style={styles.liquidHighlight} />
+                    <View style={[
+                        styles.card,
+                        {
+                            backgroundColor: colorScheme === 'light' ? '#FFFFFF' : colors.card,
+                            borderColor: colorScheme === 'light' ? '#FCE4EC' : colors.border,
+                        }
+                    ]}
+                    >
+                        <View style={styles.cardHeader}>
+                            <View style={[styles.iconBox, { backgroundColor: '#FFF0F5' }]}>
+                                <CalendarDays size={22} color={colors.tint} />
+                            </View>
+                            <Text style={[styles.cycleName, { color: colors.text }]} numberOfLines={2}>
+                                {item.name}
+                            </Text>
 
-                        <View style={styles.cardInfo}>
-                            <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
-                                <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, paddingRight: 10 }}>
-                                    <View style={[styles.iconBox, { backgroundColor: colors.tint + '20' }]}>
-                                        <CalendarDays size={20} color={colors.tint} />
-                                    </View>
-                                    <Text style={[styles.cycleName, { color: colors.text }]} numberOfLines={2}>
-                                        {item.name}
+                            <TouchableOpacity
+                                style={[styles.editCircle, { backgroundColor: '#FFF0F5' }]}
+                                onPress={() => onEdit(item)}
+                            >
+                                <Edit3 size={18} color={colors.tint} />
+                            </TouchableOpacity>
+                        </View>
+
+                        <View style={styles.dateContainer}>
+                            <View style={styles.dateItem}>
+                                <Text style={{ fontSize: 12, color: colors.icon, marginBottom: 4 }}>Inicio</Text>
+                                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                    <Clock size={12} color={colors.text} style={{ marginRight: 4 }} />
+                                    <Text style={[styles.dateText, { color: colors.text }]} numberOfLines={1}>
+                                        {item.startDate || '—'}
                                     </Text>
                                 </View>
-                                <TouchableOpacity
-                                    style={[styles.actionBtn, { backgroundColor: colors.tint + '15' }]}
-                                    onPress={() => onEdit(item)}
-                                >
-                                    <Edit3 size={18} color={colors.tint} />
-                                </TouchableOpacity>
                             </View>
 
-                            <View style={styles.dateContainer}>
-                                <View style={styles.dateItem}>
-                                    <Text style={{ fontSize: 12, color: colors.icon, marginBottom: 4 }}>Inicio</Text>
-                                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                        <Clock size={12} color={colors.text} style={{ marginRight: 4 }} />
-                                        <Text style={[styles.dateText, { color: colors.text }]} numberOfLines={1}>
-                                            {item.startDate || '—'}
-                                        </Text>
-                                    </View>
-                                </View>
+                            <View style={[styles.dateDivider, { backgroundColor: colors.border }]} />
 
-                                <View style={[styles.dateDivider, { backgroundColor: colors.border }]} />
-
-                                <View style={styles.dateItem}>
-                                    <Text style={{ fontSize: 12, color: colors.icon, marginBottom: 4 }}>Fin</Text>
-                                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                        <Clock size={12} color={colors.text} style={{ marginRight: 4 }} />
-                                        <Text style={[styles.dateText, { color: colors.text }]} numberOfLines={1}>
-                                            {item.endDate || '—'}
-                                        </Text>
-                                    </View>
-                                </View>
-
-                                <View style={[styles.dateDivider, { backgroundColor: colors.border }]} />
-
-                                <View style={[styles.dateItem, { flex: 0.8 }]}>
-                                    <Text style={{ fontSize: 12, color: colors.icon, marginBottom: 4 }}>Duración</Text>
-                                    <Text style={[styles.dateText, { color: colors.text, fontWeight: '600' }]} numberOfLines={1}>
-                                        {item.months.length} mes(es)
+                            <View style={styles.dateItem}>
+                                <Text style={{ fontSize: 12, color: colors.icon, marginBottom: 4 }}>Fin</Text>
+                                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                    <Clock size={12} color={colors.text} style={{ marginRight: 4 }} />
+                                    <Text style={[styles.dateText, { color: colors.text }]} numberOfLines={1}>
+                                        {item.endDate || '—'}
                                     </Text>
                                 </View>
+                            </View>
+
+                            <View style={[styles.dateDivider, { backgroundColor: colors.border }]} />
+
+                            <View style={[styles.dateItem, { flex: 0.8 }]}>
+                                <Text style={{ fontSize: 12, color: colors.icon, marginBottom: 4 }}>Duración</Text>
+                                <Text style={[styles.dateText, { color: colors.text, fontWeight: '600' }]} numberOfLines={1}>
+                                    {item.months.length} mes(es)
+                                </Text>
                             </View>
                         </View>
                     </View>
@@ -423,6 +419,16 @@ export default function CyclesScreen() {
 
     return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
+            {/* ─── Ambient Background Glows ─── */}
+            <View style={[
+                styles.glowTopRight,
+                { backgroundColor: colorScheme === 'dark' ? 'rgba(139, 92, 246, 0.15)' : 'rgba(236, 72, 153, 0.08)' }
+            ]} />
+            <View style={[
+                styles.glowBottomLeft,
+                { backgroundColor: colorScheme === 'dark' ? 'rgba(56, 189, 248, 0.1)' : 'rgba(56, 189, 248, 0.05)' }
+            ]} />
+
             <Stack.Screen options={{ headerShown: false }} />
 
             <PeriodHeader
@@ -655,65 +661,77 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
     },
+    glowTopRight: {
+        position: 'absolute',
+        top: -100,
+        right: -100,
+        width: 300,
+        height: 300,
+        borderRadius: 150,
+        opacity: 0.6,
+        pointerEvents: 'none',
+    },
+    glowBottomLeft: {
+        position: 'absolute',
+        bottom: -100,
+        left: -100,
+        width: 250,
+        height: 250,
+        borderRadius: 125,
+        opacity: 0.5,
+        pointerEvents: 'none',
+    },
     addButtonHeader: {
         width: 44,
         height: 44,
-        borderRadius: 16,
+        borderRadius: 12,
         justifyContent: 'center',
         alignItems: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.15,
-        shadowRadius: 8,
         elevation: 4,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
     },
     listContent: {
         padding: 15,
     },
     cardContainer: {
-        marginBottom: 16,
-        marginHorizontal: 4,
-        borderRadius: 24,
+        marginBottom: 14,
+    },
+    card: {
+        flexDirection: 'column',
+        padding: 16,
+        borderRadius: 20,
+        borderWidth: 1,
         overflow: 'hidden',
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.08,
-        shadowRadius: 12,
-        elevation: Platform.OS === 'android' ? 0 : 4,
+        shadowOpacity: 0.06,
+        shadowRadius: 14,
+        elevation: Platform.OS === 'android' ? 3 : 5,
     },
-    card: {
-        flexDirection: 'row',
-        padding: 20,
-        borderRadius: 24,
-        borderWidth: 1,
-        alignItems: 'center',
-        overflow: 'hidden',
-    },
-    liquidHighlight: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        height: '50%',
-        backgroundColor: 'rgba(255, 255, 255, 0.05)',
-        borderTopLeftRadius: 32,
-        borderTopRightRadius: 32,
-    },
+    cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 15 },
     iconBox: {
-        width: 36,
-        height: 36,
-        borderRadius: 10,
+        width: 50,
+        height: 50,
+        borderRadius: 25,
         justifyContent: 'center',
         alignItems: 'center',
-        marginRight: 10
-    },
-    cardInfo: {
-        flex: 1,
+        marginRight: 15
     },
     cycleName: {
         fontSize: 16,
         fontWeight: 'bold',
-        flex: 1, // Let title expand safely
+        flex: 1,
+    },
+    editCircle: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginLeft: 10,
     },
     dateContainer: {
         flexDirection: 'row',
@@ -757,12 +775,12 @@ const styles = StyleSheet.create({
     },
     modalOverlay: {
         flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.5)',
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
         justifyContent: 'flex-end',
     },
     modalContent: {
-        borderTopLeftRadius: 32,
-        borderTopRightRadius: 32,
+        borderTopLeftRadius: 30,
+        borderTopRightRadius: 30,
         padding: 24,
         maxHeight: '85%',
     },
@@ -774,38 +792,34 @@ const styles = StyleSheet.create({
     },
     modalTitle: {
         fontSize: 22,
-        fontWeight: '800',
-        letterSpacing: -0.5,
+        fontWeight: 'bold',
     },
     formGroup: {
         marginBottom: 20,
     },
     label: {
         fontSize: 14,
-        fontWeight: '700',
+        fontWeight: '600',
         marginBottom: 8,
-        marginLeft: 4,
-        textTransform: 'uppercase',
-        letterSpacing: 0.5,
     },
     input: {
         borderWidth: 1,
-        borderRadius: 16,
+        borderRadius: 14,
         paddingHorizontal: 16,
-        height: 56,
-        fontSize: 16,
+        height: 52,
+        fontSize: 15,
     },
     inputWrapper: {
         flexDirection: 'row',
         alignItems: 'center',
         borderWidth: 1,
-        borderRadius: 16,
+        borderRadius: 14,
         paddingHorizontal: 16,
-        height: 56,
+        height: 52,
     },
     infoBox: {
-        padding: 16,
-        borderRadius: 16,
+        padding: 15,
+        borderRadius: 12,
         borderWidth: 1,
         marginBottom: 20
     },
@@ -816,22 +830,16 @@ const styles = StyleSheet.create({
     },
     saveButton: {
         height: 56,
-        borderRadius: 20,
+        borderRadius: 16,
         justifyContent: 'center',
         alignItems: 'center',
-        marginTop: 12,
-        marginBottom: 35,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 8,
-        elevation: 6,
+        marginTop: 10,
+        marginBottom: 40,
     },
     saveText: {
         color: '#fff',
         fontSize: 16,
-        fontWeight: '800',
-        letterSpacing: 0.5,
+        fontWeight: 'bold',
     },
     errorText: {
         color: '#ff4d4d',
@@ -872,7 +880,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         borderWidth: 1,
-        borderRadius: 16,
+        borderRadius: 14,
         paddingVertical: 14,
         paddingHorizontal: 18,
     },

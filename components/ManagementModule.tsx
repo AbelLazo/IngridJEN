@@ -3,6 +3,7 @@ import { Colors } from '@/constants/theme';
 import { useAlert } from '@/context/AlertContext';
 import { useAuth } from '@/context/AuthContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useRouter } from 'expo-router';
 import { AlertCircle, Check, ChevronLeft, Edit3, Mail, Phone, Plus, Search, Trash2, UserPlus, Users, X } from 'lucide-react-native';
 import React, { useState } from 'react';
@@ -463,10 +464,25 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
     });
 
     return (
-        <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]} >
+        <View style={[styles.container, { backgroundColor: colors.background }]} >
+            {/* ─── Ambient Background Glows ─── */}
+            <View style={[
+                styles.glowTopRight,
+                { backgroundColor: colorScheme === 'dark' ? 'rgba(139, 92, 246, 0.15)' : 'rgba(236, 72, 153, 0.08)' }
+            ]} />
+            <View style={[
+                styles.glowBottomLeft,
+                { backgroundColor: colorScheme === 'dark' ? 'rgba(56, 189, 248, 0.1)' : 'rgba(56, 189, 248, 0.05)' }
+            ]} />
+
             <Stack.Screen options={{ headerShown: false }} />
 
-            <View style={styles.header}>
+            <LinearGradient
+                colors={colorScheme === 'dark' ? ['rgba(139, 92, 246, 0.15)', 'rgba(139, 92, 246, 0)'] : ['rgba(236, 72, 153, 0.1)', 'rgba(236, 72, 153, 0)']}
+                style={[styles.header, { paddingTop: insets.top + 10 }]}
+                start={{ x: 0.5, y: 0 }}
+                end={{ x: 0.5, y: 1 }}
+            >
                 <View style={styles.headerTop}>
                     <TouchableOpacity
                         onPress={() => router.back()}
@@ -488,7 +504,7 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
                         <Plus color="#fff" size={24} />
                     </TouchableOpacity>
                 </View>
-            </View>
+            </LinearGradient>
 
             {/* Search Bar - Principal focus for simple management */}
             <View
@@ -839,6 +855,26 @@ export default function ManagementModule({ title, type, placeholderExtra, iconEx
 }
 const styles = StyleSheet.create({
     container: { flex: 1 },
+    glowTopRight: {
+        position: 'absolute',
+        top: -100,
+        right: -100,
+        width: 300,
+        height: 300,
+        borderRadius: 150,
+        opacity: 0.6,
+        pointerEvents: 'none',
+    },
+    glowBottomLeft: {
+        position: 'absolute',
+        bottom: -100,
+        left: -100,
+        width: 250,
+        height: 250,
+        borderRadius: 125,
+        opacity: 0.5,
+        pointerEvents: 'none',
+    },
     header: { paddingHorizontal: 20, paddingTop: 10, marginBottom: 5 },
     headerTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
     backButton: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
@@ -863,10 +899,14 @@ const styles = StyleSheet.create({
         marginHorizontal: 20,
         paddingHorizontal: 15,
         height: 52,
-        borderRadius: 24,
+        borderRadius: 18,
         borderWidth: 1,
         marginBottom: 16,
         overflow: 'hidden',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.04,
+        shadowRadius: 10,
     },
     searchInput: {
         flex: 1,
@@ -878,23 +918,20 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
     },
     cardContainer: {
-        marginBottom: 16,
-        marginHorizontal: 4,
-        borderRadius: 24,
-        overflow: 'hidden',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.08,
-        shadowRadius: 12,
-        elevation: Platform.OS === 'android' ? 0 : 4,
+        marginBottom: 12,
     },
     card: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 20,
-        borderRadius: 24,
+        padding: 16,
+        borderRadius: 20,
         borderWidth: 1,
         overflow: 'hidden',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.06,
+        shadowRadius: 14,
+        elevation: Platform.OS === 'android' ? 3 : 5,
     },
     liquidHighlight: {
         position: 'absolute',
@@ -987,69 +1024,69 @@ const styles = StyleSheet.create({
         justifyContent: 'flex-end',
     },
     modalContent: {
-        borderTopLeftRadius: 32,
-        borderTopRightRadius: 32,
-        padding: 24,
+        borderTopLeftRadius: 28,
+        borderTopRightRadius: 28,
+        padding: 25,
         maxHeight: '85%',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -8 },
+        shadowOpacity: 0.08,
+        shadowRadius: 20,
     },
     modalHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 24,
+        marginBottom: 25,
     },
     modalTitle: {
-        fontSize: 22,
-        fontWeight: '800',
-        letterSpacing: -0.5,
+        fontSize: 20,
+        fontWeight: 'bold',
     },
     formGroup: {
         marginBottom: 20,
     },
     label: {
         fontSize: 14,
-        fontWeight: '700',
+        fontWeight: '600',
         marginBottom: 8,
         marginLeft: 4,
-        textTransform: 'uppercase',
-        letterSpacing: 0.5,
     },
     inputWrapper: {
         flexDirection: 'row',
         alignItems: 'center',
         borderWidth: 1,
-        borderRadius: 16,
-        paddingHorizontal: 16,
-        height: 56,
+        borderRadius: 15,
+        paddingHorizontal: 15,
+        height: 55,
     },
     input: {
         flex: 1,
         marginLeft: 10,
-        fontSize: 16,
+        fontSize: 15,
     },
     submitButton: {
         height: 56,
-        borderRadius: 20,
+        borderRadius: 16,
         justifyContent: 'center',
         alignItems: 'center',
-        marginTop: 12,
-        marginBottom: 35,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 8,
-        elevation: 6,
+        marginTop: 10,
+        marginBottom: 30,
+        shadowColor: '#EC4899',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.25,
+        shadowRadius: 12,
+        elevation: Platform.OS === 'android' ? 4 : 6,
     },
     submitButtonText: {
         color: '#fff',
         fontSize: 16,
-        fontWeight: '800',
-        letterSpacing: 0.5,
+        fontWeight: 'bold',
     },
     editCircle: {
-        width: 40,
-        height: 40,
-        borderRadius: 16,
+        width: 36,
+        height: 36,
+        borderRadius: 18,
         justifyContent: 'center',
         alignItems: 'center',
         marginLeft: 10,

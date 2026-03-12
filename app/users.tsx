@@ -11,6 +11,7 @@ import React, { useEffect, useState } from 'react';
 import { FlatList, Modal, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColorScheme } from '../hooks/use-color-scheme';
+import { LinearGradient } from 'expo-linear-gradient';
 
 interface AppUser {
     id: string;
@@ -256,8 +257,23 @@ export default function UsersScreen() {
     );
 
     return (
-        <View style={[styles.container, { backgroundColor: colors.background, paddingTop: Math.max(insets.top, 16) }]}>
-            <View style={styles.header}>
+        <View style={[styles.container, { backgroundColor: colors.background }]}>
+            {/* ─── Ambient Background Glows ─── */}
+            <View style={[
+                styles.glowTopRight,
+                { backgroundColor: colorScheme === 'dark' ? 'rgba(139, 92, 246, 0.15)' : 'rgba(236, 72, 153, 0.08)' }
+            ]} />
+            <View style={[
+                styles.glowBottomLeft,
+                { backgroundColor: colorScheme === 'dark' ? 'rgba(56, 189, 248, 0.1)' : 'rgba(56, 189, 248, 0.05)' }
+            ]} />
+
+            <LinearGradient
+                colors={colorScheme === 'dark' ? ['rgba(139, 92, 246, 0.15)', 'rgba(139, 92, 246, 0)'] : ['rgba(236, 72, 153, 0.1)', 'rgba(236, 72, 153, 0)']}
+                style={[styles.header, { paddingTop: Math.max(insets.top, 16) + 10 }]}
+                start={{ x: 0.5, y: 0 }}
+                end={{ x: 0.5, y: 1 }}
+            >
                 <View style={styles.headerTop}>
                     <TouchableOpacity
                         onPress={() => router.back()}
@@ -285,7 +301,7 @@ export default function UsersScreen() {
                         <Plus size={24} color="#fff" />
                     </TouchableOpacity>
                 </View>
-            </View>
+            </LinearGradient>
 
             {/* List */}
             <FlatList
@@ -686,6 +702,26 @@ export default function UsersScreen() {
 
 const styles = StyleSheet.create({
     container: { flex: 1 },
+    glowTopRight: {
+        position: 'absolute',
+        top: -100,
+        right: -100,
+        width: 300,
+        height: 300,
+        borderRadius: 150,
+        opacity: 0.6,
+        pointerEvents: 'none',
+    },
+    glowBottomLeft: {
+        position: 'absolute',
+        bottom: -100,
+        left: -100,
+        width: 250,
+        height: 250,
+        borderRadius: 125,
+        opacity: 0.5,
+        pointerEvents: 'none',
+    },
     header: { paddingHorizontal: 20, paddingTop: 10, marginBottom: 20 },
     headerTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
     greeting: { fontSize: 28, fontWeight: '800', letterSpacing: -0.5 },
@@ -712,22 +748,21 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     cardContainer: {
-        marginBottom: 16,
-        marginHorizontal: 4,
-        borderRadius: 24,
+        marginBottom: 12,
+        borderRadius: 32,
         overflow: 'hidden',
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 6 },
         shadowOpacity: 0.08,
         shadowRadius: 12,
-        elevation: Platform.OS === 'android' ? 0 : 4,
+        elevation: Platform.OS === 'android' ? 0 : 6,
     },
     userCard: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: 20,
-        borderRadius: 24,
+        padding: 18,
+        borderRadius: 32,
         borderWidth: 1,
     },
     liquidHighlightModal: {
@@ -746,9 +781,9 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     avatarBox: {
-        width: 50,
-        height: 50,
-        borderRadius: 16,
+        width: 44,
+        height: 44,
+        borderRadius: 12,
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 16,
@@ -762,26 +797,24 @@ const styles = StyleSheet.create({
     },
     emailText: {
         fontSize: 16,
-        fontWeight: '700',
+        fontWeight: '600',
         marginBottom: 6,
     },
     badge: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: 10,
-        paddingVertical: 6,
-        borderRadius: 10,
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 8,
         borderWidth: 1,
         alignSelf: 'flex-start',
     },
     badgeIcon: {
-        marginRight: 6,
+        marginRight: 4,
     },
     badgeText: {
         fontSize: 12,
-        fontWeight: '700',
-        textTransform: 'uppercase',
-        letterSpacing: 0.5,
+        fontWeight: '600',
     },
     modalOverlay: {
         flex: 1,
@@ -827,14 +860,14 @@ const styles = StyleSheet.create({
         fontSize: 16,
     },
     roleOptions: {
-        gap: 14,
+        gap: 12,
         marginBottom: 24,
     },
     roleButton: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: 18,
+        padding: 14,
         borderRadius: 20,
         borderWidth: 1,
     },
@@ -893,34 +926,25 @@ const styles = StyleSheet.create({
     },
     inputLabel: {
         fontSize: 14,
-        fontWeight: '700',
+        fontWeight: '600',
         marginBottom: 8,
-        marginLeft: 4,
-        textTransform: 'uppercase',
-        letterSpacing: 0.5,
     },
     textInput: {
         borderWidth: 1,
         borderRadius: 16,
-        padding: 18,
+        padding: 16,
         fontSize: 16,
     },
     primaryButton: {
-        padding: 18,
-        borderRadius: 20,
+        padding: 16,
+        borderRadius: 16,
         alignItems: 'center',
-        marginTop: 12,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 8,
-        elevation: 6,
+        marginTop: 8,
     },
     primaryButtonText: {
         color: '#fff',
         fontSize: 16,
-        fontWeight: '800',
-        letterSpacing: 0.5,
+        fontWeight: 'bold',
     },
     confirmDeleteContainer: {
         padding: 16,

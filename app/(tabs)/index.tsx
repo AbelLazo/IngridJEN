@@ -85,11 +85,11 @@ export default function DashboardScreen() {
       <View style={[
           styles.glowTopRight, 
           { backgroundColor: colorScheme === 'dark' ? 'rgba(139, 92, 246, 0.15)' : 'rgba(236, 72, 153, 0.08)' }
-      ]} />
+      ]} pointerEvents="none" />
       <View style={[
           styles.glowBottomLeft,
           { backgroundColor: colorScheme === 'dark' ? 'rgba(56, 189, 248, 0.1)' : 'rgba(56, 189, 248, 0.05)' }
-      ]} />
+      ]} pointerEvents="none" />
 
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
         <ScrollView

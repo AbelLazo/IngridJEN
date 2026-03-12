@@ -4,6 +4,7 @@ import { useAlert } from '@/context/AlertContext';
 import { useAuth } from '@/context/AuthContext';
 import { Course, useInstitution } from '@/context/InstitutionContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { Stack, useRouter } from 'expo-router';
 import { AlertCircle, BookOpen, ChevronLeft, Clock, Coins, Edit3, Plus, Search, Trash2, X } from 'lucide-react-native';
@@ -204,14 +205,14 @@ export default function CoursesScreen() {
                     <View style={[
                         styles.card,
                         {
-                            backgroundColor: colorScheme === 'light' ? '#FFFFFF' : '#FFFFFF',
-                            borderColor: colorScheme === 'light' ? '#FCE4EC' : '#FFFFFF',
+                            backgroundColor: colorScheme === 'light' ? '#FFFFFF' : colors.card,
+                            borderColor: colorScheme === 'light' ? '#FCE4EC' : colors.border,
                         }
                     ]}
                     >
 
 
-                        <View style={[styles.iconContainer, { backgroundColor: colors.tint + '15' }]}>
+                        <View style={[styles.iconContainer, { backgroundColor: '#FFF0F5' }]}>
                             <BookOpen size={24} color={colors.tint} />
                         </View>
                         <View style={styles.cardContent}>
@@ -232,7 +233,7 @@ export default function CoursesScreen() {
                             </View>
                         </View>
                         <TouchableOpacity
-                            style={[styles.editCircle, { backgroundColor: colors.tint + '20' }]}
+                            style={[styles.editCircle, { backgroundColor: '#FFF0F5' }]}
                             onPress={() => onEdit(item)}
                         >
                             <Edit3 size={18} color={colors.tint} />
@@ -265,10 +266,25 @@ export default function CoursesScreen() {
 
 
     return (
-        <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}>
+        <View style={[styles.container, { backgroundColor: colors.background }]}>
+            {/* ─── Ambient Background Glows ─── */}
+            <View style={[
+                styles.glowTopRight,
+                { backgroundColor: colorScheme === 'dark' ? 'rgba(139, 92, 246, 0.15)' : 'rgba(236, 72, 153, 0.08)' }
+            ]} />
+            <View style={[
+                styles.glowBottomLeft,
+                { backgroundColor: colorScheme === 'dark' ? 'rgba(56, 189, 248, 0.1)' : 'rgba(56, 189, 248, 0.05)' }
+            ]} />
+
             <Stack.Screen options={{ headerShown: false }} />
 
-            <View style={styles.header}>
+            <LinearGradient
+                colors={colorScheme === 'dark' ? ['rgba(139, 92, 246, 0.15)', 'rgba(139, 92, 246, 0)'] : ['rgba(236, 72, 153, 0.1)', 'rgba(236, 72, 153, 0)']}
+                style={[styles.header, { paddingTop: insets.top + 10 }]}
+                start={{ x: 0.5, y: 0 }}
+                end={{ x: 0.5, y: 1 }}
+            >
                 <View style={styles.headerTop}>
                     <TouchableOpacity
                         onPress={() => router.back()}
@@ -290,7 +306,7 @@ export default function CoursesScreen() {
                         <Plus color="#fff" size={24} />
                     </TouchableOpacity>
                 </View>
-            </View>
+            </LinearGradient>
 
             {/* Search Bar */}
             <View style={[
@@ -439,6 +455,26 @@ export default function CoursesScreen() {
 
 const styles = StyleSheet.create({
     container: { flex: 1 },
+    glowTopRight: {
+        position: 'absolute',
+        top: -100,
+        right: -100,
+        width: 300,
+        height: 300,
+        borderRadius: 150,
+        opacity: 0.6,
+        pointerEvents: 'none',
+    },
+    glowBottomLeft: {
+        position: 'absolute',
+        bottom: -100,
+        left: -100,
+        width: 250,
+        height: 250,
+        borderRadius: 125,
+        opacity: 0.5,
+        pointerEvents: 'none',
+    },
     header: { paddingHorizontal: 20, paddingTop: 10, marginBottom: 20 },
     headerTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
     backButton: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
@@ -482,47 +518,44 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
     },
     cardContainer: {
-        marginBottom: 16,
-        marginHorizontal: 4,
-        borderRadius: 24,
-        overflow: 'hidden',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.08,
-        shadowRadius: 12,
-        elevation: Platform.OS === 'android' ? 0 : 4,
+        marginBottom: 14,
     },
     card: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 20,
-        borderRadius: 24, // Consistent with liquid glass
+        padding: 16,
+        borderRadius: 20,
         borderWidth: 1,
         overflow: 'hidden',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.06,
+        shadowRadius: 14,
+        elevation: Platform.OS === 'android' ? 3 : 5,
     },
     iconContainer: {
         width: 50,
         height: 50,
-        borderRadius: 16,
+        borderRadius: 25,
         justifyContent: 'center',
         alignItems: 'center',
     },
     cardContent: {
         flex: 1,
-        marginLeft: 16,
+        marginLeft: 15,
     },
     cardName: {
-        fontSize: 18,
-        fontWeight: '700',
-        marginBottom: 6,
+        fontSize: 16,
+        fontWeight: 'bold',
+        marginBottom: 2,
     },
     detailsRow: {
         flexDirection: 'row',
         alignItems: 'center',
     },
     detailText: {
-        fontSize: 14,
-        marginLeft: 5,
+        fontSize: 13,
+        marginLeft: 4,
     },
     durationRow: {
         flexDirection: 'row',
@@ -535,6 +568,14 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginTop: 50,
     },
+    editCircle: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginLeft: 10,
+    },
     modalOverlay: {
         flex: 1,
         backgroundColor: 'rgba(0,0,0,0.5)',
@@ -543,29 +584,27 @@ const styles = StyleSheet.create({
     modalContent: {
         borderTopLeftRadius: 32,
         borderTopRightRadius: 32,
-        padding: 24,
+        padding: 25,
         maxHeight: '80%',
     },
     modalHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 24,
+        marginBottom: 25,
     },
     modalTitle: {
         fontSize: 22,
-        fontWeight: '800',
+        fontWeight: 'bold',
     },
     formGroup: {
-        marginBottom: 20,
+        marginBottom: 18,
     },
     label: {
         fontSize: 14,
-        fontWeight: '700',
+        fontWeight: '600',
         marginBottom: 8,
         marginLeft: 4,
-        textTransform: 'uppercase',
-        letterSpacing: 0.5,
     },
     inputWrapper: {
         flexDirection: 'row',
@@ -578,34 +617,21 @@ const styles = StyleSheet.create({
     input: {
         flex: 1,
         marginLeft: 10,
-        fontSize: 16,
+        fontSize: 15,
     },
     submitButton: {
-        height: 56,
-        borderRadius: 20,
+        height: 60,
+        borderRadius: 18,
         justifyContent: 'center',
         alignItems: 'center',
-        marginTop: 12,
+        marginTop: 15,
         marginBottom: 35,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 8,
-        elevation: 6,
+        elevation: Platform.OS === 'android' ? 0 : 4,
     },
     submitButtonText: {
         color: '#fff',
-        fontSize: 16,
-        fontWeight: '800',
-        letterSpacing: 0.5,
-    },
-    editCircle: {
-        width: 40,
-        height: 40,
-        borderRadius: 14,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginLeft: 10,
+        fontSize: 17,
+        fontWeight: 'bold',
     },
     trashZone: {
         position: 'absolute',

@@ -264,6 +264,16 @@ export default function DashboardScreen() {
         <View style={[styles.container, { backgroundColor: colors.background }]}>
             <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} translucent backgroundColor="transparent" />
 
+            {/* ─── Ambient Background Glows ─── */}
+            <View style={[
+                styles.glowTopRight,
+                { backgroundColor: colorScheme === 'dark' ? 'rgba(139, 92, 246, 0.15)' : 'rgba(236, 72, 153, 0.08)' }
+            ]} pointerEvents="none" />
+            <View style={[
+                styles.glowBottomLeft,
+                { backgroundColor: colorScheme === 'dark' ? 'rgba(56, 189, 248, 0.1)' : 'rgba(56, 189, 248, 0.05)' }
+            ]} pointerEvents="none" />
+
             <PeriodHeader
                 title="Dashboard de Negocio"
                 onBack={() => router.back()}
@@ -280,12 +290,12 @@ export default function DashboardScreen() {
                             style={styles.kpiScrollView}
                             contentContainerStyle={styles.kpiScrollContent}
                         >
-                            <View style={[styles.kpiCard, {
-                                backgroundColor: colorScheme === 'light' ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.1)',
-                                borderColor: colorScheme === 'light' ? '#FCE4EC' : '#FFFFFF'
-                            }]}
+                            <View
+                                style={[styles.kpiCard, { 
+                                    backgroundColor: colorScheme === 'light' ? '#FFFFFF' : colors.card,
+                                    borderColor: colorScheme === 'light' ? '#FCE4EC' : colors.border 
+                                }]}
                             >
-
                                 <View style={[styles.kpiIcon, { backgroundColor: colorScheme === 'light' ? '#4C6EF515' : '#4C6EF530' }]}>
                                     <Users size={22} color="#4C6EF5" />
                                 </View>
@@ -293,12 +303,12 @@ export default function DashboardScreen() {
                                 <Text style={[styles.kpiLabel, { color: colors.icon }]}>Alumnos Activos</Text>
                             </View>
 
-                            <View style={[styles.kpiCard, {
-                                backgroundColor: colorScheme === 'light' ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.1)',
-                                borderColor: colorScheme === 'light' ? '#FCE4EC' : '#FFFFFF'
-                            }]}
+                            <View
+                                style={[styles.kpiCard, { 
+                                    backgroundColor: colorScheme === 'light' ? '#FFFFFF' : colors.card,
+                                    borderColor: colorScheme === 'light' ? '#FCE4EC' : colors.border 
+                                }]}
                             >
-
                                 <View style={[styles.kpiIcon, { backgroundColor: colorScheme === 'light' ? '#12B88615' : '#12B88630' }]}>
                                     <DollarSign size={22} color="#12B886" />
                                 </View>
@@ -306,12 +316,12 @@ export default function DashboardScreen() {
                                 <Text style={[styles.kpiLabel, { color: colors.icon }]}>Recaudado</Text>
                             </View>
 
-                            <View style={[styles.kpiCard, {
-                                backgroundColor: colorScheme === 'light' ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.1)',
-                                borderColor: colorScheme === 'light' ? '#FCE4EC' : '#FFFFFF'
-                            }]}
+                            <View
+                                style={[styles.kpiCard, { 
+                                    backgroundColor: colorScheme === 'light' ? '#FFFFFF' : colors.card,
+                                    borderColor: colorScheme === 'light' ? '#FCE4EC' : colors.border 
+                                }]}
                             >
-
                                 <View style={[styles.kpiIcon, { backgroundColor: colorScheme === 'light' ? '#FA525215' : '#FA525230' }]}>
                                     <TrendingUp size={22} color="#FA5252" />
                                 </View>
@@ -319,13 +329,13 @@ export default function DashboardScreen() {
                                 <Text style={[styles.kpiLabel, { color: colors.icon }]}>Cuentas X Cobrar</Text>
                             </View>
 
-                            <View style={[styles.kpiCard, {
-                                marginRight: 40,
-                                backgroundColor: colorScheme === 'light' ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.1)',
-                                borderColor: 'rgba(0,0,0,0.15)'
-                            }]}
+                            <View
+                                style={[styles.kpiCard, { 
+                                    marginRight: 40,
+                                    backgroundColor: colorScheme === 'light' ? '#FFFFFF' : colors.card,
+                                    borderColor: colorScheme === 'light' ? '#FCE4EC' : colors.border 
+                                }]}
                             >
-
                                 <View style={[styles.kpiIcon, { backgroundColor: colorScheme === 'light' ? '#FAB00515' : '#FAB00530' }]}>
                                     <Award size={22} color="#FAB005" />
                                 </View>
@@ -339,10 +349,11 @@ export default function DashboardScreen() {
                 <View style={[styles.content, isTablet && styles.contentTablet]}>
                     <Text style={[styles.sectionTitle, { color: colors.text, fontSize: isTablet ? 24 : 18 }]}>Salud Financiera ({activeCycle?.name || 'Ciclo Actual'})</Text>
 
-                    <View style={[styles.chartCard, {
-                        backgroundColor: colorScheme === 'light' ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.1)',
-                        borderColor: 'rgba(0,0,0,0.15)'
-                    }]}
+                    <View
+                        style={[styles.chartCard, {
+                            backgroundColor: colorScheme === 'light' ? '#FFFFFF' : colors.card,
+                            borderColor: colorScheme === 'light' ? '#FCE4EC' : colors.border,
+                        }]}
                     >
 
                         <Text style={{ color: colors.text, fontWeight: '800', marginBottom: 20, alignSelf: 'flex-start', letterSpacing: -0.5 }}>Ingresos Históricos (S/ Por Mes)</Text>
@@ -370,11 +381,11 @@ export default function DashboardScreen() {
                         </View>
                     </View>
 
-                    <View style={[styles.chartCard, {
-                        backgroundColor: colorScheme === 'light' ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.1)',
-                        borderColor: 'rgba(0,0,0,0.15)',
-                        alignItems: 'center'
-                    }]}
+                    <View
+                        style={[styles.chartCard, {
+                            backgroundColor: colorScheme === 'light' ? '#FFFFFF' : colors.card,
+                            borderColor: colorScheme === 'light' ? '#FCE4EC' : colors.border,
+                        }]}
                     >
 
                         <Text style={{ color: colors.text, fontWeight: '800', marginBottom: 20, alignSelf: 'flex-start', letterSpacing: -0.5 }}>Balance de Cuotas</Text>
@@ -390,9 +401,9 @@ export default function DashboardScreen() {
                                         radius={110}
                                         innerRadius={70}
                                         strokeWidth={2}
-                                        strokeColor={colorScheme === 'light' ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.1)'}
+                                        strokeColor="transparent"
                                         backgroundColor="transparent"
-                                        innerCircleColor={colorScheme === 'light' ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.1)'}
+                                        innerCircleColor="transparent"
                                         centerLabelComponent={() => {
                                             const total = totalCollected + totalDebt;
                                             const totalParts = formatCurrency(total).split('.');
@@ -493,6 +504,26 @@ export default function DashboardScreen() {
 
 const styles = StyleSheet.create({
     container: { flex: 1 },
+    glowTopRight: {
+        position: 'absolute',
+        top: -100,
+        right: -100,
+        width: 300,
+        height: 300,
+        borderRadius: 150,
+        transform: [{ scaleX: 1.5 }],
+        opacity: 0.8,
+    },
+    glowBottomLeft: {
+        position: 'absolute',
+        bottom: -150,
+        left: -100,
+        width: 350,
+        height: 350,
+        borderRadius: 175,
+        transform: [{ scaleY: 1.2 }],
+        opacity: 0.8,
+    },
     scrollContent: { flexGrow: 1 },
     header: {
         paddingHorizontal: 20, paddingTop: 10, paddingBottom: 30,
@@ -506,12 +537,12 @@ const styles = StyleSheet.create({
         paddingVertical: 12, // Espacio para que no se corten las sombras
     },
     kpiCard: {
-        borderRadius: 32, padding: 20, marginRight: 16,
+        borderRadius: 20, padding: 20, marginRight: 16,
         width: 160, overflow: 'hidden',
-        borderWidth: 1.5,
+        borderWidth: 1,
         alignItems: 'flex-start',
-        shadowColor: '#000', shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.1, shadowRadius: 18, elevation: Platform.OS === 'android' ? 0 : 8
+        shadowColor: '#000', shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.06, shadowRadius: 14, elevation: Platform.OS === 'android' ? 3 : 5
     },
     kpiIcon: { width: 44, height: 44, borderRadius: 16, justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
     kpiValue: { fontSize: 22, fontWeight: '800', letterSpacing: -0.6, marginBottom: 4 },
@@ -520,16 +551,16 @@ const styles = StyleSheet.create({
     contentTablet: { maxWidth: 1000, alignSelf: 'center', width: '100%' },
     sectionTitle: { fontWeight: '800', marginHorizontal: 20, marginBottom: 16, letterSpacing: -0.5 },
     chartCard: {
-        marginHorizontal: 20, borderRadius: 32, borderWidth: 1.5, padding: 20, marginBottom: 15,
+        marginHorizontal: 20, borderRadius: 20, borderWidth: 1, padding: 20, marginBottom: 15,
         alignItems: 'center', overflow: 'hidden',
-        shadowColor: '#000', shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.1, shadowRadius: 18, elevation: Platform.OS === 'android' ? 0 : 8
+        shadowColor: '#000', shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.06, shadowRadius: 14, elevation: Platform.OS === 'android' ? 3 : 5
     },
     listItem: {
-        flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 32,
-        borderWidth: 1.5, marginBottom: 14, overflow: 'hidden',
-        shadowColor: '#000', shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.1, shadowRadius: 15, elevation: Platform.OS === 'android' ? 0 : 6
+        flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 20,
+        borderWidth: 1, marginBottom: 14, overflow: 'hidden',
+        shadowColor: '#000', shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.06, shadowRadius: 12, elevation: Platform.OS === 'android' ? 3 : 5
     },
     listRank: {
         width: 30, height: 30, borderRadius: 15, justifyContent: 'center',

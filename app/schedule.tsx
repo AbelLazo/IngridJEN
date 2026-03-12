@@ -118,6 +118,16 @@ export default function ScheduleScreen() {
 
     return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
+            {/* ─── Ambient Background Glows ─── */}
+            <View style={[
+                styles.glowTopRight,
+                { backgroundColor: colorScheme === 'dark' ? 'rgba(139, 92, 246, 0.15)' : 'rgba(236, 72, 153, 0.08)' }
+            ]} />
+            <View style={[
+                styles.glowBottomLeft,
+                { backgroundColor: colorScheme === 'dark' ? 'rgba(56, 189, 248, 0.1)' : 'rgba(56, 189, 248, 0.05)' }
+            ]} />
+
             <PeriodHeader title="Horarios y Asistencias" onBack={() => router.back()} />
 
             {/* Date Strip Menu */}
@@ -267,6 +277,26 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
     },
+    glowTopRight: {
+        position: 'absolute',
+        top: -100,
+        right: -100,
+        width: 300,
+        height: 300,
+        borderRadius: 150,
+        opacity: 0.6,
+        pointerEvents: 'none',
+    },
+    glowBottomLeft: {
+        position: 'absolute',
+        bottom: -100,
+        left: -100,
+        width: 250,
+        height: 250,
+        borderRadius: 125,
+        opacity: 0.5,
+        pointerEvents: 'none',
+    },
     dateSelector: {
         paddingVertical: 15,
         borderBottomWidth: 1,
@@ -338,17 +368,17 @@ const styles = StyleSheet.create({
         marginBottom: 16,
     },
     classCard: {
-        borderRadius: 24, // Consistent with liquid glass
+        borderRadius: 20,
         padding: 16,
         borderLeftWidth: 6,
         borderWidth: 1,
         overflow: 'hidden',
         // Layered shadows for depth
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.05,
-        shadowRadius: 10,
-        elevation: Platform.OS === 'android' ? 0 : 5,
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.06,
+        shadowRadius: 14,
+        elevation: Platform.OS === 'android' ? 3 : 5,
     },
     classHeaderRow: {
         flexDirection: 'row',

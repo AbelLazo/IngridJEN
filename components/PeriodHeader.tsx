@@ -1,6 +1,7 @@
 import { Colors } from '@/constants/theme';
 import { useInstitution } from '@/context/InstitutionContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { Calendar, Check, ChevronDown, ChevronLeft, X } from 'lucide-react-native';
 import React, { useState } from 'react';
@@ -28,7 +29,12 @@ export default function PeriodHeader({ title, onBack, rightAction }: PeriodHeade
     };
 
     return (
-        <View style={[styles.header, { backgroundColor: colors.background, paddingTop: insets.top + 10 }]}>
+        <LinearGradient
+            colors={colorScheme === 'dark' ? ['rgba(139, 92, 246, 0.15)', 'rgba(139, 92, 246, 0)'] : ['rgba(236, 72, 153, 0.1)', 'rgba(236, 72, 153, 0)']}
+            style={[styles.header, { paddingTop: insets.top + 10 }]}
+            start={{ x: 0.5, y: 0 }}
+            end={{ x: 0.5, y: 1 }}
+        >
             <View style={styles.topRow}>
                 {onBack && (
                     <TouchableOpacity onPress={onBack} style={[styles.backButton, { backgroundColor: colorScheme === 'light' ? '#FFF0F5' : '#FFFFFF20', borderWidth: 1, borderColor: colorScheme === 'light' ? '#FCE4EC' : '#FFFFFF40' }]}>
@@ -140,7 +146,7 @@ export default function PeriodHeader({ title, onBack, rightAction }: PeriodHeade
                     </View>
                 </TouchableWithoutFeedback>
             </Modal>
-        </View>
+        </LinearGradient>
     );
 }
 

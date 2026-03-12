@@ -175,17 +175,18 @@ const DraggableClassCard = ({
                 <View style={[
                     styles.card,
                     {
-                        backgroundColor: colorScheme === 'light' ? '#FFFFFF' : '#FFFFFF',
-                        borderColor: item.color || (colorScheme === 'light' ? '#FCE4EC' : '#FFFFFF'),
+                        backgroundColor: colorScheme === 'light' ? '#FFFFFF' : colors.card,
+                        borderColor: colorScheme === 'light' ? '#FCE4EC' : colors.border,
+                        borderLeftWidth: 6,
+                        borderLeftColor: item.color || colors.tint,
                     }
                 ]}
                 >
-                    <View style={styles.liquidHighlight} />
 
 
                     <View style={styles.cardMain}>
-                        <View style={[styles.courseIcon, { backgroundColor: item.color + '15' }]}>
-                            <BookOpen size={24} color={item.color} />
+                        <View style={[styles.courseIcon, { backgroundColor: (item.color || colors.tint) + '15' }]}>
+                            <BookOpen size={24} color={item.color || colors.tint} />
                         </View>
                         <View style={styles.cardContent}>
                             <Text style={[styles.courseTitle, { color: colors.text }]}>{item.courseName}</Text>
@@ -199,7 +200,7 @@ const DraggableClassCard = ({
                                     <Clock size={14} color={colors.icon} />
                                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                                         <Text style={[styles.infoText, { color: colors.icon }]}>{schedule.day}: </Text>
-                                        <Text style={[styles.timeText, { color: item.color }]}>
+                                        <Text style={[styles.timeText, { color: colors.tint }]}>
                                             {format24to12(schedule.startTime)} - {calculateEndTime(schedule.startTime, item.duration)}
                                         </Text>
                                     </View>
@@ -215,14 +216,12 @@ const DraggableClassCard = ({
                         </View>
                     </View>
 
-                    <View style={[styles.cardActions, { borderLeftWidth: 1, borderLeftColor: colorScheme === 'light' ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.05)', paddingLeft: 12 }]}>
-                        <TouchableOpacity
-                            style={[styles.editCircle, { backgroundColor: colors.tint + '10' }]}
-                            onPress={() => onEdit(item)}
-                        >
-                            <Edit3 size={18} color={colors.tint} />
-                        </TouchableOpacity>
-                    </View>
+                    <TouchableOpacity
+                        style={[styles.editCircle, { backgroundColor: (item.color || colors.tint) + '15' }]}
+                        onPress={() => onEdit(item)}
+                    >
+                        <Edit3 size={18} color={item.color || colors.tint} />
+                    </TouchableOpacity>
                 </View>
             </Animated.View>
         </GestureDetector>
@@ -803,6 +802,16 @@ export default function ClassesScreen() {
 
     return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
+            {/* ─── Ambient Background Glows ─── */}
+            <View style={[
+                styles.glowTopRight,
+                { backgroundColor: colorScheme === 'dark' ? 'rgba(139, 92, 246, 0.15)' : 'rgba(236, 72, 153, 0.08)' }
+            ]} />
+            <View style={[
+                styles.glowBottomLeft,
+                { backgroundColor: colorScheme === 'dark' ? 'rgba(56, 189, 248, 0.1)' : 'rgba(56, 189, 248, 0.05)' }
+            ]} />
+
             <Stack.Screen options={{ headerShown: false }} />
 
             <PeriodHeader
@@ -1569,6 +1578,26 @@ export default function ClassesScreen() {
 
 const styles = StyleSheet.create({
     container: { flex: 1 },
+    glowTopRight: {
+        position: 'absolute',
+        top: -100,
+        right: -100,
+        width: 300,
+        height: 300,
+        borderRadius: 150,
+        opacity: 0.6,
+        pointerEvents: 'none',
+    },
+    glowBottomLeft: {
+        position: 'absolute',
+        bottom: -100,
+        left: -100,
+        width: 250,
+        height: 250,
+        borderRadius: 125,
+        opacity: 0.5,
+        pointerEvents: 'none',
+    },
     header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20 },
     backButton: { padding: 5 },
     headerTitle: { fontSize: 20, fontWeight: 'bold' },
@@ -1582,7 +1611,7 @@ const styles = StyleSheet.create({
         marginHorizontal: 20,
         paddingHorizontal: 15,
         height: 52,
-        borderRadius: 24,
+        borderRadius: 32, // Upgraded
         borderWidth: 1,
         marginBottom: 15,
         overflow: 'hidden',
@@ -1590,27 +1619,23 @@ const styles = StyleSheet.create({
     searchInput: { flex: 1, marginLeft: 10, fontSize: 16, fontWeight: '500' },
     listContent: { paddingHorizontal: 20 },
     cardContainer: {
-        marginBottom: 16,
-        marginHorizontal: 4,
-        borderRadius: 24,
-        overflow: 'hidden',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.08,
-        shadowRadius: 12,
-        elevation: Platform.OS === 'android' ? 0 : 4,
+        marginBottom: 15,
     },
     card: {
         flexDirection: 'row',
-        padding: 20,
-        borderRadius: 24,
+        padding: 16,
+        borderRadius: 20,
         borderWidth: 1,
         alignItems: 'center',
         overflow: 'hidden',
+        // Layered shadows for depth
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.06,
+        shadowRadius: 14,
+        elevation: Platform.OS === 'android' ? 3 : 5,
     },
     cardMain: { flex: 1, flexDirection: 'row', alignItems: 'center', flexShrink: 1 },
-    courseIcon: { width: 48, height: 48, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
-    iconBox: { width: 48, height: 48, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
     cardInfo: { flex: 1, marginLeft: 15 },
     courseName: { fontSize: 16, fontWeight: 'bold', marginBottom: 4 },
     infoRow: { flexDirection: 'row', alignItems: 'center', marginTop: 2 },
@@ -1632,16 +1657,16 @@ const styles = StyleSheet.create({
     scheduleDuration: { fontSize: 10 },
     emptyDay: { padding: 20, borderRadius: 12, borderWidth: 1, borderStyle: 'dashed', borderColor: '#ccc', alignItems: 'center' },
     modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-    modalContent: { borderTopLeftRadius: 32, borderTopRightRadius: 32, padding: 24, maxHeight: '85%' },
-    modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
-    modalTitle: { fontSize: 22, fontWeight: '800', letterSpacing: -0.5 },
-    formGroup: { marginBottom: 20 },
-    label: { fontSize: 14, fontWeight: '700', marginBottom: 8, marginLeft: 4, textTransform: 'uppercase', letterSpacing: 0.5 },
-    inputWrapper: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: 16, paddingHorizontal: 16, height: 56 },
-    input: { flex: 1, marginLeft: 10, fontSize: 16 },
+    modalContent: { borderTopLeftRadius: 30, borderTopRightRadius: 30, padding: 25, maxHeight: '85%' },
+    modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+    modalTitle: { fontSize: 20, fontWeight: 'bold' },
+    formGroup: { marginBottom: 16 },
+    label: { fontSize: 14, fontWeight: '600', marginBottom: 8 },
+    inputWrapper: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, height: 50 },
+    input: { flex: 1, marginLeft: 8, fontSize: 15 },
     row: { flexDirection: 'row' },
-    saveButton: { height: 56, borderRadius: 20, justifyContent: 'center', alignItems: 'center', marginTop: 12, marginBottom: 35, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 6 },
-    saveText: { color: '#fff', fontSize: 16, fontWeight: '800', letterSpacing: 0.5 },
+    saveButton: { height: 56, borderRadius: 16, justifyContent: 'center', alignItems: 'center', marginTop: 20, marginBottom: 40 },
+    saveText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
     studentList: {
         gap: 10,
     },
@@ -1676,17 +1701,25 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
     },
+    courseIcon: {
+        width: 50,
+        height: 50,
+        borderRadius: 25,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
     editCircle: {
         width: 36,
         height: 36,
         borderRadius: 18,
         justifyContent: 'center',
         alignItems: 'center',
+        marginLeft: 10,
     },
     enrollBtn: {
-        width: 36,
-        height: 36,
-        borderRadius: 10,
+        width: 40,
+        height: 40,
+        borderRadius: 20,
         justifyContent: 'center',
         alignItems: 'center',
         marginLeft: 4,
@@ -1777,9 +1810,9 @@ const styles = StyleSheet.create({
         left: 0,
         right: 0,
         height: '50%',
-        backgroundColor: 'rgba(255, 255, 255, 0.05)',
-        borderTopLeftRadius: 24,
-        borderTopRightRadius: 24,
+        backgroundColor: '#FFFFFF',
+        borderTopLeftRadius: 32,
+        borderTopRightRadius: 32,
     },
 });
 

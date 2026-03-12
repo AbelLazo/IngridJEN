@@ -4,8 +4,9 @@ import { useAlert } from '@/context/AlertContext';
 import { useAuth } from '@/context/AuthContext';
 import { PromotionRule, PromotionType, useInstitution } from '@/context/InstitutionContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useRouter } from 'expo-router';
-import { AlertCircle, ChevronLeft, Info, Plus, Save, Trash2, X } from 'lucide-react-native';
+import { AlertCircle, Calendar as CalendarIcon, ChevronLeft, Info, Plus, Save, Trash2, Users, X } from 'lucide-react-native';
 import React, { useState } from 'react';
 import {
     FlatList,
@@ -106,7 +107,7 @@ export default function PromotionsScreen() {
                 }
             ]
         );
-    };
+    }
 
     const renderPromoItem = ({ item }: { item: PromotionRule }) => (
         <TouchableOpacity
@@ -118,36 +119,35 @@ export default function PromotionsScreen() {
             activeOpacity={0.7}
         >
             <View style={styles.promoHeader}>
-                <View style={[styles.iconContainer, { backgroundColor: colors.tint + '15' }]}>
+                <View style={[styles.iconContainer, { backgroundColor: '#FFF0F5' }]}>
                     {item.type === 'multi_course' ? (
                         <Plus size={22} color={colors.tint} />
                     ) : item.type === 'family' ? (
-                        <AlertCircle size={22} color={colors.tint} />
+                        <Users size={22} color={colors.tint} />
                     ) : (
-                        <Save size={22} color={colors.tint} />
+                        <CalendarIcon size={22} color={colors.tint} />
                     )}
                 </View>
-                <View style={{ flex: 1, marginLeft: 12 }}>
+                <View style={{ flex: 1, marginLeft: 15 }}>
                     <Text style={[styles.promoName, { color: colors.text }]} numberOfLines={1}>{item.name}</Text>
                     <Text style={[styles.promoType, { color: colors.icon }]}>
                         {item.type === 'multi_course' ? 'Multi-Curso' : item.type === 'family' ? 'Familiar' : 'Pago Anticipado'}
+                        {item.active ? (
+                            <Text style={{ color: '#4CAF50', fontWeight: 'bold' }}> • Activo</Text>
+                        ) : (
+                            <Text style={{ color: '#F44336', fontWeight: 'bold' }}> • Inactivo</Text>
+                        )}
                     </Text>
                 </View>
-                <View style={[styles.discountBadge, { backgroundColor: colors.tint }]}>
-                    <Text style={[styles.discountText, { color: '#FFF' }]}>S/ {item.discountAmount}</Text>
+                <View style={[styles.discountBadge, { backgroundColor: '#FFF0F5' }]}>
+                    <Text style={[styles.discountText, { color: colors.tint }]}>S/ {item.discountAmount}</Text>
                 </View>
-            </View>
 
-            <View style={styles.promoFooter}>
-                <View style={styles.statusRow}>
-                    <View style={[styles.statusDot, { backgroundColor: item.active ? '#4CAF50' : '#F44336' }]} />
-                    <Text style={[styles.statusText, { color: colors.icon }]}>{item.active ? 'Regla Activa' : 'Desactivada'}</Text>
-                </View>
                 <TouchableOpacity
                     onPress={() => handleDelete(item.id)}
-                    style={[styles.deleteButton, { backgroundColor: '#FF444415' }]}
+                    style={[styles.deleteCircle, { backgroundColor: '#ff4d4d15' }]}
                 >
-                    <Trash2 size={18} color="#FF4444" />
+                    <Trash2 size={18} color="#ff4d4d" />
                 </TouchableOpacity>
             </View>
         </TouchableOpacity>
@@ -155,13 +155,26 @@ export default function PromotionsScreen() {
 
     return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
+            {/* ─── Ambient Background Glows ─── */}
+            <View style={[
+                styles.glowTopRight,
+                { backgroundColor: colorScheme === 'dark' ? 'rgba(139, 92, 246, 0.15)' : 'rgba(236, 72, 153, 0.08)' }
+            ]} />
+            <View style={[
+                styles.glowBottomLeft,
+                { backgroundColor: colorScheme === 'dark' ? 'rgba(56, 189, 248, 0.1)' : 'rgba(56, 189, 248, 0.05)' }
+            ]} />
+
             <Stack.Screen options={{
                 headerShown: false, // We'll use a custom header for the Modern look
             }} />
 
-            <View style={{ height: insets.top + 10 }} />
-
-            <View style={styles.header}>
+            <LinearGradient
+                colors={colorScheme === 'dark' ? ['rgba(139, 92, 246, 0.15)', 'rgba(139, 92, 246, 0)'] : ['rgba(236, 72, 153, 0.1)', 'rgba(236, 72, 153, 0)']}
+                style={[styles.header, { paddingTop: insets.top + 10 }]}
+                start={{ x: 0.5, y: 0 }}
+                end={{ x: 0.5, y: 1 }}
+            >
                 <View style={styles.headerTop}>
                     <TouchableOpacity
                         onPress={() => router.back()}
@@ -183,7 +196,7 @@ export default function PromotionsScreen() {
                         <Plus color="#fff" size={24} />
                     </TouchableOpacity>
                 </View>
-            </View>
+            </LinearGradient>
 
 
             <FlatList
@@ -310,6 +323,26 @@ export default function PromotionsScreen() {
 
 const styles = StyleSheet.create({
     container: { flex: 1 },
+    glowTopRight: {
+        position: 'absolute',
+        top: -100,
+        right: -100,
+        width: 300,
+        height: 300,
+        borderRadius: 150,
+        opacity: 0.6,
+        pointerEvents: 'none',
+    },
+    glowBottomLeft: {
+        position: 'absolute',
+        bottom: -100,
+        left: -100,
+        width: 250,
+        height: 250,
+        borderRadius: 125,
+        opacity: 0.5,
+        pointerEvents: 'none',
+    },
     header: { paddingHorizontal: 20, paddingTop: 10, marginBottom: 20 },
     headerTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
     backButton: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
@@ -330,46 +363,55 @@ const styles = StyleSheet.create({
     infoChipText: { fontSize: 13, fontWeight: '700', marginLeft: 6 },
     listContainer: { paddingHorizontal: 20, paddingBottom: 120 },
     promoCard: {
-        padding: 20,
-        borderRadius: 24,
+        flexDirection: 'column',
+        padding: 16,
+        borderRadius: 20,
         borderWidth: 1,
         marginBottom: 16,
-        marginHorizontal: 4,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.08,
-        shadowRadius: 12,
-        elevation: Platform.OS === 'android' ? 0 : 4,
+        shadowOpacity: 0.06,
+        shadowRadius: 14,
+        elevation: Platform.OS === 'android' ? 3 : 5,
     },
     promoHeader: { flexDirection: 'row', alignItems: 'center' },
-    iconContainer: { width: 50, height: 50, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
-    promoName: { fontSize: 18, fontWeight: '700', letterSpacing: -0.3 },
-    promoType: { fontSize: 13, fontWeight: '500', opacity: 0.6, marginTop: 2 },
-    discountBadge: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 16 },
-    discountText: { fontWeight: '800', fontSize: 15 },
-    promoFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 16, borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.05)', paddingTop: 16 },
-    statusRow: { flexDirection: 'row', alignItems: 'center' },
-    statusDot: { width: 8, height: 8, borderRadius: 4, marginRight: 8 },
-    statusText: { fontSize: 12, fontWeight: '600' },
-    deleteButton: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
+    iconContainer: {
+        width: 50,
+        height: 50,
+        borderRadius: 25,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    promoName: { fontSize: 16, fontWeight: 'bold' },
+    promoType: { fontSize: 13, fontWeight: '500', marginTop: 2 },
+    discountBadge: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12, marginLeft: 10 },
+    discountText: { fontWeight: 'bold', fontSize: 14 },
+    deleteCircle: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginLeft: 10,
+    },
 
     emptyState: { padding: 60, alignItems: 'center', justifyContent: 'center' },
-    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
     modalContent: { borderTopLeftRadius: 32, borderTopRightRadius: 32, padding: 24, minHeight: '60%', maxHeight: '90%' },
     modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 25 },
-    modalTitle: { fontSize: 22, fontWeight: '800', letterSpacing: -0.5 },
+    modalTitle: { fontSize: 24, fontWeight: '800', letterSpacing: -0.5 },
     formGroup: { marginBottom: 20 },
-    label: { fontSize: 14, fontWeight: '700', marginBottom: 8, marginLeft: 4, textTransform: 'uppercase', letterSpacing: 0.5 },
+    label: { fontSize: 15, fontWeight: '700', marginBottom: 10, marginLeft: 4 },
     inputWrapper: {
         flexDirection: 'row',
         alignItems: 'center',
-        borderWidth: 1,
-        borderRadius: 16,
+        borderWidth: 1.5,
+        borderRadius: 18,
         paddingHorizontal: 16,
         height: 56,
     },
     input: { flex: 1, marginLeft: 12, fontSize: 16, fontWeight: '500' },
     switchRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.03)', padding: 16, borderRadius: 20 },
-    saveButton: { height: 56, borderRadius: 20, justifyContent: 'center', alignItems: 'center', marginTop: 20, elevation: 6, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8 },
-    saveButtonText: { color: '#FFF', fontSize: 16, fontWeight: '800', letterSpacing: 0.5 },
+    saveButton: { height: 64, borderRadius: 22, justifyContent: 'center', alignItems: 'center', marginTop: 20, elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 4 },
+    saveButtonText: { color: '#FFF', fontSize: 18, fontWeight: '800' },
 });
