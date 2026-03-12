@@ -67,10 +67,14 @@ function RootLayoutNav() {
 
   // OTA Updates Check
   useEffect(() => {
+    if (__DEV__) return;
+
     async function onFetchUpdateAsync() {
       try {
+        // Only check if we are in a production environment and updates are enabled
+        if (!Updates.isEnabled) return;
+        
         const update = await Updates.checkForUpdateAsync();
-
         if (update.isAvailable) {
           Alert.alert(
             "Actualización Disponible",
@@ -92,8 +96,7 @@ function RootLayoutNav() {
           );
         }
       } catch (error) {
-        // Silently fail if testing in Expo Go or error checking for updates
-        console.log("Error checking for updates:", error);
+        console.log("Updates check skipped or failed:", error);
       }
     }
 
@@ -135,7 +138,7 @@ function RootLayoutNav() {
 
   if (isLoading || !isNavigationReady) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colorScheme === 'dark' ? '#111827' : '#FFFFFF' }}>
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#1A0B12' }}>
         <ActivityIndicator size="large" color="#3B82F6" />
       </View>
     );

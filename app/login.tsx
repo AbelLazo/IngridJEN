@@ -13,6 +13,7 @@ import { Eye, EyeOff, Lock, Mail } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Video, ResizeMode } from 'expo-av';
+import { Asset } from 'expo-asset';
 import { Colors } from '../constants/theme';
 import { useColorScheme } from '../hooks/use-color-scheme';
 import { auth, db } from '../lib/firebaseConfig';
@@ -28,6 +29,19 @@ export default function LoginScreen() {
     const router = useRouter();
     const isDark = useColorScheme() === 'dark';
     const passwordInputRef = useRef<TextInput>(null);
+    const [isVideoReady, setIsVideoReady] = useState(false);
+
+    // Preload video to avoid delay
+    useEffect(() => {
+        const prepare = async () => {
+            try {
+                await Asset.fromModule(require('../assets/videos/Explosion-colors.mp4')).downloadAsync();
+            } catch (e) {
+                console.warn("VIDEO_DEBUG: Preload error:", e);
+            }
+        };
+        prepare();
+    }, []);
 
     // Set up Expo Google Auth Session
     const [request, response, promptAsync] = Google.useAuthRequest({
@@ -266,12 +280,28 @@ export default function LoginScreen() {
 
     return (
         <View style={styles.backgroundImage}>
+            <View style={[StyleSheet.absoluteFillObject, { backgroundColor: '#FFFFFF', zIndex: 1, opacity: isVideoReady ? 0 : 1, justifyContent: 'center', alignItems: 'center' }]} pointerEvents="none">
+                <ActivityIndicator size="large" color="#3B82F6" />
+            </View>
             <Video
                 source={require('../assets/videos/Explosion-colors.mp4')}
-                style={StyleSheet.absoluteFillObject}
+                style={[StyleSheet.absoluteFillObject, { opacity: isVideoReady ? 1 : 0 }]}
                 resizeMode={ResizeMode.COVER}
                 shouldPlay
+                isLooping={false}
                 isMuted
+                useNativeControls={false}
+                onReadyForDisplay={() => setIsVideoReady(true)}
+                posterSource={require('../assets/images/ballet_logo.png')}
+                posterStyle={{ resizeMode: 'contain', height: '50%', alignSelf: 'center' }}
+                onPlaybackStatusUpdate={(status) => {
+                    if (status.isLoaded) {
+                        if (status.didJustFinish) console.log("VIDEO_DEBUG: Finished loop");
+                    } else if (status.error) {
+                        console.log("VIDEO_DEBUG: Native Playback Error:", status.error);
+                    }
+                }}
+                onError={(e) => console.log("VIDEO_DEBUG: Component Error:", e)}
             />
             <View style={[StyleSheet.absoluteFillObject, { backgroundColor: 'rgba(0,0,0,0.15)' }]} />
             <KeyboardAvoidingView
@@ -400,6 +430,7 @@ const styles = StyleSheet.create({
         flex: 1,
         width: '100%',
         height: '100%',
+        backgroundColor: '#1A0B12',
     },
     scrollContent: {
         flexGrow: 1,
