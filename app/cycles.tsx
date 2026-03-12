@@ -335,14 +335,14 @@ export default function CyclesScreen() {
         return (
             <GestureDetector gesture={composedGesture}>
                 <Animated.View style={[styles.cardContainer, animatedStyle]}>
-                    <View style={[
-                        styles.card,
-                        {
-                            backgroundColor: colorScheme === 'light' ? '#FFFFFF' : '#FFFFFF',
-                            borderColor: colorScheme === 'light' ? '#FCE4EC' : '#FFFFFF',
-                        }
-                    ]}
-                    >
+                        <View style={[
+                            styles.card,
+                            {
+                                backgroundColor: colorScheme === 'light' ? '#FFFFFF' : '#FFFFFF',
+                                borderColor: colorScheme === 'light' ? '#FCE4EC' : '#FFFFFF',
+                            }
+                        ]}>
+                            <View style={styles.liquidHighlight} />
 
                         <View style={styles.cardInfo}>
                             <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
@@ -658,33 +658,46 @@ const styles = StyleSheet.create({
     addButtonHeader: {
         width: 44,
         height: 44,
-        borderRadius: 12,
+        borderRadius: 16,
         justifyContent: 'center',
         alignItems: 'center',
-        elevation: 4,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 4,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 8,
+        elevation: 4,
     },
     listContent: {
         padding: 15,
     },
     cardContainer: {
-        marginBottom: 14,
+        marginBottom: 16,
+        marginHorizontal: 4,
+        borderRadius: 24,
+        overflow: 'hidden',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.08,
+        shadowRadius: 12,
+        elevation: Platform.OS === 'android' ? 0 : 4,
     },
     card: {
         flexDirection: 'row',
-        padding: 18,
-        borderRadius: 32,
+        padding: 20,
+        borderRadius: 24,
         borderWidth: 1,
         alignItems: 'center',
         overflow: 'hidden',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.05,
-        shadowRadius: 10,
-        elevation: Platform.OS === 'android' ? 0 : 5,
+    },
+    liquidHighlight: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: '50%',
+        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        borderTopLeftRadius: 32,
+        borderTopRightRadius: 32,
     },
     iconBox: {
         width: 36,
@@ -744,12 +757,12 @@ const styles = StyleSheet.create({
     },
     modalOverlay: {
         flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        backgroundColor: 'rgba(0,0,0,0.5)',
         justifyContent: 'flex-end',
     },
     modalContent: {
-        borderTopLeftRadius: 30,
-        borderTopRightRadius: 30,
+        borderTopLeftRadius: 32,
+        borderTopRightRadius: 32,
         padding: 24,
         maxHeight: '85%',
     },
@@ -761,34 +774,38 @@ const styles = StyleSheet.create({
     },
     modalTitle: {
         fontSize: 22,
-        fontWeight: 'bold',
+        fontWeight: '800',
+        letterSpacing: -0.5,
     },
     formGroup: {
         marginBottom: 20,
     },
     label: {
         fontSize: 14,
-        fontWeight: '600',
+        fontWeight: '700',
         marginBottom: 8,
+        marginLeft: 4,
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
     },
     input: {
         borderWidth: 1,
-        borderRadius: 14,
+        borderRadius: 16,
         paddingHorizontal: 16,
-        height: 52,
-        fontSize: 15,
+        height: 56,
+        fontSize: 16,
     },
     inputWrapper: {
         flexDirection: 'row',
         alignItems: 'center',
         borderWidth: 1,
-        borderRadius: 14,
+        borderRadius: 16,
         paddingHorizontal: 16,
-        height: 52,
+        height: 56,
     },
     infoBox: {
-        padding: 15,
-        borderRadius: 12,
+        padding: 16,
+        borderRadius: 16,
         borderWidth: 1,
         marginBottom: 20
     },
@@ -799,16 +816,22 @@ const styles = StyleSheet.create({
     },
     saveButton: {
         height: 56,
-        borderRadius: 16,
+        borderRadius: 20,
         justifyContent: 'center',
         alignItems: 'center',
-        marginTop: 10,
-        marginBottom: 40,
+        marginTop: 12,
+        marginBottom: 35,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+        elevation: 6,
     },
     saveText: {
         color: '#fff',
         fontSize: 16,
-        fontWeight: 'bold',
+        fontWeight: '800',
+        letterSpacing: 0.5,
     },
     errorText: {
         color: '#ff4d4d',
@@ -849,7 +872,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         borderWidth: 1,
-        borderRadius: 14,
+        borderRadius: 16,
         paddingVertical: 14,
         paddingHorizontal: 18,
     },
