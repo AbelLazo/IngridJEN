@@ -8,6 +8,8 @@ import { Calendar, Check, ChevronDown, CloudSun, LogOut, Moon, Sun, X } from 'lu
 import React, { useMemo, useState } from 'react';
 import { Modal, Platform, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, TouchableWithoutFeedback, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 
 export default function DashboardScreen() {
   const { width } = useWindowDimensions();
@@ -78,6 +80,17 @@ export default function DashboardScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} translucent backgroundColor="transparent" />
+      
+      {/* ─── Ambient Background Glows ─── */}
+      <View style={[
+          styles.glowTopRight, 
+          { backgroundColor: colorScheme === 'dark' ? 'rgba(139, 92, 246, 0.15)' : 'rgba(236, 72, 153, 0.08)' }
+      ]} />
+      <View style={[
+          styles.glowBottomLeft,
+          { backgroundColor: colorScheme === 'dark' ? 'rgba(56, 189, 248, 0.1)' : 'rgba(56, 189, 248, 0.05)' }
+      ]} />
+
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
         <ScrollView
           showsVerticalScrollIndicator={false}
@@ -87,8 +100,13 @@ export default function DashboardScreen() {
           ]}
         >
           {/* ─── Header Area ─── */}
-          <View style={[styles.header, isTablet && styles.headerTablet]}>
-            <View style={styles.headerTop}>
+          <LinearGradient
+            colors={colorScheme === 'dark' ? ['rgba(139, 92, 246, 0.15)', 'rgba(139, 92, 246, 0)'] : ['rgba(236, 72, 153, 0.1)', 'rgba(236, 72, 153, 0)']}
+            style={[styles.header, isTablet && styles.headerTablet, { paddingBottom: 30 }]}
+            start={{ x: 0.5, y: 0 }}
+            end={{ x: 0.5, y: 1 }}
+          >
+            <Animated.View entering={FadeInDown.delay(100).duration(800).springify().damping(16)} style={styles.headerTop}>
               <View style={styles.greetingTextContainer}>
                 <View style={styles.greetingRow}>
                   {greeting.icon}
@@ -107,14 +125,14 @@ export default function DashboardScreen() {
               >
                 <LogOut size={isTablet ? 22 : 18} color={colors.tint} />
               </TouchableOpacity>
-            </View>
+            </Animated.View>
 
             {/* Cycle Selector Pill */}
-            <TouchableOpacity
-              onPress={() => setIsCycleMenuVisible(true)}
-              activeOpacity={0.7}
-              style={styles.cyclePillWrapper}
-            >
+            <Animated.View entering={FadeInDown.delay(300).duration(800).springify().damping(16)} style={styles.cyclePillWrapper}>
+              <TouchableOpacity
+                onPress={() => setIsCycleMenuVisible(true)}
+                activeOpacity={0.7}
+              >
               <View style={[styles.cyclePill, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
                 <Calendar size={14} color={colors.tint} />
                 <Text style={[styles.cyclePillText, { color: colors.text }]}>
@@ -124,16 +142,27 @@ export default function DashboardScreen() {
                   <ChevronDown size={14} color={colors.tint} />
                 </View>
               </View>
-            </TouchableOpacity>
+              </TouchableOpacity>
+            </Animated.View>
 
-            {/* ─── Summary Card ─── */}
-            <View
+            {/* ─── Summary Card (Premium Gradient) ─── */}
+            <Animated.View entering={FadeInDown.delay(500).duration(800).springify().damping(16)}>
+            <LinearGradient
+              colors={colorScheme === 'dark' 
+                ? ['#1E1B4B', '#312E81'] // Deep indigo to dark violet
+                : ['#FDF4FF', '#FCE7F3']} // Ultra-pale pink to soft blush/lavender
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
               style={[
                 styles.summaryCard,
                 isTablet && styles.summaryCardTablet,
-                {
-                  backgroundColor: colorScheme === 'light' ? '#FFFFFF' : colors.card,
-                  borderColor: colorScheme === 'light' ? '#FCE4EC' : colors.border,
+                { 
+                  borderWidth: 1,
+                  borderColor: colorScheme === 'light' ? '#FBCFE8' : '#4338CA',
+                  shadowColor: colorScheme === 'light' ? colors.tint : '#4F46E5',
+                  shadowOffset: { width: 0, height: 8 },
+                  shadowOpacity: 0.15,
+                  shadowRadius: 16,
                 }
               ]}
             >
@@ -150,14 +179,15 @@ export default function DashboardScreen() {
                 <Text style={[styles.summaryLabel, { color: colors.icon + '90' }]}>Cursos Hoy</Text>
                 <Text style={[styles.summaryValue, { fontSize: isTablet ? 30 : 28, color: colors.tint }]}>{classesTodayCount}</Text>
               </View>
-            </View>
-          </View>
+            </LinearGradient>
+            </Animated.View>
+          </LinearGradient>
 
           {/* ─── Module Grid ─── */}
-          <View style={[styles.content, isTablet && styles.contentTablet]}>
+          <Animated.View entering={FadeInDown.delay(700).duration(800).springify().damping(16)} style={[styles.content, isTablet && styles.contentTablet]}>
             <Text style={[styles.sectionTitle, { color: colors.text, fontSize: isTablet ? 24 : 18 }]}>Menú Principal</Text>
             <DashboardGrid />
-          </View>
+          </Animated.View>
         </ScrollView>
       </SafeAreaView>
 
@@ -245,6 +275,26 @@ export default function DashboardScreen() {
 }
 
 const styles = StyleSheet.create({
+  glowTopRight: {
+    position: 'absolute',
+    top: -100,
+    right: -100,
+    width: 300,
+    height: 300,
+    borderRadius: 150,
+    transform: [{ scaleX: 1.5 }],
+    opacity: 0.8,
+  },
+  glowBottomLeft: {
+    position: 'absolute',
+    bottom: -150,
+    left: -100,
+    width: 350,
+    height: 350,
+    borderRadius: 175,
+    transform: [{ scaleY: 1.2 }],
+    opacity: 0.8,
+  },
   scrollContent: {
     flexGrow: 1,
   },

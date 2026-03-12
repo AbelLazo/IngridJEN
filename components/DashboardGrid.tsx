@@ -14,6 +14,8 @@ import {
 } from 'lucide-react-native';
 import React from 'react';
 import { Platform, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const GAP = 14;
 
@@ -50,31 +52,44 @@ export default function DashboardGrid() {
 
     return (
         <View style={styles.container}>
-            {filteredMenuItems.map((item) => (
-                <TouchableOpacity
+            {filteredMenuItems.map((item, index) => (
+                <Animated.View
                     key={item.id}
-                    onPress={() => router.push(item.route as any)}
-                    activeOpacity={0.7}
+                    entering={FadeInDown.delay(700 + (index * 100)).duration(800).springify().damping(15)}
                     style={{ width: cardWidth }}
                 >
-                    <View
+                    <TouchableOpacity
+                        onPress={() => router.push(item.route as any)}
+                        activeOpacity={0.7}
+                    >
+                    <LinearGradient
+                        colors={colorScheme === 'light' 
+                            ? ['#FFFFFF', '#FDF2F8'] // White to very faint pink
+                            : [colors.card, colors.background]} // Dark card to dark bg
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
                         style={[
                             styles.card,
                             {
-                                backgroundColor: colorScheme === 'light' ? '#FFFFFF' : colors.card,
                                 borderColor: colorScheme === 'light' ? '#FCE4EC' : colors.border,
+                                shadowColor: colorScheme === 'light' ? colors.tint : '#000',
                             }
                         ]}
                     >
-                        <View style={[styles.iconContainer, {
-                            backgroundColor: colorScheme === 'light' ? '#FFF0F5' : colors.tint + '15'
-                        }]}>
+                        <LinearGradient
+                            colors={colorScheme === 'light' 
+                                ? [colors.tint + '20', colors.tint + '05']
+                                : [colors.tint + '30', colors.tint + '10']}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 1 }}
+                            style={styles.iconContainer}
+                        >
                             <item.icon
                                 size={width > 600 ? 26 : 22}
                                 color={colors.tint}
-                                strokeWidth={1.8}
+                                strokeWidth={2}
                             />
-                        </View>
+                        </LinearGradient>
                         <Text
                             style={[
                                 styles.label,
@@ -88,8 +103,9 @@ export default function DashboardGrid() {
                         >
                             {item.label}
                         </Text>
-                    </View>
-                </TouchableOpacity>
+                    </LinearGradient>
+                 </TouchableOpacity>
+                </Animated.View>
             ))}
         </View>
     );
@@ -112,11 +128,10 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         gap: 10,
         borderWidth: 1,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.05,
-        shadowRadius: 12,
-        elevation: Platform.OS === 'android' ? 2 : 4,
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.1,
+        shadowRadius: 16,
+        elevation: Platform.OS === 'android' ? 3 : 6,
     },
     iconContainer: {
         width: 44,
