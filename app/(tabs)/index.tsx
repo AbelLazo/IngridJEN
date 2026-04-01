@@ -5,7 +5,7 @@ import { useInstitution } from '@/context/InstitutionContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useRouter } from 'expo-router';
 import { Calendar, Check, ChevronDown, CloudSun, LogOut, Moon, Sun, X } from 'lucide-react-native';
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Modal, Platform, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, TouchableWithoutFeedback, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -20,10 +20,18 @@ export default function DashboardScreen() {
   const { user, userRole } = useAuth();
   const [isCycleMenuVisible, setIsCycleMenuVisible] = useState(false);
   const router = useRouter();
-  const [currentDate] = useState(new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' }));
+  const [now, setNow] = useState(() => new Date());
+
+  // Refresh every minute so the card stays up-to-date automatically
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const currentDate = now.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
 
   const getGreeting = () => {
-    const hour = new Date().getHours();
+    const hour = now.getHours();
     if (hour < 12) return { text: 'Buenos días', icon: <Sun size={20} color="#EAB308" /> };
     if (hour < 18) return { text: 'Buenas tardes', icon: <CloudSun size={20} color="#F59E0B" /> };
     return { text: 'Buenas noches', icon: <Moon size={20} color="#6366F1" /> };
@@ -37,24 +45,35 @@ export default function DashboardScreen() {
     [academicCycles, currentCycleId]
   );
 
+  // Lógica idéntica a dashboard.tsx: filtra por enrollment activo, student activo y activeYears
   const activeStudentsCount = useMemo(() => {
     const enrolledIds = new Set(
       enrollments
         .filter(e => {
+          if (e.status !== 'active') return false;
           const cls = classes.find(c => c.id === e.classId);
           return cls && cls.cycleId === currentCycleId;
         })
         .map(e => e.studentId)
     );
-    return enrolledIds.size;
-  }, [enrollments, classes, currentCycleId]);
+    let validCount = 0;
+    enrolledIds.forEach(id => {
+      const student = students.find(s => s.id === id);
+      if (student && student.status === 'active') {
+        const cycleYear = activeCycle?.name.match(/\d{4}/)?.[0];
+        if (cycleYear && student.activeYears?.includes(cycleYear)) {
+          validCount++;
+        }
+      }
+    });
+    return validCount;
+  }, [enrollments, classes, currentCycleId, students, activeCycle]);
 
   const classesTodayCount = useMemo(() => {
     const days = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-    const today = days[new Date().getDay()];
+    const today = days[now.getDay()];
 
     if (activeCycle) {
-      const now = new Date();
       const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
       if (todayStr < activeCycle.startDate || todayStr > activeCycle.endDate) {
         return 0;
@@ -65,7 +84,7 @@ export default function DashboardScreen() {
       c.cycleId === currentCycleId &&
       c.schedules.some(s => s.day === today)
     ).length;
-  }, [classes, currentCycleId, activeCycle]);
+  }, [classes, currentCycleId, activeCycle, now]);
 
   const handleLogout = async () => {
     try {

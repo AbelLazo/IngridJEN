@@ -22,7 +22,7 @@ import {
     User,
     X
 } from 'lucide-react-native';
-import React, { useMemo, useState } from 'react';
+import React, { memo, useMemo, useState } from 'react';
 import {
     FlatList,
     Modal,
@@ -44,7 +44,7 @@ interface EnrollmentItemProps {
     onRecalculate?: (id: string) => void;
 }
 
-const EnrollmentItem = ({ student, detail, colors, onPay, onShowDetail, onRecalculate }: EnrollmentItemProps) => {
+const EnrollmentItem = memo(({ student, detail, colors, onPay, onShowDetail, onRecalculate }: EnrollmentItemProps) => {
     const [expanded, setExpanded] = useState(false);
 
     return (
@@ -171,7 +171,7 @@ const EnrollmentItem = ({ student, detail, colors, onPay, onShowDetail, onRecalc
             )}
         </View>
     );
-};
+});
 
 interface StudentCardProps {
     item: any;
@@ -181,7 +181,7 @@ interface StudentCardProps {
     onRecalculate?: (id: string) => void;
 }
 
-const StudentCard = ({ item, colors, onPay, onShowDetail, onRecalculate }: StudentCardProps) => {
+const StudentCard = memo(({ item, colors, onPay, onShowDetail, onRecalculate }: StudentCardProps) => {
     const [isExpanded, setIsExpanded] = useState(false);
     const colorScheme = useColorScheme() ?? 'light';
 
@@ -240,7 +240,7 @@ const StudentCard = ({ item, colors, onPay, onShowDetail, onRecalculate }: Stude
             </View>
         </View>
     );
-};
+});
 
 export default function FeesScreen() {
     const { showAlert } = useAlert();
@@ -269,7 +269,8 @@ export default function FeesScreen() {
 
     const [searchQuery, setSearchQuery] = useState('');
     const [viewMode, setViewMode] = useState<'pendientes' | 'historial'>('pendientes');
-    const [networkTime, setNetworkTime] = useState<Date | null>(null);
+    // Hora local del dispositivo — estable durante la sesión para evitar re-renders
+    const today = useMemo(() => new Date(), []);
 
     const [isPayConfirmVisible, setIsPayConfirmVisible] = useState(false);
     const [payData, setPayData] = useState<any>(null);
@@ -280,33 +281,19 @@ export default function FeesScreen() {
     const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
 
     const selectedMonthYear = useMemo(() => {
-        const today = networkTime || new Date();
         return today.toISOString().substring(0, 7); // YYYY-MM
-    }, [networkTime]);
+    }, [today]);
 
     const totalPaid = useMemo(() => {
         return payments
             .filter(p => p.monthYear === selectedMonthYear)
-            .reduce((acc, p) => acc + parseFloat(p.amount), 0);
+            .reduce((acc, p) => acc + parseFloat(p.amount), 0)
+            .toFixed(2);
     }, [payments, selectedMonthYear]);
 
-    React.useEffect(() => {
-        const fetchTime = async () => {
-            try {
-                const response = await fetch('https://timeapi.io/api/Time/current/zone?timeZone=America/Lima');
-                const data = await response.json();
-                if (data && data.dateTime) {
-                    setNetworkTime(new Date(data.dateTime));
-                }
-            } catch (error) {
-                setNetworkTime(new Date());
-            }
-        };
-        fetchTime();
-    }, []);
+    // No se hace fetch externo — la hora del dispositivo es suficiente para uso local
 
     const studentFees = useMemo(() => {
-        const today = networkTime || new Date();
         const todayStr = today.toISOString().split('T')[0];
 
         return students.map(student => {
@@ -423,12 +410,11 @@ export default function FeesScreen() {
             };
         }).filter(s => s.enrollmentDetails.length > 0)
             .sort((a, b) => b.totalDebt - a.totalDebt);
-    }, [students, enrollments, classes, courses, payments, installments, networkTime, currentCycleId]);
+    }, [students, enrollments, classes, courses, payments, installments, today, currentCycleId]);
 
     const handleRegisterPayment = (student: any, enrollment: any, month: any) => {
         setPayData({ student, enrollment, month });
-        const today = networkTime || new Date();
-        setPaymentDate(today.toISOString().split('T')[0]);
+        setPaymentDate(new Date().toISOString().split('T')[0]);
         setIsPayConfirmVisible(true);
     };
 
@@ -605,6 +591,11 @@ export default function FeesScreen() {
                         renderItem={renderItem}
                         keyExtractor={item => item.id}
                         contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 20 }]}
+                        removeClippedSubviews={true}
+                        windowSize={5}
+                        maxToRenderPerBatch={8}
+                        updateCellsBatchingPeriod={50}
+                        initialNumToRender={10}
                         ListEmptyComponent={
                             <View style={styles.emptyContainer}>
                                 <Coins size={48} color={colors.icon + '40'} />
@@ -639,12 +630,13 @@ export default function FeesScreen() {
                             const student = students.find(s => s.id === p.studentId);
                             const fullName = `${student?.firstName} ${student?.lastName}`.toLowerCase();
                             const matchesSearch = fullName.includes(searchQuery.toLowerCase());
-                            // Filter by selected cycle
+                            // Filtrar por ciclo seleccionado
                             const enrollment = enrollments.find(e => e.id === p.enrollmentId);
                             const cls = enrollment ? classes.find(c => c.id === enrollment.classId) : null;
                             const matchesCycle = cls?.cycleId === currentCycleId;
                             return matchesSearch && matchesCycle;
-                        }).sort((a, b) => b.id.localeCompare(a.id))}
+                        // Ordenar por fecha de pago real, más reciente primero
+                        }).sort((a, b) => b.date.localeCompare(a.date))}
                         renderItem={({ item }) => {
                             const student = students.find(s => s.id === item.studentId);
                             const enrollment = enrollments.find(e => e.id === item.enrollmentId);

@@ -82,16 +82,18 @@ export const format24to12 = (time24: string): string => {
 };
 
 export const calculateEndTime = (startTime: string, duration: string) => {
-    const [startHours, startMinutes] = startTime.split(':').map(Number);
+    const cleanStart = (startTime || '').trim();
+    const cleanDuration = (duration || '').trim();
+    const [startHours, startMinutes] = cleanStart.split(':').map(Number);
 
-    const hoursMatch = duration.match(/(\d+)h/);
-    const minutesMatch = duration.match(/(\d+)m/);
+    const hoursMatch = cleanDuration.match(/(\d+)h/);
+    const minutesMatch = cleanDuration.match(/(\d+)\s*m/);
 
     const durationHours = hoursMatch ? parseInt(hoursMatch[1]) : 0;
     const durationMinutes = minutesMatch ? parseInt(minutesMatch[1]) : 0;
 
-    let endMinutes = startMinutes + durationMinutes;
-    let endHours = startHours + durationHours + Math.floor(endMinutes / 60);
+    let endMinutes = (startMinutes || 0) + durationMinutes;
+    let endHours = (startHours || 0) + durationHours + Math.floor(endMinutes / 60);
 
     endMinutes = endMinutes % 60;
     endHours = endHours % 24;
@@ -384,11 +386,11 @@ export default function ClassesScreen() {
             color: cls.color || CLASS_COLORS[0],
             cycleId: cls.cycleId || currentCycleId,
             schedules: cls.schedules.map(s => {
-                const [h, m] = s.startTime.split(':');
-                const hInt = parseInt(h);
+                const [h, m] = s.startTime.trim().split(':');
+                const hInt = parseInt(h.trim());
                 const h12 = hInt === 0 ? 12 : hInt > 12 ? hInt - 12 : hInt;
                 const period = hInt >= 12 ? 'PM' : 'AM';
-                return { day: s.day, startHours: h12.toString().padStart(2, '0'), startMinutes: m.trim(), startPeriod: period };
+                return { day: s.day, startHours: h12.toString().padStart(2, '0'), startMinutes: (m || '00').trim(), startPeriod: period };
             })
         });
         setEditingClassId(cls.id);
@@ -570,7 +572,7 @@ export default function ClassesScreen() {
         const allTimesSelected = formData.schedules.every(s => s.startHours !== '' && s.startMinutes !== '' && s.startPeriod !== '');
 
         if (selectedCourse && selectedTeacher && allDaysSelected && allTimesSelected) {
-            const newDuration = `${formData.hours || '0'}h ${formData.minutes || '0'} m`;
+            const newDuration = `${formData.hours || '0'}h ${formData.minutes || '0'}m`;
 
             // Validate General Schedule Overlap (Single Environment)
             const cycleClasses = classes.filter(
@@ -587,7 +589,7 @@ export default function ClassesScreen() {
                             const h12 = parseInt(targetSchedule.startHours);
                             const isPM = targetSchedule.startPeriod === 'PM';
                             const h24 = isPM ? (h12 === 12 ? 12 : h12 + 12) : (h12 === 12 ? 0 : h12);
-                            const newStart = `${h24.toString().padStart(2, '0')}:${targetSchedule.startMinutes} `;
+                            const newStart = `${h24.toString().padStart(2, '0')}:${targetSchedule.startMinutes}`;
                             if (checkTimeOverlap(existingSchedule.startTime, existingClass.duration, newStart, newDuration)) {
                                 conflictFound = true;
                                 conflictMsg = `Ya existe la clase "${existingClass.courseName}" dictada por ${existingClass.teacherName} el ${existingSchedule.day} a las ${format24to12(existingSchedule.startTime)}. Todo opera en el mismo ambiente.`;
@@ -617,10 +619,10 @@ export default function ClassesScreen() {
                     const h24 = isPM ? (h12 === 12 ? 12 : h12 + 12) : (h12 === 12 ? 0 : h12);
                     return {
                         day: s.day,
-                        startTime: `${h24.toString().padStart(2, '0')}:${s.startMinutes} `
+                        startTime: `${h24.toString().padStart(2, '0')}:${s.startMinutes}`
                     };
                 }),
-                duration: `${formData.hours || '0'}h ${formData.minutes || '0'} m`,
+                duration: `${formData.hours || '0'}h ${formData.minutes || '0'}m`,
                 capacity: formData.capacity || '20',
                 color: formData.color,
                 cycleId: currentCycleId || formData.cycleId // Forzar ciclo abierto en el Header
@@ -1284,7 +1286,7 @@ export default function ClassesScreen() {
                                                 <Text style={{ color: colors.text, fontWeight: 'bold' }}>{c.courseName}</Text>
                                                 <Text style={{ color: colors.icon, fontSize: 12 }}>{c.teacherName}</Text>
                                                 <Text style={{ color: colors.icon, fontSize: 12 }}>
-                                                    {c.schedules.map(s => `${s.day} ${format24to12(s.startTime)} `).join(', ')}
+                                                    {c.schedules.map(s => `${s.day} ${format24to12(s.startTime.trim())}`).join(', ')}
                                                 </Text>
                                             </View>
                                             <View style={{

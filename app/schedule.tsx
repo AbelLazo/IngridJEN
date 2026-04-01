@@ -4,6 +4,7 @@ import { Colors } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { ClassItem, useInstitution } from '@/context/InstitutionContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { calculateEndTime, format24to12 } from '@/app/classes';
 import { BlurView } from 'expo-blur';
 import { useRouter } from 'expo-router';
 import { Calendar as CalendarIcon, Clock, Users } from 'lucide-react-native';
@@ -104,9 +105,10 @@ export default function ScheduleScreen() {
         }).map(c => {
             // Find specific schedule time for sorting
             const schedule = c.schedules.find(s => s.day === selectedDayName);
+            const rawTime = schedule?.startTime?.trim() || '00:00';
             return {
                 ...c,
-                startTime: schedule?.startTime || '00:00'
+                startTime: rawTime
             };
         }).sort((a, b) => a.startTime.localeCompare(b.startTime)); // Sort chronologically
     }, [classes, currentCycleId, academicCycles, selectedDate, selectedDateString, userRole, user, teachers]);
@@ -215,7 +217,7 @@ export default function ScheduleScreen() {
                                         <View style={[styles.timeBadge, { backgroundColor: (cls.color || colors.tint) + '20' }]}>
                                             <Clock size={14} color={cls.color || colors.tint} />
                                             <Text style={[styles.timeText, { color: cls.color || colors.tint }]}>
-                                                {cls.startTime} - {cls.duration}
+                                                {format24to12(cls.startTime)} - {calculateEndTime(cls.startTime, cls.duration)}
                                             </Text>
                                         </View>
                                         <View style={[

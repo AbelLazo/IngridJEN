@@ -37,10 +37,11 @@
       [
         "expo-splash-screen",
         {
+          "image": "./assets/images/splash-background.png",
           "resizeMode": "contain",
-          "backgroundColor": "#1A0B12",
+          "backgroundColor": "#FFFFFF",
           "dark": {
-            "backgroundColor": "#1A0B12"
+            "backgroundColor": "#FFFFFF"
           }
         }
       ],
@@ -62,6 +63,9 @@
     "owner": "abelazo16",
     "runtimeVersion": {
       "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/80b995d8-cc24-4491-89bd-323933107ccc"
     }
   }
 }
