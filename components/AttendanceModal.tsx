@@ -47,6 +47,14 @@ export default function AttendanceModal({ visible, onClose, classData, dateStrin
             .sort((a, b) => a.lastName.localeCompare(b.lastName));
     }, [classData, enrollments, students]);
 
+    const presentCount = useMemo(() => {
+        return Object.values(studentStatuses).filter(status => status === 'present').length;
+    }, [studentStatuses]);
+
+    const absentCount = useMemo(() => {
+        return Object.values(studentStatuses).filter(status => status === 'absent').length;
+    }, [studentStatuses]);
+
     // Load Existing data or set default 'present' state
     useEffect(() => {
         if (visible && classData && dateString) {
@@ -213,9 +221,14 @@ export default function AttendanceModal({ visible, onClose, classData, dateStrin
                             </View>
                         </View>
 
-                        <Text style={[styles.sectionCountText, { color: colors.icon, marginVertical: 10, marginLeft: 5 }]}>
-                            ALUMNOS ({activeStudents.length})
-                        </Text>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginVertical: 10, marginHorizontal: 5 }}>
+                            <Text style={[styles.sectionCountText, { color: colors.icon }]}>
+                                ALUMNOS ({activeStudents.length})
+                            </Text>
+                            <Text style={{ color: colors.icon, fontSize: 13, fontWeight: 'bold' }}>
+                                Presentes: <Text style={{ color: '#10b981' }}>{presentCount}</Text>  |  Ausentes: <Text style={{ color: '#ef4444' }}>{absentCount}</Text>
+                            </Text>
+                        </View>
 
                         {/* STUDENTS SECTION */}
                         <View style={styles.studentsListContainer}>
